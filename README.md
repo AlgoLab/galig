@@ -1,0 +1,2 @@
+# galig
+A graph aligner
