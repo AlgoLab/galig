@@ -63,7 +63,7 @@ vector<vector<mem > > extractMEMs(string fpath, int plen) {
     memsFile.close();
   }
   else {
-    cout << "Unable to open file" << endl;
+    cout << "Unable to open MEMs file" << endl;
   }
   
   return MEMs;
@@ -82,7 +82,7 @@ int getId(TPt<TNodeEDatNet<TInt, TInt> > Graph, TIntStrH labels, mem m) {
 
 void saveGraph(TPt<TNodeEDatNet<TInt, TInt> >  Graph, TIntStrH labels) {
   ofstream myfile;
-  myfile.open("graph.dot");
+  myfile.open("./out/graph.dot");
   
   string dot = "digraph G {\n graph [splines=true overlap=false]\n node  [shape=ellipse, width=0.3, height=0.3]\n";
 
@@ -98,16 +98,41 @@ void saveGraph(TPt<TNodeEDatNet<TInt, TInt> >  Graph, TIntStrH labels) {
   myfile << dot;
   myfile.close();
   
-  system("neato -Tpng graph.dot -o graph.png");
+  system("neato -Tpng ./out/graph.dot -o ./out/graph.png");
 }
 
-int main() {
+vector<int> getExonsLengths(string fpath) {
+  vector<int> e_lens;
+
+  string line;
+  ifstream memsFile(fpath);
+  if (memsFile.is_open()) {
+    while(getline(memsFile,line)) {
+      e_lens.push_back(stoi(line));
+    }
+    memsFile.close();
+  }
+  else {
+    cout << "Unable to open exons file" << endl;
+  }
+  
+  return e_lens;
+}
+
+int main(int argc, char* argv[]) {
   // Input
-  int L = 2;
-  int plen = 9;
-  int k = 3;
+  string mems_file = argv[1];
+  string e_lens_file = argv[2];
+  
+  vector<int> e_lens = getExonsLengths(e_lens_file);
+  int L = stoi(argv[3]);
+  int k = stoi(argv[4]);
+  //text_path
+  //pattern_path
+  
+  int plen = stoi(argv[5]);
   //int e_lens[] {4,5};
-  int e_lens[] {5,7,5,6};
+  
   int tot_L = 1;
   for(int l:e_lens) {
     tot_L += l+1;
@@ -139,8 +164,7 @@ int main() {
   rrr_vector<>::select_1_type select_BV(&rrrb); //select_BV(int i)
   
   //Extracting MEMs from file
-  string fpath = IO_folder + "mems1";
-  vector<vector<mem > > MEMs = extractMEMs(fpath, plen);
+  vector<vector<mem > > MEMs = extractMEMs(mems_file, plen);
   
   //Printing MEMs
   int p_ = 1;
@@ -154,8 +178,11 @@ int main() {
   //MEMsGraph
   TPt<TNodeEDatNet<TInt, TInt> >  Graph = TNodeEDatNet<TInt, TInt>::New();
   TIntStrH labels;
-  int nodes_index = 0;
+  int nodes_index = 1;
   int curr_index;
+  
+  Graph->AddNode(0, 0);
+  labels.AddDat(0, "Start");
   
   int curr_p = 1;
   while(curr_p<MEMs.size()) {
@@ -166,6 +193,7 @@ int main() {
         m1_index = nodes_index;
         nodes_index++;
         Graph->AddNode(m1_index, m1.l);
+        Graph->AddEdge(0, m1_index);
         labels.AddDat(m1_index, toTStr(m1.toStr()));
       }
       

@@ -6,10 +6,7 @@ OTHER=-fopenmp -lrt -lsdsl -ldivsufsort -ldivsufsort64
 BIN=./bin/
 SRC=./src/
 
-all: main tuts
+all: main
 
 main: $(SRC)main.cpp
-	$(CXX) $(CFLAGS) $(SNAP_FLAGS) $(SDSL_FLAGS) -o main $(SRC)main.cpp $(OTHER)
-
-tuts: $(SRC)tuts.cpp
-	$(CXX) $(CFLAGS) $(SNAP_FLAGS) $(SDSL_FLAGS) -o tuts $(SRC)tuts.cpp $(OTHER)
+	$(CXX) $(CFLAGS) $(SNAP_FLAGS) $(SDSL_FLAGS) -o $(BIN)main $(SRC)main.cpp $(OTHER)
