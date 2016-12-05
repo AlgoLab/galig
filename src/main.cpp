@@ -5,7 +5,7 @@
 #include <algorithm>
 
 #include "Snap.h"
-
+#include <sdsl/bit_vectors.hpp>
 
 using namespace std;
 
