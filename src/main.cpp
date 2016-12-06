@@ -11,9 +11,6 @@
 using namespace std;
 using namespace sdsl;
 
-
-const string IO_folder = "./IO/";
-
 typedef struct {
   int t;
   int p;
@@ -118,6 +115,30 @@ vector<int> getExonsLengths(string fpath) {
   
   return e_lens;
 }
+
+vector<vector<int> > DFS(TPt<TNodeEDatNet<TInt, TInt> > Graph, TIntStrH labels, TNodeEDatNet<TInt, TInt>::TNodeI node) {
+  vector<vector<int> > paths;
+  int out = node.GetOutDeg();
+  int node_id = node.GetId();
+  int i = 0;
+  cout << labels.GetDat(labels.GetKey(labels.GetKeyId(node.GetId()))).GetCStr() << endl;
+  while(i < out) {
+    int child_id = node.GetOutNId(i);
+    TNodeEDatNet<TInt, TInt>::TNodeI child = Graph->GetNI(child_id);
+    TNodeEDatNet<TInt, TInt>::TEdgeI edge = Graph->GetEI(node_id, child_id);
+    cout << to_string(edge.GetDat()) << endl;
+    vector<vector<int> > subpaths = DFS(Graph, labels, child);
+    for(auto sp : subpaths) {
+      vector<int> p (node_id);
+      p.insert(p.end(),sp.begin(),sp.end());
+      paths.push_back(p);
+    }
+    i++;
+  }
+  
+  return paths;
+}
+
 
 int main(int argc, char* argv[]) {
   // Input
@@ -251,7 +272,7 @@ int main(int argc, char* argv[]) {
                     labels.AddDat(m2_index, toTStr(m2.toStr()));
                   }
                   //Weight
-                  int wt = (select_BV(rank_BV(m1.t-1) + 1) - m1.t - m1.l) + (m2.t - select_BV(rank_BV(m2.t-1)));
+                  int wt = (select_BV(rank_BV(m1.t-1) + 1) - m1.t - m1.l) + (m2.t - select_BV(rank_BV(m2.t-1)) - 1);
                   
                   int wp = abs(m2.p - m1.p - m1.l);
                   
@@ -267,7 +288,28 @@ int main(int argc, char* argv[]) {
     }
     curr_p++;
   }
+  Graph->AddNode(nodes_index, 0);
+  labels.AddDat(nodes_index, "End");
+  for (TNodeEDatNet<TInt, TInt>::TNodeI NI = Graph->BegNI(); NI < Graph->EndNI(); NI++) { 
+    if(NI.GetOutDeg() == 0 && NI.GetId() != nodes_index) {
+      Graph->AddEdge(NI.GetId(), nodes_index, 0);
+    }
+  }
+  
   saveGraph(Graph, labels);
   
-  //TSnap::DrawGViz(Graph, gvlDot, toTStr(IO_folder + "graph.png"), "", labels);
+  //Visits
+  vector<vector<int> > paths = DFS(Graph, labels, Graph->BegNI());
+  
+  cout << paths.size() << endl;
+  
+  for(auto p : paths) {
+    for(auto n : p) {
+      cout << n << " ";
+    }
+    cout << endl << endl;
+  }
+  
+  //PNGraph tree = TSnap::GetBfsTree(Graph, 0, true, true);
+  //TSnap::DrawGViz(tree, gvlDot, "BFS.png", "");
 }

@@ -1,0 +1,5 @@
+--------
+/home/luca/Pubblici/galig/bin/main.Err
+Tue Dec  6 09:51:22 2016
+Execution stopped: (0<=ValN)&&(ValN<Vals) [Reason:'Index:-1 Vals:1 MxVals:16 Type:4TVecI11THashKeyDatI4TInt4TStrEiE'], file ./libs/Snap/glib-core/ds.h, line 464
+--------
