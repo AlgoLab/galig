@@ -118,24 +118,40 @@ vector<int> getExonsLengths(string fpath) {
 
 vector<vector<int> > DFS(TPt<TNodeEDatNet<TInt, TInt> > Graph, TIntStrH labels, TNodeEDatNet<TInt, TInt>::TNodeI node) {
   vector<vector<int> > paths;
+  
+  /**
   int out = node.GetOutDeg();
   int node_id = node.GetId();
   int i = 0;
+  cout << "\t--------------\nNode: " << node.GetId() << endl;
+  cout << "Out: " << out << endl;
   cout << labels.GetDat(labels.GetKey(labels.GetKeyId(node.GetId()))).GetCStr() << endl;
   while(i < out) {
     int child_id = node.GetOutNId(i);
+    cout << "Child: " << child_id << endl;
+    cout << labels.GetDat(labels.GetKey(labels.GetKeyId(child_id))).GetCStr() << endl;
     TNodeEDatNet<TInt, TInt>::TNodeI child = Graph->GetNI(child_id);
     TNodeEDatNet<TInt, TInt>::TEdgeI edge = Graph->GetEI(node_id, child_id);
     cout << to_string(edge.GetDat()) << endl;
     vector<vector<int> > subpaths = DFS(Graph, labels, child);
     for(auto sp : subpaths) {
-      vector<int> p (node_id);
+      vector<int> p { node_id };
       p.insert(p.end(),sp.begin(),sp.end());
+      for(auto n : p) {
+        cout << "\t\t" << n << " ";
+      }
       paths.push_back(p);
     }
     i++;
   }
   
+  for(auto p : paths) {
+    for(auto n : p) {
+      cout << n << " ";
+    }
+    cout << endl << endl;
+  }
+  **/
   return paths;
 }
 
