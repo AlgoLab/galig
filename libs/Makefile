@@ -13,7 +13,9 @@ clean-prerequisites: clean-snap
 .PHONY: folders
 folders:
 	@echo "* Checking folders..." ; \
-	[ -d $(LOC_DIR) ] || mkdir -p $(LOC_DIR)
+	[ -d $(LOC_DIR) ] || mkdir -p $(LOC_DIR) ; \
+	[ -d $(LOC_DIR)/include ] || mkdir -p $(LOC_DIR)/include ; \
+	[ -d $(LOC_DIR)/lib ] || mkdir -p $(LOC_DIR)/lib
 
 .PHONY: snap
 snap: folders $(LOC_DIR)/include/snap-core/
@@ -21,12 +23,12 @@ snap: folders $(LOC_DIR)/include/snap-core/
 SNAP_NAME:=Snap-2.3
 $(LOC_DIR)/include/snap-core/:
 	@echo "* SNAP Lirary" ;	\
-	unzip $(SNAP_NAME).zip;	\
+	unzip -f $(SNAP_NAME).zip;	\
 	if [ -d $(SNAP_NAME)/ ]; then	\
 		cd $(SNAP_NAME)/ &&	\
 		$(MAKE) all;	\
-		ln -sf ../../thirdparty/$(SNAP_NAME)/snap-core $(LOC_DIR)/include/;	\
-		ln -sf ../../thirdparty/$(SNAP_NAME)/glib-core $(LOC_DIR)/include/;	\
+		ln -sf ../../libs/$(SNAP_NAME)/snap-core $(LOC_DIR)/include/;	\
+		ln -sf ../../libs/$(SNAP_NAME)/glib-core $(LOC_DIR)/include/;	\
 	else \
 		echo "SNAP library not found in the current directory" ; \
 		exit 1 ; \
