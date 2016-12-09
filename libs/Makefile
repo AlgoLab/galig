@@ -5,10 +5,10 @@ LOC_DIR ?=$(CURDIR)/../local
 
 .PHONY: prerequisites
 .DEFAULT: prerequisites
-prerequisites: folders snap
+prerequisites: folders snap sdsl
 
 .PHONY: clean-prerequisites
-clean-prerequisites: clean-snap
+clean-prerequisites: clean-snap clean-sdsl
 
 .PHONY: folders
 folders:
@@ -23,7 +23,7 @@ snap: folders $(LOC_DIR)/include/snap-core/
 SNAP_NAME:=Snap-2.3
 $(LOC_DIR)/include/snap-core/:
 	@echo "* SNAP Lirary" ;	\
-	unzip -f $(SNAP_NAME).zip;	\
+	unzip -o $(SNAP_NAME).zip;	\
 	if [ -d $(SNAP_NAME)/ ]; then	\
 		cd $(SNAP_NAME)/ &&	\
 		$(MAKE) all;	\
@@ -38,3 +38,24 @@ $(LOC_DIR)/include/snap-core/:
 clean-snap:
 	@echo "* Cleaning SNAP library..." ; \
 	rm -rf $(SNAP_NAME)/
+
+
+.PHONY: sdsl
+sdsl: folders $(LOC_DIR)/include/divsufsort64.h
+
+SDSL_NAME:=sdsl
+$(LOC_DIR)/include/divsufsort64.h:
+	@echo "* SDSL-lite Lirary" ;	\
+	git clone https://github.com/simongog/sdsl.git;	\
+	if [ -d $(SDSL_NAME)/ ]; then	\
+		cd $(SDSL_NAME)/ &&	\
+		./install.sh $(LOC_DIR)/;	\
+	else \
+		echo "SDSL library not found in the current directory" ; \
+		exit 1 ; \
+	fi
+
+.PHONY: clean-sdsl
+clean-sdsl:
+	@echo "* Cleaning SDSL library..." ; \
+	rm -rf $(SDSL_NAME)/
