@@ -1,10 +1,18 @@
 #!/bin/bash
-L=$1
-k=$2
+genomic=$1
+annotation=$2
+rnaseqs=$3
+L=$4
+k=$5
+
+python3 prepareInput.py $genomic $annotation $rnaseqs
+
 while read p; do
   plen=${#p}
-  echo ">P\n"$p > P.fa
-  ./bMEM/backwardMEM -l=$L ./tmp/T.fa P.fa > ./tmp/mems
+  echo -e ">P\n"$p > ./tmp/P.fa
+  ./bMEM/backwardMEM -l=$L ./tmp/T.fa ./tmp/P.fa > ./tmp/mems
   ../bin/main ./tmp/mems ./tmp/e_lens ./tmp/edges $L $k $plen
-done <patterns
+done <./tmp/patterns
 
+rm ./stopwatch.txt
+rm ./lock.txt

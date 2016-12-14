@@ -62,43 +62,26 @@ def extractInfo(genomic, gene_annotation):
   f.write("{}".format(edg_string))
   f.close()
 
-def savePatternFile(pattern):
-  f = open("./tmp/P.fa", "w")
-  f.write("> P\n{}\n".format(pattern))
-  f.close()
-  
-  f = open("patterns", "a")
-  f.write("{}\n".format(pattern))
-  f.close()
+def main(genomic, gene_annotation, rna_seqs):
+  os.system("rm -f ./tmp/*")
+  os.system("mkdir -p tmp")
+  os.system("touch ./tmp/patterns")
 
-
-def main(genomic, gene_annotation, rna_seqs, L, k):
-  os.system("rm T.fa*")
-  os.system("rm P.fa")
-  os.system("rm e_lens")
-  os.system("rm mems")
-  os.system("rm patterns")
-  os.system("touch patterns")
-  
+  print("Extracting splicing graph (T.fa, e_lens, edges)...")
   extractInfo(genomic, gene_annotation)
-  
+
+  print("Extracting patterns...")
   patterns_fa = list(SeqIO.parse("{}".format(rna_seqs), "fasta"))
-  c = 0
-  log = open("avanzamento.log", "w")
+  n = 0
   for pattern in patterns_fa:
-    c += 1
     p = pattern.seq
-    savePatternFile(str(p))
-    p_len = len(p)
-    os.system("./bMEM/backwardMEM -l={} ./tmp/T.fa ./tmp/P.fa > ./tmp/mems".format(L))
-    print("../bin/main ./tmp/mems ./tmp/e_lens ./tmp/edges {} {} {}".format(L, k, p_len))
-    os.system("../bin/main ./tmp/mems ./tmp/e_lens ./tmp/edges {} {} {}".format(L, k, p_len))
-    if c % 100 == 0:
-       log.write("{0}\n".format(c))
-       log.flush()
-  os.system("rm stopwatch.txt")
-  os.system("rm lock.txt")
-    
+    f = open("./tmp/patterns", "a")
+    f.write("{}\n".format(str(p)))
+    f.close()
+    n+=1
+    if n%100 == 0:
+      print("{}".format(n))
 
 if __name__ == '__main__':
-  main(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5])
+  #Genomic, annotation, rna-seq reads
+  main(sys.argv[1], sys.argv[2], sys.argv[3])
