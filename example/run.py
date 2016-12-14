@@ -68,6 +68,11 @@ def main(genomic, gene_annotation, rna_seqs, L, k):
   
   for pattern in patterns_fa:
     p = pattern.seq
+    
+    f = open("patterns.fa")
+    f.write("{}\n".foramt(str(p)))
+    f.close()
+    
     savePatternFile(str(p))
     p_len = len(p)
     os.system("./bMEM/backwardMEM -l={} ./tmp/T.fa ./tmp/P.fa > ./tmp/mems".format(L))
