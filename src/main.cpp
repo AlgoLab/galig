@@ -5,8 +5,8 @@
 #include <algorithm>
 #include <stdlib.h>
 
-#include "Snap.h"
 #include <sdsl/bit_vectors.hpp>
+#include "Snap.h"
 
 using namespace std;
 using namespace sdsl;
@@ -16,9 +16,9 @@ TStr toTStr(string s) {
 }
 
 struct MEM {
-  int t;
-  int p;
-  int l;
+  unsigned int t;
+  unsigned int p;
+  unsigned int l;
   
   MEM() {
     t = -1;
@@ -26,28 +26,33 @@ struct MEM {
     l = -1;
   }
   
+  MEM(TSIn& SIn) { }
+  
   string toStr() {
     return "(" + to_string(t) + "," + to_string(p) + "," + to_string(l) + ")";
   }
+  
+  void Save(TSOut& SOut) const { }
+  
 };
 
 struct MEMs_Graph {
   //Attributes
-  TPt<TNodeEDatNet<TInt, TInt> > Graph;
+  TPt<TNodeEDatNet<MEM, TInt> > Graph;
   TIntStrH labels;
   vector<vector<vector<int> > > subpaths;
   
   //Constructor
-  MEMs_Graph(vector<vector<MEM > > MEMs, int plen, int k, rrr_vector<>::rank_1_type rank_BV, rrr_vector<>::select_1_type select_BV) {
-    Graph = TNodeEDatNet<TInt, TInt>::New();
-    build(MEMs, plen, k, rank_BV, select_BV);
+  MEMs_Graph(vector<vector<MEM > > MEMs, vector<vector<int> > edges, int plen, int k, rrr_vector<>::rank_1_type rank_BV, rrr_vector<>::select_1_type select_BV) {
+    Graph = TNodeEDatNet<MEM, TInt>::New();
+    build(MEMs, edges, plen, k, rank_BV, select_BV);
     subpaths = vector<vector<vector<int> > >(Graph->GetNodes(), { vector<vector<int> > { vector<int> { } } });
   }
   
   //Methods
   int getId(MEM m) {
     int index = -1;
-    for (TNodeEDatNet<TInt, TInt>::TNodeI NI = Graph->BegNI(); NI < Graph->EndNI(); NI++) {
+    for (TNodeEDatNet<MEM, TInt>::TNodeI NI = Graph->BegNI(); NI < Graph->EndNI(); NI++) {
       if(labels.GetDat(labels.GetKey(labels.GetKeyId(NI.GetId()))).EqI(toTStr(m.toStr()))) {
         index = NI.GetId();
         break;
@@ -56,55 +61,71 @@ struct MEMs_Graph {
     return index;
   }
   
-  int getNodeAttr(int i) {
+  MEM getNodeAttr(int i) {
     return Graph->GetNI(i).GetDat();
   }
   
   int getEdgeAttr(int i, int j) {
     return Graph->GetEI(i,j).GetDat();
   }
-  
+
   /*********************************************************************
-   * CONSTRUCTION
+   * CONSTRUCTION 1
    ********************************************************************/
-  TPt<TNodeEDatNet<TInt, TInt> > build(vector<vector<MEM > > MEMs, int plen, int k, rrr_vector<>::rank_1_type rank_BV, rrr_vector<>::select_1_type select_BV) {
+
+  TPt<TNodeEDatNet<MEM, TInt> > build(vector<vector<MEM > > MEMs, vector<vector<int> > edges, int plen, int k, rrr_vector<>::rank_1_type rank_BV, rrr_vector<>::select_1_type select_BV) {
     int nodes_index = 1;
-    int curr_index;
+    //int curr_index;
     
-    Graph->AddNode(0, -1);
+    Graph->AddNode(0, MEM());
     labels.AddDat(0, "Start");
-    int curr_p = 1;
-    while(curr_p<MEMs.size()) {
+    unsigned int curr_p = 1;
+    while(curr_p < MEMs.size()) {
       for(MEM m1 : MEMs[curr_p]) {
         int m1_index = getId(m1);
         
         if(m1_index == -1) {
           m1_index = nodes_index;
           nodes_index++;
-          Graph->AddNode(m1_index, m1.l);
-          Graph->AddEdge(0, m1_index, m1.t);
+          Graph->AddNode(m1_index, m1);
+          Graph->AddEdge(0, m1_index, 0);
           labels.AddDat(m1_index, toTStr(m1.toStr()));
         }
         
-        int i = m1.p + 1;
+        unsigned int i = m1.p + 1;
         while(i < plen and i < m1.p + m1.l + k) {
           for(MEM m2 : MEMs[i]) { //Per tutti i m2 "consecutivi" a m1
             if(m1.p + m1.l != m2.p + m2.l) { //Se m1 e m2 non finiscono nello stesso punto sul pattern
               if(m1.t != m2.t && m1.t + m1.l != m2.t + m2.l) { //Se m1 e m2 non iniziano e finiscono negli stessi punti sul testo
                 if(rank_BV(m1.t - 1) == rank_BV(m2.t - 1)) { //Se m1 e m2 sono nello stesso nodo
-                  //cout << "(1) Checking " << m1.toStr() << " -> " << m2.toStr() << endl;
+                  cout << "(1) Checking " << m1.toStr() << " -> " << m2.toStr() << endl;
                   if(m2.t > m1.t && m2.t < m1.t + m1.l + k && m1.t + m1.l != m2.t + m2.l) {
-                    //cout << "\tLinking " << m1.toStr() << " to " << m2.toStr() << endl;
+                    cout << "\tLinking " << m1.toStr() << " to " << m2.toStr() << endl;
                     int m2_index = getId(m2);
                     
                     if(m2_index == -1) {
                       m2_index = nodes_index;
                       nodes_index++;
-                      Graph->AddNode(m2_index, m2.l);
+                      Graph->AddNode(m2_index, m2);
                       labels.AddDat(m2_index, toTStr(m2.toStr()));
                     }
                     
                     //Weight
+                    int wt = m2.t - m1.t - m1.l;
+                    int wp = m2.p - m1.p - m1.l;
+                    
+                    cout << wt << " " << wp << endl;
+                    int w;
+                    if(wt<0 || wp<0) {
+                      cout << "1" << endl;
+                      w = abs(wt - wp);
+                    }
+                    else {
+                      cout << "2" << endl;
+                      w = max(wt, wp);
+                    }
+                    
+                    /**
                     int wt = m2.t - m1.t - m1.l;
                     if(wt<0) {
                       wt = abs((m1.t + m1.l - m2.t) - (m1.p + m1.l - m2.p));
@@ -116,35 +137,38 @@ struct MEMs_Graph {
                     }
                     
                     int w = max(wt, wp);
+                    **/
                     
                     Graph->AddEdge(m1_index, m2_index, w);
                   }
                 }
                 else { //Se m1 e m2 sono in due nodi differenti
-                  //cout << "(2) Checking " << m1.toStr() << " -> " << m2.toStr() << endl;
+                  cout << "(2) Checking " << m1.toStr() << " -> " << m2.toStr() << endl;
                   //for debug
                   //int x1 = rank_BV(m1.t-1);
                   //int y1 = select_BV(x1 + 1);
                   //int x2 = rank_BV(m2.t-1);
                   //int y2 = select_BV(x2 + 1);
-                   
-                  if(m1.t + m1.l >= select_BV(rank_BV(m1.t-1) + 1) - k && m2.t <= select_BV(rank_BV(m2.t-1)) + k) {
-                    //cout << "\tLinking " << m1.toStr() << " to " << m2.toStr() << endl;
-                    int m2_index = getId(m2);
-                  
-                    if(m2_index == -1) {
-                      m2_index = nodes_index;
-                      nodes_index++;
-                      Graph->AddNode(m2_index, m2.l);
-                      labels.AddDat(m2_index, toTStr(m2.toStr()));
+                  vector<int> curr_edge (rank_BV(m1.t), rank_BV(m2.t));
+                  if(find(edges.begin(), edges.end(), curr_edge) != edges.end()) {
+                    if(m1.t + m1.l >= select_BV(rank_BV(m1.t-1) + 1) - k && m2.t <= select_BV(rank_BV(m2.t-1)) + k) {
+                      cout << "\tLinking " << m1.toStr() << " to " << m2.toStr() << endl;
+                      int m2_index = getId(m2);
+                    
+                      if(m2_index == -1) {
+                        m2_index = nodes_index;
+                        nodes_index++;
+                        Graph->AddNode(m2_index, m2);
+                        labels.AddDat(m2_index, toTStr(m2.toStr()));
+                      }
+                      //Weight
+                      int wt = (select_BV(rank_BV(m1.t-1) + 1) - m1.t - m1.l) + (m2.t - select_BV(rank_BV(m2.t-1)) - 1);
+                      
+                      int wp = abs(m2.p - m1.p - m1.l);
+                      
+                      int w = max(wt, wp);
+                      Graph->AddEdge(m1_index, m2_index, w);
                     }
-                    //Weight
-                    int wt = (select_BV(rank_BV(m1.t-1) + 1) - m1.t - m1.l) + (m2.t - select_BV(rank_BV(m2.t-1)) - 1);
-                    
-                    int wp = abs(m2.p - m1.p - m1.l);
-                    
-                    int w = max(wt, wp);
-                    Graph->AddEdge(m1_index, m2_index, w);
                   }
                 }
               }
@@ -156,9 +180,9 @@ struct MEMs_Graph {
       curr_p++;
     }
     
-    Graph->AddNode(nodes_index, -1);
+    Graph->AddNode(nodes_index, MEM());
     labels.AddDat(nodes_index, "End");
-    for (TNodeEDatNet<TInt, TInt>::TNodeI NI = Graph->BegNI(); NI < Graph->EndNI(); NI++) { 
+    for (TNodeEDatNet<MEM, TInt>::TNodeI NI = Graph->BegNI(); NI < Graph->EndNI(); NI++) { 
       if(NI.GetOutDeg() == 0 && NI.GetId() != nodes_index) {
         Graph->AddEdge(NI.GetId(), nodes_index, 0);
       }
@@ -166,7 +190,7 @@ struct MEMs_Graph {
 
     return Graph;
   }
-  
+
   /*********************************************************************
    * VISIT
    ********************************************************************/
@@ -174,7 +198,7 @@ struct MEMs_Graph {
     return rec_visit(Graph->BegNI());
   }
   
-  vector<vector<int> > rec_visit(TNodeEDatNet<TInt, TInt>::TNodeI node) {
+  vector<vector<int> > rec_visit(TNodeEDatNet<MEM, TInt>::TNodeI node) {
     int node_id = node.GetId();
     //cout << node_id;
     
@@ -198,7 +222,7 @@ struct MEMs_Graph {
       int child_id = node.GetOutNId(i);
       i++;
       
-      TNodeEDatNet<TInt, TInt>::TNodeI child = Graph->GetNI(child_id);
+      TNodeEDatNet<MEM, TInt>::TNodeI child = Graph->GetNI(child_id);
       vector<vector<int> > starting_paths = rec_visit(child);
       
       for(vector<int> sp : starting_paths) {
@@ -220,11 +244,11 @@ struct MEMs_Graph {
     
     string dot = "digraph G {\n graph [splines=true overlap=false]\n node  [shape=ellipse, width=0.3, height=0.3]\n";
 
-    for (TNodeEDatNet<TInt, TInt>::TNodeI NI = Graph->BegNI(); NI < Graph->EndNI(); NI++) { 
+    for (TNodeEDatNet<MEM, TInt>::TNodeI NI = Graph->BegNI(); NI < Graph->EndNI(); NI++) { 
       dot += " " + to_string(NI.GetId()) + " [label=\"" + labels.GetDat(labels.GetKey(labels.GetKeyId(NI.GetId()))).GetCStr() + "\"];\n";
     }
     
-    for (TNodeEDatNet<TInt, TInt>::TEdgeI EI = Graph->BegEI(); EI < Graph->EndEI(); EI++) { 
+    for (TNodeEDatNet<MEM, TInt>::TEdgeI EI = Graph->BegEI(); EI < Graph->EndEI(); EI++) { 
       dot += " " + to_string(EI.GetSrcNId()) + " -> " + to_string(EI.GetDstNId()) + " [label=\" " + to_string(EI.GetDat()) + "\"];\n";
     }
     dot += "}";
@@ -295,25 +319,63 @@ vector<int> getExonsLengths(string fpath) {
   return e_lens;
 }
 
+vector<int> extractEdge(string line) {
+  vector<int> edge;
+  string delimiter = ",";
+  size_t pos = 0;
+  string token;
+  while ((pos = line.find(delimiter)) != string::npos) {
+    token = line.substr(0, pos);
+    edge.push_back(stoi(token));
+    line.erase(0, pos + delimiter.length());
+  }
+  edge.push_back(stoi(line));
+
+  return edge;
+}
+
+vector<vector<int > > extractEdges(string fpath) {
+  vector<vector<int > > edges;
+
+  string line;
+  ifstream edgesFile(fpath);
+  if (edgesFile.is_open()) {
+    while(getline(edgesFile,line)) {
+      vector<int> edge = extractEdge(line);
+      edges.push_back(edge);
+    }
+    edgesFile.close();
+  }
+  else {
+    cout << "Unable to open edges file" << endl;
+  }
+  
+  return edges;
+}
+
 int main(int argc, char* argv[]) {
   // Input
   string mems_file = argv[1];
   string e_lens_file = argv[2];
-  int L = stoi(argv[3]);
-  int k = stoi(argv[4]);
-  int plen = stoi(argv[5]);
-  
+  string edges_file = argv[3];
+  //int L = stoi(argv[4]);
+  int k = stoi(argv[5]);
+  unsigned int plen = stoi(argv[6]);
+
   //Extracting exons lenghts from file
   vector<int> e_lens = getExonsLengths(e_lens_file);
-  
+
+  //Extracting edges from file
+  vector<vector<int> > edges = extractEdges(edges_file);
+
   //Bit Vector Setup  
   int tot_L = 1;
   for(int l:e_lens) {
     tot_L += l+1;
   }
-  
+
   bit_vector BV(tot_L, 0);
-  
+
   int i = 0;
   BV[i] = 1;
   for(int l:e_lens) {
@@ -324,24 +386,25 @@ int main(int argc, char* argv[]) {
   rrr_vector<> rrrb(BV);
   rrr_vector<>::rank_1_type rank_BV(&rrrb);
   rrr_vector<>::select_1_type select_BV(&rrrb);
-  
+
   //Extracting MEMs from file
   vector<vector<MEM > > MEMs = extractMEMs(mems_file, plen);
-  
+
   //Build MEMs Graph
-  MEMs_Graph mg (MEMs, plen, k, rank_BV, select_BV);
+  MEMs_Graph mg (MEMs, edges, plen, k, rank_BV, select_BV);
   mg.save();
   vector<vector<int> > paths = mg.visit();
-  
+
   //Format output
   for(vector<int> path : paths) {
-    int i = 1;
+    int i = 0;
     while(i<path.size()-1) {
-      //cout << mg.getEdgeAttr(path[i-1], path[i]) << endl;
-      //cout << mg.getNodeAttr(path[i]) << endl;
+      cout << mg.getNodeAttr(path[i]).toStr() << endl;
+      cout << mg.getEdgeAttr(path[i], path[i+1]) << endl;
       
       i++;
     }
-    //cout << "-----------------------" <<endl << endl;
+    cout << "-----------------------" << endl;
   }
 }
+
