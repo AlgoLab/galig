@@ -16,7 +16,7 @@ while read p; do
   plen=${#p}
   echo -e ">P\n"$p > ./tmp/P.fa
   ./bMEM/backwardMEM -l=$L ./tmp/T.fa ./tmp/P.fa > ./tmp/mems
-  echo $(wc -l ./tmp/mems) >> ./log
+  echo $(wc -l ./tmp/mems) >> ./tmp/log_memsNumber
   ../bin/main ./tmp/mems ./tmp/e_lens ./tmp/edges $L $k $plen
 done <./tmp/patterns
 
