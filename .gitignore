@@ -1,6 +1,7 @@
 bin/
 obj/
 local/
+example/
 
 # Compiled Object files
 *.slo
