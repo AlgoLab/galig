@@ -63,10 +63,6 @@ def extractInfo(genomic, gene_annotation):
   f.close()
 
 def main(genomic, gene_annotation, rna_seqs):
-  os.system("rm -f ./tmp/*")
-  os.system("mkdir -p tmp")
-  os.system("touch ./tmp/patterns")
-
   print("Extracting splicing graph (T.fa, e_lens, edges)...")
   extractInfo(genomic, gene_annotation)
 

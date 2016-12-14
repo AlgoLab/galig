@@ -1,9 +1,14 @@
 #!/bin/bash
+
 genomic=$1
 annotation=$2
 rnaseqs=$3
 L=$4
 k=$5
+
+rm -rf ./tmp/
+mkdir -p ./tmp/
+touch ./tmp/patterns
 
 python3 prepareInput.py $genomic $annotation $rnaseqs
 
@@ -11,6 +16,7 @@ while read p; do
   plen=${#p}
   echo -e ">P\n"$p > ./tmp/P.fa
   ./bMEM/backwardMEM -l=$L ./tmp/T.fa ./tmp/P.fa > ./tmp/mems
+  echo $(wc -l ./tmp/mems) >> ./log
   ../bin/main ./tmp/mems ./tmp/e_lens ./tmp/edges $L $k $plen
 done <./tmp/patterns
 
