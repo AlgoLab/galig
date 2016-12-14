@@ -255,7 +255,9 @@ struct MEMs_Graph {
     
     myfile << dot;
     myfile.close();
-    system("neato -Tpng ./out/graph.dot -o ./out/graph.png");
+    if(system("neato -Tpng ./out/graph.dot -o ./out/graph.png") != 0) {
+	cerr << "System call error" << endl;
+    }
   }
 };
 
