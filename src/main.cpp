@@ -43,7 +43,7 @@ struct MEMs_Graph {
   vector<vector<vector<int> > > subpaths;
   
   //Constructor
-  MEMs_Graph(vector<vector<MEM > > MEMs, vector<vector<int> > edges, int plen, int k, rrr_vector<>::rank_1_type rank_BV, rrr_vector<>::select_1_type select_BV) {
+  MEMs_Graph(vector<vector<MEM > > MEMs, vector<vector<int> > edges, unsigned int plen, int k, rrr_vector<>::rank_1_type rank_BV, rrr_vector<>::select_1_type select_BV) {
     Graph = TNodeEDatNet<MEM, TInt>::New();
     build(MEMs, edges, plen, k, rank_BV, select_BV);
     subpaths = vector<vector<vector<int> > >(Graph->GetNodes(), { vector<vector<int> > { vector<int> { } } });
@@ -73,7 +73,7 @@ struct MEMs_Graph {
    * CONSTRUCTION 1
    ********************************************************************/
 
-  TPt<TNodeEDatNet<MEM, TInt> > build(vector<vector<MEM > > MEMs, vector<vector<int> > edges, int plen, int k, rrr_vector<>::rank_1_type rank_BV, rrr_vector<>::select_1_type select_BV) {
+  TPt<TNodeEDatNet<MEM, TInt> > build(vector<vector<MEM > > MEMs, vector<vector<int> > edges, unsigned int plen, int k, rrr_vector<>::rank_1_type rank_BV, rrr_vector<>::select_1_type select_BV) {
     int nodes_index = 1;
     //int curr_index;
     
@@ -255,7 +255,6 @@ struct MEMs_Graph {
     
     myfile << dot;
     myfile.close();
-    
     system("neato -Tpng ./out/graph.dot -o ./out/graph.png");
   }
 };
@@ -282,7 +281,7 @@ MEM extractMEM(string line) {
   return m;
 }
 
-vector<vector<MEM > > extractMEMs(string fpath, int plen) {
+vector<vector<MEM > > extractMEMs(string fpath, unsigned int plen) {
   vector<vector<MEM > > MEMs (plen + 1, vector<MEM >());
 
   string line;
@@ -394,10 +393,12 @@ int main(int argc, char* argv[]) {
   MEMs_Graph mg (MEMs, edges, plen, k, rank_BV, select_BV);
   mg.save();
   vector<vector<int> > paths = mg.visit();
-
+  
+  cout << "--- " << paths.size() << endl << endl;
+  
   //Format output
   for(vector<int> path : paths) {
-    int i = 0;
+    unsigned int i = 0;
     while(i<path.size()-1) {
       cout << mg.getNodeAttr(path[i]).toStr() << endl;
       cout << mg.getEdgeAttr(path[i], path[i+1]) << endl;
