@@ -1,0 +1,10 @@
+#!/bin/bash
+L=$1
+k=$2
+while read p; do
+  plen=${#p}
+  echo ">P\n"$p > P.fa
+  ./bMEM/backwardMEM -l=$L ./tmp/T.fa P.fa > ./tmp/mems
+  ../bin/main ./tmp/mems ./tmp/e_lens ./tmp/edges $L $k $plen
+done <patterns
+

@@ -255,7 +255,7 @@ struct MEMs_Graph {
     
     myfile << dot;
     myfile.close();
-    if(system("neato -Tpng ./out/graph.dot -o ./out/graph.png") != 0) {
+    if(system("dot -Tpng ./out/graph.dot -o ./out/graph.png") != 0) {
 	cerr << "System call error" << endl;
     }
   }
@@ -393,7 +393,7 @@ int main(int argc, char* argv[]) {
 
   //Build MEMs Graph
   MEMs_Graph mg (MEMs, edges, plen, k, rank_BV, select_BV);
-  mg.save();
+  // mg.save();
   vector<vector<int> > paths = mg.visit();
   
   cout << "--- " << paths.size() << endl << endl;
