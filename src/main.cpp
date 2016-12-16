@@ -335,6 +335,9 @@ int main(int argc, char* argv[]) {
   chrono::time_point<chrono::system_clock> start, end;
   chrono::duration<double> elapsed_seconds;
 
+  ofstream myfile;
+  myfile.open("time_log");
+
   start = chrono::system_clock::now();
   // Input
   string mems_file = argv[1];
@@ -374,19 +377,19 @@ int main(int argc, char* argv[]) {
   end = chrono::system_clock::now();
   
   elapsed_seconds = end-start;
-  cout << "Parsing input: " << elapsed_seconds.count() << endl;
+  myfile << "Parsing input: " << elapsed_seconds.count() << "\n";
   //Build MEMs Graph
   start = chrono::system_clock::now();
   MEMs_Graph mg (MEMs, edges, plen, k, rank_BV, select_BV);
   end = chrono::system_clock::now();
   elapsed_seconds = end-start;
-  cout << "Building graph: " << elapsed_seconds.count() << endl;
+  myfile << "Building graph: " << elapsed_seconds.count() << "\n";
   // mg.save();
   start = chrono::system_clock::now();
   vector<vector<int> > paths = mg.visit();
   end = chrono::system_clock::now();
   elapsed_seconds = end-start;
-  cout << "Visiting  graph: " << elapsed_seconds.count() << endl;
+  myfile << "Visiting  graph: " << elapsed_seconds.count() << "\n";
 
   start = chrono::system_clock::now();
   //Format output
@@ -401,5 +404,6 @@ int main(int argc, char* argv[]) {
   }
   end = chrono::system_clock::now();
   elapsed_seconds = end-start;
-  cout << "Formatting output: " << elapsed_seconds.count() << endl;
+  myfile << "Formatting output: " << elapsed_seconds.count() << "\n\n";
+  myfile.close();
 }
