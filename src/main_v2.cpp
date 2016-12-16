@@ -4,6 +4,8 @@
 #include <vector>
 #include <algorithm>
 #include <stdlib.h>
+#include <chrono>
+#include <ctime>
 
 #include <sdsl/bit_vectors.hpp>
 #include "Snap.h"
@@ -96,9 +98,9 @@ struct MEMs_Graph {
 	    if(m1.p + m1.l != m2.p + m2.l) { //Se m1 e m2 non finiscono nello stesso punto sul pattern
 	      if(m1.t != m2.t && m1.t + m1.l != m2.t + m2.l) { //Se m1 e m2 non iniziano e finiscono negli stessi punti sul testo
 		if(rank_BV(m1.t - 1) == rank_BV(m2.t - 1)) { //Se m1 e m2 sono nello stesso nodo
-		  cout << "(1) Checking " << m1.toStr() << " -> " << m2.toStr() << endl;
+		  //cout << "(1) Checking " << m1.toStr() << " -> " << m2.toStr() << endl;
 		  if(m2.t > m1.t && m2.t < m1.t + m1.l + k && m1.t + m1.l != m2.t + m2.l) {
-		    cout << "\tLinking " << m1.toStr() << " to " << m2.toStr() << endl;
+		    //cout << "\tLinking " << m1.toStr() << " to " << m2.toStr() << endl;
 		    int m2_index = getId(m2);
 
 		    if(m2_index == -1) {
@@ -113,11 +115,11 @@ struct MEMs_Graph {
 		    int wp = m2.p - m1.p - m1.l;
 		    int w;
 		    if(wt<0 || wp<0) {
-		      cout << "1" << endl;
+		      //cout << "1" << endl;
 		      w = abs(wt - wp);
 		    }
 		    else {
-		      cout << "2" << endl;
+		      //cout << "2" << endl;
 		      w = max(wt, wp);
 		    }
 
@@ -125,11 +127,11 @@ struct MEMs_Graph {
 		  }
 		}
 		else { //Se m1 e m2 sono in due nodi differenti
-		  cout << "(2) Checking " << m1.toStr() << " -> " << m2.toStr() << endl;
+		  //cout << "(2) Checking " << m1.toStr() << " -> " << m2.toStr() << endl;
 		  vector<int> curr_edge { rank_BV(m1.t), rank_BV(m2.t) };
 		  if(find(edges.begin(), edges.end(), curr_edge) != edges.end()) {
 		    if(m1.t + m1.l >= select_BV(rank_BV(m1.t-1) + 1) - k && m2.t <= select_BV(rank_BV(m2.t-1)) + k) {
-		      cout << "\tLinking " << m1.toStr() << " to " << m2.toStr() << endl;
+		      //cout << "\tLinking " << m1.toStr() << " to " << m2.toStr() << endl;
 		      int m2_index = getId(m2);
 
 		      if(m2_index == -1) {
@@ -330,6 +332,13 @@ vector<vector<int > > extractEdges(const string fpath) {
 }
 
 int main(int argc, char* argv[]) {
+  chrono::time_point<chrono::system_clock> start, end;
+  chrono::duration<double> elapsed_seconds;
+
+  ofstream myfile;
+  myfile.open("time_log");
+
+  start = chrono::system_clock::now();
   // Input
   string mems_file = argv[1];
   string e_lens_file = argv[2];
@@ -365,22 +374,36 @@ int main(int argc, char* argv[]) {
 
   //Extracting MEMs from file
   vector<vector<MEM > > MEMs = extractMEMs(mems_file, plen);
-
+  end = chrono::system_clock::now();
+  
+  elapsed_seconds = end-start;
+  myfile << "Parsing input: " << elapsed_seconds.count() << "\n";
   //Build MEMs Graph
+  start = chrono::system_clock::now();
   MEMs_Graph mg (MEMs, edges, plen, k, rank_BV, select_BV);
+  end = chrono::system_clock::now();
+  elapsed_seconds = end-start;
+  myfile << "Building graph: " << elapsed_seconds.count() << "\n";
   // mg.save();
+  start = chrono::system_clock::now();
   vector<vector<int> > paths = mg.visit();
+  end = chrono::system_clock::now();
+  elapsed_seconds = end-start;
+  myfile << "Visiting  graph: " << elapsed_seconds.count() << "\n";
 
-  cout << "--- " << paths.size() << endl << endl;
-
+  start = chrono::system_clock::now();
   //Format output
   for(vector<int> path : paths) {
     unsigned int i = 0;
     while(i<path.size()-1) {
-      cout << mg.getNodeAttr(path[i]).toStr() << endl;
-      cout << mg.getEdgeAttr(path[i], path[i+1]) << endl;
+      mg.getNodeAttr(path[i]).toStr();
+      mg.getEdgeAttr(path[i], path[i+1]);
 
       i++;
     }
   }
+  end = chrono::system_clock::now();
+  elapsed_seconds = end-start;
+  myfile << "Formatting output: " << elapsed_seconds.count() << "\n\n";
+  myfile.close();
 }
