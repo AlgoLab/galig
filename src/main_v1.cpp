@@ -372,10 +372,12 @@ int main(int argc, char* argv[]) {
   bit_vector BV(tot_L, 0);
 
   int i = 0;
+  int exons_n = 0;
   BV[i] = 1;
   for(int l:e_lens) {
     i += l+1;
     BV[i] = 1;
+    exons_n++;
   }
 
   rrr_vector<> rrrb(BV);
@@ -383,14 +385,14 @@ int main(int argc, char* argv[]) {
   rrr_vector<>::select_1_type select_BV(&rrrb);
 
   //Extracting MEMs from file
-  vector<vector<MEM > > MEMs = extractMEMs(mems_file, plen);
+  vector<MEM> MEMs = extractMEMs(mems_file, plen);
   end = chrono::system_clock::now();
   
   elapsed_seconds = end-start;
   myfile << "Parsing input: " << elapsed_seconds.count() << "\n";
   //Build MEMs Graph
   start = chrono::system_clock::now();
-  MEMs_Graph mg (MEMs, edges, plen, k, rank_BV, select_BV);
+  MEMs_Graph mg (MEMs, edges, exons_n, plen, k, rank_BV, select_BV);
   end = chrono::system_clock::now();
   elapsed_seconds = end-start;
   myfile << "Building graph: " << elapsed_seconds.count() << "\n";
