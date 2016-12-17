@@ -1,0 +1,13 @@
+#include "MEM.hpp"
+
+Mem::Mem(int t, int p, int l) {
+  this->t = t;
+  this->p = p;
+  this->l = l;
+}
+
+std::string Mem::toStr() {
+  return "(" + std::to_string(t) + "," +
+    std::to_string(p) + "," +
+    std::to_string(l) + ")";
+}

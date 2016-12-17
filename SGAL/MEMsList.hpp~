@@ -1,0 +1,6 @@
+#ifndef MEMsList
+#define MEMsList
+
+class MEMsList {
+
+}
