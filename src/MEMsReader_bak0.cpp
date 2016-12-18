@@ -2,10 +2,12 @@
 #include "MEMsList.hpp"
 
 MemsReader::MemsReader(const std::string& fpath) {
-    memsFile.open(fpath);
+    this->fpath = fpath;
 }
 
 void MemsReader::addPattern(const std::string& pattern_id, const int& pattern_length, std::forward_list<std::vector<int> > MEMs) {
+    unsigned int UI_MemoryUsed = GetMemoryTotalPhys();
+    std::cout << UI_MemoryUsed << std::endl;
     MemsList ml (pattern_length);
     std::cout << "Adding pattern..." << std::endl;
     while(!MEMs.empty()) {
@@ -42,41 +44,29 @@ std::vector<int> MemsReader::extractMEM(std::string line) {
     return m;
 }
 
-int MemsReader::extractLength(std::string line) {
-    int l = 0;
-    std::string delimiter = "=";
-    size_t pos = 0;
-    std::string token;
-    while ((pos = line.find(delimiter)) != std::string::npos) {
-	line.erase(0, pos + delimiter.length());
-    }
-    l = stoi(line);
-    return l;
-}
-
-void MemsReader::readMEMsFile(const int& max) {
+void MemsReader::readMEMsFile() {
     patterns.clear();
     bool flag = false;
     std::string line;
     std::string pattern_id;
     int pattern_length;
     std::forward_list<std::vector<int> > MEMs;
+    std::ifstream memsFile(fpath);
     int i = 1;
     if (memsFile.is_open()) {
-	while(i<max && getline(memsFile,line)) {
+	while(getline(memsFile,line)) {
 	    if(line.length() != 0) {
 		if(line.at(0) == '#') {
 		    if(flag) {
+			std::cout << ++i << std::endl;
 			addPattern(pattern_id, pattern_length, MEMs);
 			std::cout << "-------------------" << std::endl;
-			i++;
 			MEMs.clear();
 			flag = false;
 		    }
 		    else {
 			if(line.substr(0,7).compare("# P.len") == 0) {
-			    pattern_length = extractLength(line);
-			    std::cout << "P Len: " << pattern_length << std::endl;
+			    pattern_length = stoi(line.substr(line.length()-2,line.length()));
 			}
 		    }
 		}
@@ -87,12 +77,12 @@ void MemsReader::readMEMsFile(const int& max) {
 		}
 		if(line.at(0) == '>') {
 		    pattern_id = line.substr(2, line.length());
-		    std::cout << "P_len" << pattern_id << std::endl;
+		    std::cout << pattern_id << std::endl;
 		    flag = true;
 		}
 	    }
 	}
-	//memsFile.close();
+	memsFile.close();
     }
     else {
 	std::cout << "Unable to open MEMs file" << std::endl;

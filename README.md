@@ -2,6 +2,8 @@
 
 A splicing graph aligner
 
+il Makefile non è aggiornato
+
 ```bash
 git clone git@github.com:AlgoLab/galig.git
 cd galig

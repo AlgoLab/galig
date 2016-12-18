@@ -42,18 +42,6 @@ std::vector<int> MemsReader::extractMEM(std::string line) {
     return m;
 }
 
-int MemsReader::extractLength(std::string line) {
-    int l = 0;
-    std::string delimiter = "=";
-    size_t pos = 0;
-    std::string token;
-    while ((pos = line.find(delimiter)) != std::string::npos) {
-	line.erase(0, pos + delimiter.length());
-    }
-    l = stoi(line);
-    return l;
-}
-
 void MemsReader::readMEMsFile(const int& max) {
     patterns.clear();
     bool flag = false;
@@ -75,8 +63,7 @@ void MemsReader::readMEMsFile(const int& max) {
 		    }
 		    else {
 			if(line.substr(0,7).compare("# P.len") == 0) {
-			    pattern_length = extractLength(line);
-			    std::cout << "P Len: " << pattern_length << std::endl;
+			    pattern_length = stoi(line.substr(line.length()-2,line.length()));
 			}
 		    }
 		}
@@ -87,7 +74,7 @@ void MemsReader::readMEMsFile(const int& max) {
 		}
 		if(line.at(0) == '>') {
 		    pattern_id = line.substr(2, line.length());
-		    std::cout << "P_len" << pattern_id << std::endl;
+		    std::cout << pattern_id << std::endl;
 		    flag = true;
 		}
 	    }
