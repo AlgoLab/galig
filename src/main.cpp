@@ -21,13 +21,12 @@ int main() {
     mr.readMEMsFile();
     //mr.print();
     ReferenceGraph g ("./example/in/e_lens", "./example/in/edges");
-    
+
     while(mr.hasPattern()) {
 	pair<string, MemsList> p = mr.popPattern();
 	cout << p.first << endl;
 	MemsGraph mg (g, p.second, 5);
-	mg.save();
-	//La visita produce un Segmentation fault (causata dai vector)
+	//mg.save();
 	mg.visit();
     }
     cout << "Ending." << endl;
