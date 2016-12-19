@@ -1,0 +1,20 @@
+digraph G {
+ graph [splines=true overlap=false]
+ node  [shape=ellipse, width=0.3, height=0.3]
+ 0 [label="Start"];
+ 1 [label="(5,1,4)"];
+ 2 [label="(10,5,6)"];
+ 3 [label="(5,3,4)"];
+ 4 [label="(17,11,6)"];
+ 5 [label="(2,9,3)"];
+ 6 [label="End"];
+ 0 -> 1 [label=" 0"];
+ 0 -> 3 [label=" 0"];
+ 0 -> 5 [label=" 0"];
+ 1 -> 2 [label=" 0"];
+ 2 -> 4 [label=" 0"];
+ 3 -> 2 [label=" 2"];
+ 3 -> 4 [label=" 4"];
+ 4 -> 6 [label=" 0"];
+ 5 -> 4 [label=" 4"];
+}

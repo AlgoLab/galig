@@ -49,13 +49,13 @@ MemsGraph::MemsGraph(ReferenceGraph &g, MemsList ml, const int& K) {
 		    Mem m2 = (*it2);
 		    if(m1.p + m1.l != m2.p + m2.l) {
 			if(m1.t != m2.t && m1.t + m1.l != m2.t + m2.l) {
-			    std::cout << m1.t-1 << " " << m2.t-1 << std::endl;
-			    std::cout << g.rank(m1.t - 1) << " " << g.rank(m2.t-1) << std::endl;
+			    //std::cout << m1.t-1 << " " << m2.t-1 << std::endl;
+			    //std::cout << g.rank(m1.t - 1) << " " << g.rank(m2.t-1) << std::endl;
 			    if(g.rank(m1.t - 1) == g.rank(m2.t - 1)) {
 				if(m2.t > m1.t && m2.t < m1.t + m1.l + K && m1.t + m1.l != m2.t + m2.l) {
 				    int m2_index = getNodeId(m2.toStr());
 				    if(m2_index == -1) {
-					std::cout << "1 Adding " << m2.toStr() << std::endl;
+					//std::cout << "1 Adding " << m2.toStr() << std::endl;
 					m2_index = nodes_index;
 					addNode(m2_index, m2.toStr());
 				    }
@@ -70,7 +70,7 @@ MemsGraph::MemsGraph(ReferenceGraph &g, MemsList ml, const int& K) {
 					w = max(wt, wp);
 				    }
 				    
-				    std::cout << "1 Adding " << m1.toStr() << " -> " << m2.toStr() << std::endl;
+				    //std::cout << "1 Adding " << m1.toStr() << " -> " << m2.toStr() << std::endl;
 				    addEdge(m1_index, m2_index, w);
 				}
 			    }
@@ -80,7 +80,7 @@ MemsGraph::MemsGraph(ReferenceGraph &g, MemsList ml, const int& K) {
 				    if(m1.t + m1.l >= g.select(g.rank(m1.t-1) + 1) - K && m2.t <= g.select(g.rank(m2.t-1)) + K) {
 					int m2_index = getNodeId(m2.toStr());
 					if(m2_index == -1) {
-					    std::cout << "2 Adding " << m2.toStr() << std::endl;
+					    //std::cout << "2 Adding " << m2.toStr() << std::endl;
 					    m2_index = nodes_index;
 					    addNode(m2_index, m2.toStr());
 					}
@@ -88,7 +88,7 @@ MemsGraph::MemsGraph(ReferenceGraph &g, MemsList ml, const int& K) {
 					int wp = abs(m2.p - m1.p - m1.l);
 					int w = max(wt, wp);
 				        addEdge(m1_index, m2_index, w);
-					std::cout << "2 Adding " << m1.toStr() << " -> " << m2.toStr() << std::endl;
+					//std::cout << "2 Adding " << m1.toStr() << " -> " << m2.toStr() << std::endl;
 				    }
 				}
 			    }
@@ -109,6 +109,8 @@ MemsGraph::MemsGraph(ReferenceGraph &g, MemsList ml, const int& K) {
 	    Graph->AddEdge(NI.GetId(), end_index, 0);
 	}
     }
+
+    subpaths = std::vector<std::vector<std::vector<int> > >(Graph->GetNodes(), { std::vector<std::vector<int> > { std::vector<int> { } } });
 }
 
 std::vector<std::vector<int> > MemsGraph::visit() {
@@ -117,7 +119,6 @@ std::vector<std::vector<int> > MemsGraph::visit() {
 
 std::vector<std::vector<int> > MemsGraph::rec_visit(const TNodeEDatNet<TInt, TInt>::TNodeI node) {
     int node_id = node.GetId();
-    
     if(subpaths[node_id][0].size() != 0) {
 	return subpaths[node_id];
     }
@@ -128,13 +129,11 @@ std::vector<std::vector<int> > MemsGraph::rec_visit(const TNodeEDatNet<TInt, TIn
 	subpaths.at(node_id) = starting_paths;
 	return starting_paths;
     }
-
     int i = 0;
     std::vector<std::vector<int> > paths;
     while(i < out) {
 	int child_id = node.GetOutNId(i);
 	i++;
-
 	TNodeEDatNet<TInt, TInt>::TNodeI child = Graph->GetNI(child_id);
 	std::vector<std::vector<int> > starting_paths = rec_visit(child);
 

@@ -26,9 +26,9 @@ int main() {
 	pair<string, MemsList> p = mr.popPattern();
 	cout << p.first << endl;
 	MemsGraph mg (g, p.second, 5);
-	//mg.save();
+	mg.save();
 	//La visita produce un Segmentation fault (causata dai vector)
-	//mg.visit();
+	mg.visit();
     }
     cout << "Ending." << endl;
 }
