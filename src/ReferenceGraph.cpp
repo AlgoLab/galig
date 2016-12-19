@@ -15,7 +15,7 @@ std::vector<int> ReferenceGraph::extractEdge(std::string line) {
     return edge;
 }
 
-std::vector<int> ReferenceGraph::extractExonsLengths(const string& fpath) {
+std::vector<int> ReferenceGraph::extractExonsLengths(const std::string& fpath) {
     std::vector<int> e_lens;
     std::string line;
     std::ifstream memsFile(fpath);
@@ -62,13 +62,27 @@ void ReferenceGraph::setupBitVector(const std::string& fpath) {
 	BV[i] = 1;
     }
 
-    for(unsigned int i=0; i<BV.size(); ++i) {
-	std::cout << BV[i];
-    }
-
-    std::cout << std::endl;
+    
     
     bitVector = sdsl::rrr_vector<>(BV);
+    for(unsigned int i=0; i<bitVector.size(); ++i) {
+	std::cout << bitVector[i];
+    }
+    std::cout << std::endl;
+    select_BV = sdsl::rrr_vector<>::select_1_type(&bitVector);
+    rank_BV = sdsl::rrr_vector<>::rank_1_type(&bitVector);
+}
+
+int ReferenceGraph::rank(const int& i) {
+    return rank_BV(i);
+}
+
+int ReferenceGraph::select(const int& i) {
+    return select_BV(i);
+}
+
+bool ReferenceGraph::contain(std::vector<int> edge) {
+    return std::find(edges.begin(), edges.end(), edge) != edges.end();
 }
 
 ReferenceGraph::ReferenceGraph(const std::string& exons_file_path, const std::string& edges_file_path) {

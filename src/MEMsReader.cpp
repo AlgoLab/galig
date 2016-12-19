@@ -74,12 +74,18 @@ void MemsReader::readMEMsFile() {
 	    if(line.length() != 0) {
 		if(line.at(0) == '#') {
 		    if(flag) {
-			//std::cout << "3" << std::endl;
-			addPattern(pattern_id, pattern_length, MEMs);
-			i++;
-			std::cout << "Pattern " << i << std::endl;
-			MEMs.clear();
-			flag = false;
+			if(MEMs.empty()) {
+			    MEMs.clear();
+			    flag = false;
+			}
+			else {
+			    //std::cout << "3" << std::endl;
+			    addPattern(pattern_id, pattern_length, MEMs);
+			    i++;
+			    std::cout << "Pattern " << i << std::endl;
+			    MEMs.clear();
+			    flag = false;
+			}
 		    }
 		    else {
 			if(line.substr(0,7).compare("# P.len") == 0) {

@@ -43,10 +43,10 @@ clean-snap:
 .PHONY: sdsl
 sdsl: folders $(LOC_DIR)/include/divsufsort64.h
 
-SDSL_NAME:=sdsl
+SDSL_NAME:=sdsl-lite
 $(LOC_DIR)/include/divsufsort64.h:
 	@echo "* SDSL-lite Lirary" ;	\
-	git clone https://github.com/simongog/sdsl.git;	\
+	git clone https://github.com/simongog/sdsl-lite.git;	\
 	if [ -d $(SDSL_NAME)/ ]; then	\
 		cd $(SDSL_NAME)/ &&	\
 		./install.sh $(LOC_DIR)/;	\

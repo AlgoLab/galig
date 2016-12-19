@@ -1,1 +1,0 @@
-MemsGraph(MemsList* mem, const std::string& exons_file_path, const std::string& edges_file_path, const int& K);
