@@ -1,5 +1,0 @@
-#!/bin/sh
-
-\time -o 'TGGT1_294550_5_1' ./run ~/Toxoplasma/data/ToxoDB-29_TgondiiGT1/ToxoDB-29_TgondiiGT1_Genome.fasta ~/Toxoplasma/data/TGONDII_genes_flank200/TGGT1_294550/TGGT1_294550.gff ~/Toxoplasma/data/TGONDII_genes_flank200/TGGT1_294550/TGGT1_294550.fa 5 1
-\time -o 'TGGT1_294550_5_3' ./run ~/Toxoplasma/data/ToxoDB-29_TgondiiGT1/ToxoDB-29_TgondiiGT1_Genome.fasta ~/Toxoplasma/data/TGONDII_genes_flank200/TGGT1_294550/TGGT1_294550.gff ~/Toxoplasma/data/TGONDII_genes_flank200/TGGT1_294550/TGGT1_294550.fa 5 3
-\time -o 'TGGT1_294550_5_5' ./run ~/Toxoplasma/data/ToxoDB-29_TgondiiGT1/ToxoDB-29_TgondiiGT1_Genome.fasta ~/Toxoplasma/data/TGONDII_genes_flank200/TGGT1_294550/TGGT1_294550.gff ~/Toxoplasma/data/TGONDII_genes_flank200/TGGT1_294550/TGGT1_294550.fa 5 5

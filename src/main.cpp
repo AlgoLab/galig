@@ -1,4 +1,4 @@
-/**
+/**x
    type* name; -> pointer declaration
    type& name; -> reference declaration
 
@@ -9,22 +9,22 @@
 #include <iostream>
 
 #include "MEMsReader.hpp"
+#include "ReferenceGraph.hpp"
 
 using namespace std;
 
-int main(int argc, char* argv[]) {
-    if(argc == 1) {
-	MemsReader mr = MemsReader("./example/tmp/mems");
-	mr.readMEMsFile(70);
-	//cout << "end" << endl;
-	mr.print();
-    }
+//int main(int argc, char* argv[]) {
+int main() {
+    cout << "Starting..." << endl;
+    MemsReader mr = MemsReader("./example/in/mems");
+    mr.readMEMsFile();
+    //mr.print();
+    ReferenceGraph g ("./example/in/e_lens", "./example/in/edges");
     /**
-    if(argc == 3) {
-	cout << "Starting..." << endl;
-	MemsReader mr = MemsReader(argv[1]);
-	mr.readMEMsFile(stoi(argv[2]));
-	mr.print();
+    if(mr.hasPattern()) {
+	pair<string, MemsList> p = mr.popPattern();
+	cout << p.first << endl;
     }
     **/
+    cout << "Ending." << endl;
 }

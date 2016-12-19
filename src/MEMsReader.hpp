@@ -1,11 +1,7 @@
 //=================================
 // include guard
-#ifndef MEMsReader
-#define MEMsReader
-
-//=================================
-// forward declared dependencies
-class MemsList;
+#ifndef _MEMSREADER_HPP_
+#define _MEMSREADER_HPP_
 
 //=================================
 // included dependencies
@@ -26,8 +22,10 @@ private:
 public:
   MemsReader(const std::string& fpath);
     void addPattern(const std::string& pattern_id, const int& pattern_length, std::forward_list<std::vector<int> > MEMs);
-    void readMEMsFile(const int& max);
+    void readMEMsFile();
     void print();
+    bool hasPattern();
+    std::pair<std::string, MemsList> popPattern();
 };
 
 #endif

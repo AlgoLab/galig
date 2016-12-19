@@ -1,7 +1,7 @@
 //=================================
 // include guard
-#ifndef MEMsList
-#define MEMsList
+#ifndef _MEMSLIST_HPP_
+#define _MEMSLIST_HPP_
 
 //=================================
 // forward declared dependencies

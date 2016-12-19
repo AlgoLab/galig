@@ -7,23 +7,28 @@ MemsReader::MemsReader(const std::string& fpath) {
 
 void MemsReader::addPattern(const std::string& pattern_id, const int& pattern_length, std::forward_list<std::vector<int> > MEMs) {
     MemsList ml (pattern_length);
-    std::cout << "Adding pattern..." << std::endl;
+    /**
     while(!MEMs.empty()) {
 	std::vector<int> m = MEMs.front();	
 	MEMs.pop_front();
 	ml.addMem(m[0], m[1], m[2]);
     }
-    /**
+    **/
     for(std::forward_list<std::vector<int> >::iterator it=MEMs.begin(); it != MEMs.end(); ++it) {
-	std::cout << "0" << std::endl;
 	std::vector<int> m = (*it);
 	ml.addMem(m[0], m[1], m[2]);
     }
-    **/
-    std::cout << "Making pair..." << std::endl;
     std::pair<std::string, MemsList&> p (pattern_id, ml);
-    std::cout << "Pushing..." << std::endl;
     patterns.push_front(p);
+}
+
+bool MemsReader::hasPattern() {
+    return !patterns.empty();
+}
+std::pair<std::string, MemsList> MemsReader::popPattern() {
+    std::pair<std::string, MemsList> p = patterns.front();
+    patterns.pop_front();
+    return p;
 }
 
 std::vector<int> MemsReader::extractMEM(std::string line) {
@@ -54,45 +59,50 @@ int MemsReader::extractLength(std::string line) {
     return l;
 }
 
-void MemsReader::readMEMsFile(const int& max) {
+void MemsReader::readMEMsFile() {
+    std::cout << "Reading patterns..." << std::endl;
     patterns.clear();
+    const int& max = 1000000;
     bool flag = false;
     std::string line;
     std::string pattern_id;
     int pattern_length;
     std::forward_list<std::vector<int> > MEMs;
-    int i = 1;
+    int i = 0;
     if (memsFile.is_open()) {
 	while(i<max && getline(memsFile,line)) {
 	    if(line.length() != 0) {
 		if(line.at(0) == '#') {
 		    if(flag) {
+			//std::cout << "3" << std::endl;
 			addPattern(pattern_id, pattern_length, MEMs);
-			std::cout << "-------------------" << std::endl;
 			i++;
+			std::cout << "Pattern " << i << std::endl;
 			MEMs.clear();
 			flag = false;
 		    }
 		    else {
 			if(line.substr(0,7).compare("# P.len") == 0) {
+			    //std::cout << "1" << std::endl;
 			    pattern_length = extractLength(line);
-			    std::cout << "P Len: " << pattern_length << std::endl;
 			}
 		    }
 		}
 		if(flag) {
-		    std::cout << line << std::endl;
 		    std::vector<int> mem = extractMEM(line);
 		    MEMs.push_front(mem);
 		}
 		if(line.at(0) == '>') {
+		    //std::cout << "2" << std::endl;
 		    pattern_id = line.substr(2, line.length());
-		    std::cout << "P_len" << pattern_id << std::endl;
 		    flag = true;
 		}
 	    }
 	}
-	//memsFile.close();
+	if(memsFile.eof()) {
+	    std::cout << "All patterns read" << std::endl;
+	    memsFile.close();
+	}
     }
     else {
 	std::cout << "Unable to open MEMs file" << std::endl;
@@ -100,6 +110,7 @@ void MemsReader::readMEMsFile(const int& max) {
 }
 
 void MemsReader::print() {
+    std::cout << "Printing patterns..." << std::endl;
     for(std::forward_list<std::pair<std::string, MemsList> >::iterator it=patterns.begin(); it != patterns.end(); ++it) {
 	std::pair<std::string, MemsList> pattern = (*it);
 	std::cout << pattern.first << std::endl;

@@ -47,6 +47,9 @@ PROGRAMS:=main
 
 # analyzegraph SNAP library
 OBJS_main = \
+	MEMsList.o \
+	MEMsReader.o \
+	ReferenceGraph.o \
         main.o
 LIBS_main= $(LIBS) $(LOC_DIR)/include/snap-core/Snap.o -lrt -lsdsl -ldivsufsort -ldivsufsort64
 
@@ -65,7 +68,6 @@ all: $(addprefix $(BIN_DIR)/, $(PROGRAMS))
 #
 # END Additional dependencies
 ######
-
 
 # Build the pre-requisites
 .PHONY: prerequisites
