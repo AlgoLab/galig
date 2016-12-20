@@ -82,7 +82,7 @@ int ReferenceGraph::select(const int& i) {
 }
 
 bool ReferenceGraph::contain(std::vector<int> edge) {
-    if(edges[edge[0]][edge[1]] == 1) {
+    if(edges[edge[0]-1][edge[1]-1] == 1) {
 	return true;
     } else {
 	return false;

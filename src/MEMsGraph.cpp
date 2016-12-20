@@ -38,14 +38,9 @@ MemsGraph::MemsGraph(ReferenceGraph& g, MemsList& ml, const int& K) {
     addNode(0, "Start");
     int curr_p = 1;
     int plen = ml.getLength();
-    std::cout << "Start " << plen << std::endl;
-    int c_currp = 0;
     while(curr_p < plen) {
-	std::cout << "Primo ciclo: " << ++c_currp << std::endl;
 	std::forward_list<Mem> mems1 = ml.getMems(curr_p);
-	int secc = 0;
 	for(auto it1=mems1.begin(); it1!=mems1.end(); ++it1) {
-	    std::cout << "Secondo ciclo: " << ++secc << std::endl;
 	    Mem m1 = (*it1);
 	    int m1_index = getNodeId(m1.toStr());
 	    if(m1_index == -1) {
@@ -60,8 +55,6 @@ MemsGraph::MemsGraph(ReferenceGraph& g, MemsList& ml, const int& K) {
 		    Mem m2 = (*it2);
 		    if(m1.p + m1.l != m2.p + m2.l) {
 			if(m1.t != m2.t && m1.t + m1.l != m2.t + m2.l) {
-			    //std::cout << m1.t-1 << " " << m2.t-1 << std::endl;
-			    //std::cout << g.rank(m1.t - 1) << " " << g.rank(m2.t-1) << std::endl;
 			    if(g.rank(m1.t - 1) == g.rank(m2.t - 1)) {
 				if(m2.t > m1.t && m2.t < m1.t + m1.l + K && m1.t + m1.l != m2.t + m2.l) {
 				    int m2_index = getNodeId(m2.toStr());
@@ -117,7 +110,6 @@ MemsGraph::MemsGraph(ReferenceGraph& g, MemsList& ml, const int& K) {
 	    Graph->AddEdge(NI.GetId(), end_index, 0);
 	}
     }
-    std::cout << "Esco e vado..." << std::endl;
     subpaths = std::vector<std::vector<std::vector<int> > >(Graph->GetNodes(), { std::vector<std::vector<int> > { std::vector<int> { } } });
 }
 
