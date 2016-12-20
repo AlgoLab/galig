@@ -13,19 +13,18 @@ TStr MemsGraph::toTStr(const std::string& s) {
 }
 
 int MemsGraph::getNodeId(const std::string& mem) {
-    int node_index = -1;
-    for (TNodeEDatNet<TInt, TInt>::TNodeI NI = Graph->BegNI(); NI < Graph->EndNI(); NI++) {
-	if(labels.GetDat(labels.GetKey(labels.GetKeyId(NI.GetId()))).EqI(toTStr(mem))) {
-	    node_index = NI.GetId();
-	    break;
-	}
+    int index;
+    try {
+	index = MEMsToIndex.at(mem);
+    } catch (const std::out_of_range& oor) {
+	index = -1;
     }
-    return node_index;
+    return index;
 }
 
 void MemsGraph::addNode(const int& exon_index, const std::string& label) {
+    MEMsToIndex.insert({label, nodes_index});
     Graph->AddNode(nodes_index, exon_index);
-    labels.AddDat(nodes_index, toTStr(label));
     nodes_index++;
 }
 
@@ -44,9 +43,9 @@ MemsGraph::MemsGraph(ReferenceGraph& g, MemsList& ml, const int& K) {
 	    Mem m1 = (*it1);
 	    int m1_index = getNodeId(m1.toStr());
 	    if(m1_index == -1) {
-		m1_index = nodes_index;
-		addNode(m1_index, m1.toStr());
-		addEdge(0, m1_index, 0);
+	    	m1_index = nodes_index;
+	     	addNode(m1_index, m1.toStr());
+	    	addEdge(0, m1_index, 0);
 	    }
 	    int i = m1.p + 1;
 	    while(i < plen && i < m1.p + m1.l + K) {
@@ -59,18 +58,18 @@ MemsGraph::MemsGraph(ReferenceGraph& g, MemsList& ml, const int& K) {
 				if(m2.t > m1.t && m2.t < m1.t + m1.l + K && m1.t + m1.l != m2.t + m2.l) {
 				    int m2_index = getNodeId(m2.toStr());
 				    if(m2_index == -1) {
-					//std::cout << "1 Adding " << m2.toStr() << std::endl;
-					m2_index = nodes_index;
-					addNode(m2_index, m2.toStr());
+				    	//std::cout << "1 Adding " << m2.toStr() << std::endl;
+				    	m2_index = nodes_index;
+				    	addNode(m2_index, m2.toStr());
 				    }
 				    int wt = m2.t - m1.t - m1.l;
 				    int wp = m2.p - m1.p - m1.l;
 				    int w;
 				    if(wt<0 || wp<0) {
-					w = abs(wt - wp);
+				    	w = abs(wt - wp);
 				    }
 				    else {
-					w = max(wt, wp);
+				    	w = max(wt, wp);
 				    }
 				    //std::cout << "1 Adding " << m1.toStr() << " -> " << m2.toStr() << std::endl;
 				    addEdge(m1_index, m2_index, w);
@@ -106,9 +105,9 @@ MemsGraph::MemsGraph(ReferenceGraph& g, MemsList& ml, const int& K) {
     int end_index = nodes_index;
     addNode(0, "End");
     for(TNodeEDatNet<TInt, TInt>::TNodeI NI = Graph->BegNI(); NI < Graph->EndNI(); NI++) {
-	if(NI.GetOutDeg() == 0 && NI.GetId() != end_index) {
-	    Graph->AddEdge(NI.GetId(), end_index, 0);
-	}
+    	if(NI.GetOutDeg() == 0 && NI.GetId() != end_index) {
+    	    Graph->AddEdge(NI.GetId(), end_index, 0);
+    	}
     }
     subpaths = std::vector<std::vector<std::vector<int> > >(Graph->GetNodes(), { std::vector<std::vector<int> > { std::vector<int> { } } });
 }
@@ -153,7 +152,7 @@ void MemsGraph::saveOutput(std::ostream& os) {
     }
 }
 
-void MemsGraph::saveImage(const std::string& patt) {
+/** void MemsGraph::saveImage(const std::string& patt) {
     std::ofstream myfile;
     myfile.open(patt + ".dot");
     
@@ -173,4 +172,4 @@ void MemsGraph::saveImage(const std::string& patt) {
     if(system(("dot -Tpng ./" + patt + ".dot -o ./" + patt + ".png").c_str()) != 0) {
 	std::cerr << "System call error" << std::endl;
     }
-}
+} **/
