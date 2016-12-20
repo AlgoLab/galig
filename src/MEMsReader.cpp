@@ -82,7 +82,7 @@ void MemsReader::readMEMsFile() {
 			    //std::cout << "3" << std::endl;
 			    addPattern(pattern_id, pattern_length, MEMs);
 			    i++;
-			    std::cout << "Pattern " << i << std::endl;
+			    //std::cout << "Pattern " << i << std::endl;
 			    MEMs.clear();
 			    flag = false;
 			}
