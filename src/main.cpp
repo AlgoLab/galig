@@ -14,13 +14,13 @@
 
 using namespace std;
 
-//int main(int argc, char* argv[]) {
-int main() {
+int main(int argc, char* argv[]) {
+    string path = argv[1];
     cout << "Starting..." << endl;
-    MemsReader mr = MemsReader("./example/in/mems");
+    MemsReader mr = MemsReader(path + "mems");
     mr.readMEMsFile();
     //mr.print();
-    ReferenceGraph g ("./example/in/e_lens", "./example/in/edges");
+    ReferenceGraph g (path + "e_lens", path + "edges");
 
     while(mr.hasPattern()) {
 	pair<string, MemsList> p = mr.popPattern();
