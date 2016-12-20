@@ -15,17 +15,21 @@
 using namespace std;
 
 int main(int argc, char* argv[]) {
-    string path = argv[1];
+    string mems = argv[1];
+    string e_lens = argv[2];
+    string edges = argv[3];
+    int K = atoi(argv[4]);
+    
     cout << "Starting..." << endl;
-    MemsReader mr = MemsReader(path + "mems");
+    MemsReader mr = MemsReader(mems);
     mr.readMEMsFile();
     //mr.print();
-    ReferenceGraph g (path + "e_lens", path + "edges");
+    ReferenceGraph g (e_lens, edges);
 
     while(mr.hasPattern()) {
 	pair<string, MemsList> p = mr.popPattern();
 	cout << p.first << endl;
-	MemsGraph mg (g, p.second, 5);
+	MemsGraph mg (g, p.second, K);
 	//mg.save();
 	mg.visit();
     }
