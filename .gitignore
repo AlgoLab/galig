@@ -2,6 +2,7 @@ bin/
 obj/
 local/
 tmp/
+out/
 
 # Compiled Object files
 *.slo

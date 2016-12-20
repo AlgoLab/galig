@@ -1,5 +1,13 @@
 #include "MEMsGraph.hpp"
 
+std::ostream& operator<<(std::ostream& os, const std::vector<int>& vect) {
+    for(int i : vect) {
+	os << i << " ";
+    }
+    os << "\n";
+    return os;
+}
+
 TStr MemsGraph::toTStr(const std::string& s) {
   return TStr(s.c_str());
 }
@@ -113,8 +121,8 @@ MemsGraph::MemsGraph(ReferenceGraph &g, MemsList ml, const int& K) {
     subpaths = std::vector<std::vector<std::vector<int> > >(Graph->GetNodes(), { std::vector<std::vector<int> > { std::vector<int> { } } });
 }
 
-std::vector<std::vector<int> > MemsGraph::visit() {
-    return rec_visit(Graph->BegNI());
+void MemsGraph::visit() {
+    paths = rec_visit(Graph->BegNI());
 }
 
 std::vector<std::vector<int> > MemsGraph::rec_visit(const TNodeEDatNet<TInt, TInt>::TNodeI node) {
@@ -147,10 +155,15 @@ std::vector<std::vector<int> > MemsGraph::rec_visit(const TNodeEDatNet<TInt, TIn
     return paths;
 }
 
+void MemsGraph::saveOutput(std::ostream& os) {
+    for(std::vector<int> path : paths) {
+	os << path;
+    }
+}
 
-void MemsGraph::save() {
+void MemsGraph::saveImage(const std::string& patt) {
     std::ofstream myfile;
-    myfile.open("./graph.dot");
+    myfile.open(patt + ".dot");
     
     std::string dot = "digraph G {\n graph [splines=true overlap=false]\n node  [shape=ellipse, width=0.3, height=0.3]\n";
     
@@ -165,7 +178,7 @@ void MemsGraph::save() {
     
     myfile << dot;
     myfile.close();
-    if(system("dot -Tpng ./graph.dot -o ./graph.png") != 0) {
+    if(system(("dot -Tpng ./" + patt + ".dot -o ./" + patt + ".png").c_str()) != 0) {
 	std::cerr << "System call error" << std::endl;
     }
 }

@@ -7,6 +7,7 @@
    **/
 
 #include <iostream>
+#include <fstream>
 
 #include "MEMsReader.hpp"
 #include "ReferenceGraph.hpp"
@@ -26,12 +27,18 @@ int main(int argc, char* argv[]) {
     //mr.print();
     ReferenceGraph g (e_lens, edges);
 
+    ofstream outFile;
+    outFile.open("./out/output");
+    
     while(mr.hasPattern()) {
 	pair<string, MemsList> p = mr.popPattern();
-	cout << p.first << endl;
+        outFile << p.first << "\n";
 	MemsGraph mg (g, p.second, K);
-	//mg.save();
+	//mg.saveImage("./out/" + p.first);
 	mg.visit();
+	mg.saveOutput(outFile);
+	outFile << "\n-------------------------------------------------------\n";
     }
+    outFile.close();
     cout << "Ending." << endl;
 }

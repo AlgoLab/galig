@@ -9,6 +9,9 @@ K=$5
 rm -rf ./tmp/
 mkdir -p ./tmp/
 
+rm -rf ./out/
+mkdir -p ./out/
+
 python3 ./scripts/prepareInput.py $genomic $annotation
 ./bMEM/backwardMEM -l=$L ./tmp/T.fa $rnaseqs &> ./tmp/mems
 rm ./stopwatch.txt

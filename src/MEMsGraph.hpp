@@ -16,6 +16,7 @@ private:
     TPt<TNodeEDatNet<TInt, TInt> > Graph;
     TIntStrH labels;
     std::vector<std::vector<std::vector<int> > > subpaths;
+    std::vector<std::vector<int> > paths;
 
     TStr toTStr(const std::string& s);
     void addNode(const int& exon_index, const std::string& label);
@@ -24,8 +25,9 @@ private:
     std::vector<std::vector<int> > rec_visit(const TNodeEDatNet<TInt, TInt>::TNodeI node);
 public:
     MemsGraph(ReferenceGraph &g, MemsList ml, const int& K);
-    void save();
-    std::vector<std::vector<int> > visit();
+    void saveImage(const std::string& patt);
+    void saveOutput(std::ostream& os);
+    void visit();
 };
 
 #endif
