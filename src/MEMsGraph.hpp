@@ -24,7 +24,7 @@ private:
     int getNodeId(const std::string& mem);
     std::vector<std::vector<int> > rec_visit(const TNodeEDatNet<TInt, TInt>::TNodeI node);
 public:
-    MemsGraph(ReferenceGraph &g, MemsList ml, const int& K);
+    MemsGraph(ReferenceGraph &g, MemsList& ml, const int& K);
     void saveImage(const std::string& patt);
     void saveOutput(std::ostream& os);
     void visit();

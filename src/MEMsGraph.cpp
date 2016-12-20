@@ -33,15 +33,19 @@ void MemsGraph::addEdge(const int& exon_index_1, const int& exon_index_2, const 
     Graph->AddEdge(exon_index_1, exon_index_2, w);
 }
 
-MemsGraph::MemsGraph(ReferenceGraph &g, MemsList ml, const int& K) {
+MemsGraph::MemsGraph(ReferenceGraph& g, MemsList& ml, const int& K) {
     Graph = TNodeEDatNet<TInt, TInt>::New();
     addNode(0, "Start");
-    
     int curr_p = 1;
     int plen = ml.getLength();
+    std::cout << "Start " << plen << std::endl;
+    int c_currp = 0;
     while(curr_p < plen) {
-        std::forward_list<Mem> mems1 = ml.getMems(curr_p);
+	std::cout << "Primo ciclo: " << ++c_currp << std::endl;
+	std::forward_list<Mem> mems1 = ml.getMems(curr_p);
+	int secc = 0;
 	for(auto it1=mems1.begin(); it1!=mems1.end(); ++it1) {
+	    std::cout << "Secondo ciclo: " << ++secc << std::endl;
 	    Mem m1 = (*it1);
 	    int m1_index = getNodeId(m1.toStr());
 	    if(m1_index == -1) {
@@ -49,7 +53,6 @@ MemsGraph::MemsGraph(ReferenceGraph &g, MemsList ml, const int& K) {
 		addNode(m1_index, m1.toStr());
 		addEdge(0, m1_index, 0);
 	    }
-
 	    int i = m1.p + 1;
 	    while(i < plen && i < m1.p + m1.l + K) {
 		std::forward_list<Mem> mems2 = ml.getMems(i);
@@ -67,7 +70,6 @@ MemsGraph::MemsGraph(ReferenceGraph &g, MemsList ml, const int& K) {
 					m2_index = nodes_index;
 					addNode(m2_index, m2.toStr());
 				    }
-				    
 				    int wt = m2.t - m1.t - m1.l;
 				    int wp = m2.p - m1.p - m1.l;
 				    int w;
@@ -77,12 +79,10 @@ MemsGraph::MemsGraph(ReferenceGraph &g, MemsList ml, const int& K) {
 				    else {
 					w = max(wt, wp);
 				    }
-				    
 				    //std::cout << "1 Adding " << m1.toStr() << " -> " << m2.toStr() << std::endl;
 				    addEdge(m1_index, m2_index, w);
 				}
-			    }
-			    else {
+			    } else {
 				std::vector<int> curr_edge { g.rank(m1.t-1), g.rank(m2.t-1) };
 				if(g.contain(curr_edge)) {
 				    if(m1.t + m1.l >= g.select(g.rank(m1.t-1) + 1) - K && m2.t <= g.select(g.rank(m2.t-1)) + K) {
@@ -95,7 +95,7 @@ MemsGraph::MemsGraph(ReferenceGraph &g, MemsList ml, const int& K) {
 					int wt = (g.select(g.rank(m1.t-1) + 1) - m1.t - m1.l) + (m2.t - g.select(g.rank(m2.t-1)) - 1);
 					int wp = abs(m2.p - m1.p - m1.l);
 					int w = max(wt, wp);
-				        addEdge(m1_index, m2_index, w);
+					addEdge(m1_index, m2_index, w);
 					//std::cout << "2 Adding " << m1.toStr() << " -> " << m2.toStr() << std::endl;
 				    }
 				}
@@ -117,7 +117,7 @@ MemsGraph::MemsGraph(ReferenceGraph &g, MemsList ml, const int& K) {
 	    Graph->AddEdge(NI.GetId(), end_index, 0);
 	}
     }
-
+    std::cout << "Esco e vado..." << std::endl;
     subpaths = std::vector<std::vector<std::vector<int> > >(Graph->GetNodes(), { std::vector<std::vector<int> > { std::vector<int> { } } });
 }
 

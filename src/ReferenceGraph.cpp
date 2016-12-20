@@ -31,13 +31,17 @@ std::vector<int> ReferenceGraph::extractExonsLengths(const std::string& fpath) {
     return e_lens;
 }
 
-void ReferenceGraph::setupEdges(const std::string& fpath) {
+void ReferenceGraph::setupEdges(const std::string& fpath, int nex) {
     std::string line;
+    edges.resize(nex);
+    for(int i = 0; i < nex; i++) {
+	edges[i] = std::vector< int>(nex, 0);
+    }
     std::ifstream edgesFile(fpath);
     if (edgesFile.is_open()) {
 	while(getline(edgesFile,line)) {
 	    std::vector<int> edge = extractEdge(line);
-	    edges.push_back(edge);
+	    edges[edge[0]][edge[1]] = 1;
 	}
 	edgesFile.close();
     }
@@ -46,24 +50,19 @@ void ReferenceGraph::setupEdges(const std::string& fpath) {
     }
 }
 
-void ReferenceGraph::setupBitVector(const std::string& fpath) {
+int ReferenceGraph::setupBitVector(const std::string& fpath) {
     std::vector<int> e_lens = extractExonsLengths(fpath);
     int tot_L = 1;
     for(int l:e_lens) {
 	tot_L += l+1;
     }
-    
     sdsl::bit_vector BV (tot_L, 0);
-    
     int i = 0;
     BV[i] = 1;
     for(int l:e_lens) {
 	i += l+1;
 	BV[i] = 1;
     }
-
-    
-    
     bitVector = sdsl::rrr_vector<>(BV);
     //for(unsigned int i=0; i<bitVector.size(); ++i) {
     //std::cout << bitVector[i];
@@ -71,6 +70,7 @@ void ReferenceGraph::setupBitVector(const std::string& fpath) {
     std::cout << std::endl;
     select_BV = sdsl::rrr_vector<>::select_1_type(&bitVector);
     rank_BV = sdsl::rrr_vector<>::rank_1_type(&bitVector);
+    return e_lens.size();
 }
 
 int ReferenceGraph::rank(const int& i) {
@@ -82,16 +82,18 @@ int ReferenceGraph::select(const int& i) {
 }
 
 bool ReferenceGraph::contain(std::vector<int> edge) {
-    return std::find(edges.begin(), edges.end(), edge) != edges.end();
+    if(edges[edge[0]][edge[1]] == 1) {
+	return true;
+    } else {
+	return false;
+    }
 }
 
 ReferenceGraph::ReferenceGraph(const std::string& exons_file_path, const std::string& edges_file_path) {
+    int nex = setupBitVector(exons_file_path);
     //Extracting edges from file
-    setupEdges(edges_file_path);
+    setupEdges(edges_file_path, nex);
     //for(std::vector<int> e : edges) {
     //std::cout << e[0] << " -> " << e[1] << std::endl;
     //}
-
-    setupBitVector(exons_file_path);
-    
 }

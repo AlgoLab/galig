@@ -12,15 +12,15 @@
 
 class ReferenceGraph {
 private:
-    std::vector<std::vector<int> > edges;
+    std::vector< std::vector< int > > edges;
     sdsl::rrr_vector<> bitVector;
     sdsl::rrr_vector<>::select_1_type select_BV;
     sdsl::rrr_vector<>::rank_1_type rank_BV;
     
     std::vector<int> extractEdge(std::string line);
     std::vector<int> extractExonsLengths(const std::string& fpath);
-    void setupEdges(const std::string& fpath);
-    void setupBitVector(const std::string& fpath);
+    void setupEdges(const std::string& fpath, int nex);
+    int setupBitVector(const std::string& fpath);
 public:
     ReferenceGraph(const std::string& exons_file_path, const std::string& edges_file_path);
     int rank(const int& i);
