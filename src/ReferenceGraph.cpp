@@ -33,8 +33,8 @@ std::vector<int> ReferenceGraph::extractExonsLengths(const std::string& fpath) {
 
 void ReferenceGraph::setupEdges(const std::string& fpath, int nex) {
     std::string line;
-    edges.resize(nex);
-    for(int i = 0; i < nex; i++) {
+    edges.resize(nex+1);
+    for(int i = 0; i <= nex; i++) {
 	edges[i] = std::vector< int>(nex, 0);
     }
     std::ifstream edgesFile(fpath);

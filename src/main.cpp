@@ -20,6 +20,7 @@ int main(int argc, char* argv[]) {
     string e_lens = argv[2];
     string edges = argv[3];
     int K = atoi(argv[4]);
+    string out_file = argv[5];
 
     cout << "Starting..." << endl;
     MemsReader mr = MemsReader(mems);
@@ -28,7 +29,7 @@ int main(int argc, char* argv[]) {
     ReferenceGraph g (e_lens, edges);
 
     ofstream outFile;
-    outFile.open("./out/output");
+    outFile.open(out_file);
 
     while(mr.hasPattern()) {
 	pair<string, MemsList> p = mr.popPattern();

@@ -5,6 +5,7 @@ annotation=$2
 rnaseqs=$3
 L=$4
 K=$5
+out=$6
 
 rm -rf ./tmp/
 mkdir -p ./tmp/
@@ -16,5 +17,4 @@ python3 ./scripts/prepareInput.py $genomic $annotation
 ./bMEM/backwardMEM -l=$L ./tmp/T.fa $rnaseqs &> ./tmp/mems
 rm ./stopwatch.txt
 rm ./lock.txt
-./bin/main ./tmp/mems ./tmp/e_lens ./tmp/edges $K
-
+./bin/main ./tmp/mems ./tmp/e_lens ./tmp/edges $K $out
