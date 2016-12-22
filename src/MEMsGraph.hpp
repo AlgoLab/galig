@@ -16,6 +16,7 @@ class MemsGraph {
 private:
     int nodes_index = 0;
     TPt<TNodeEDatNet<TInt, TInt> > Graph;
+    TIntStrH labels;
     std::unordered_map<std::string, int> MEMsToIndex;
     std::vector<std::vector<std::vector<int> > > subpaths;
     std::vector<std::vector<int> > paths;
@@ -27,7 +28,7 @@ private:
     std::vector<std::vector<int> > rec_visit(const TNodeEDatNet<TInt, TInt>::TNodeI node);
 public:
     MemsGraph(ReferenceGraph &g, MemsList& ml, const int& K);
-    //void saveImage(const std::string& patt);
+    void saveImage(const std::string& patt);
     void saveOutput(std::ostream& os);
     void visit();
 };

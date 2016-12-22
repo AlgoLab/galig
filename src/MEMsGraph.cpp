@@ -1,8 +1,13 @@
 #include "MEMsGraph.hpp"
 
-std::ostream& operator<<(std::ostream& os, const std::vector<int>& vect) {
-    for(int i : vect) {
-	os << i << " ";
+TStr toTStr(const std::string& s) {
+  return TStr(s.c_str());
+}
+
+std::ostream& operator<<(std::ostream& os, const std::vector<std::string>& vect) {
+    for(std::string s : vect) {
+	//os << i << " ";
+	os << s << " ";
     }
     os << "\n";
     return os;
@@ -25,6 +30,7 @@ int MemsGraph::getNodeId(const std::string& mem) {
 void MemsGraph::addNode(const int& exon_index, const std::string& label) {
     MEMsToIndex.insert({label, nodes_index});
     Graph->AddNode(nodes_index, exon_index);
+    labels.AddDat(nodes_index, toTStr(label));
     nodes_index++;
 }
 
@@ -33,6 +39,7 @@ void MemsGraph::addEdge(const int& exon_index_1, const int& exon_index_2, const 
 }
 
 MemsGraph::MemsGraph(ReferenceGraph& g, MemsList& ml, const int& K) {
+    //std::cout << ".." << std::endl;
     Graph = TNodeEDatNet<TInt, TInt>::New();
     addNode(0, "Start");
     int curr_p = 1;
@@ -52,9 +59,12 @@ MemsGraph::MemsGraph(ReferenceGraph& g, MemsList& ml, const int& K) {
 		std::forward_list<Mem> mems2 = ml.getMems(i);
 		for(auto it2=mems2.begin(); it2!=mems2.end(); ++it2) {
 		    Mem m2 = (*it2);
-		    if(m1.p + m1.l != m2.p + m2.l) {
+		    //std::cout << "Checking " << m1.toStr() << " -> "<< m2.toStr() << std::endl;
+		    if(m1.p + m1.l < m2.p + m2.l) {
 			if(m1.t != m2.t && m1.t + m1.l != m2.t + m2.l) {
 			    if(g.rank(m1.t - 1) == g.rank(m2.t - 1)) {
+				//Stesso esone
+				//std::cout << "1" << std::endl;
 				if(m2.t > m1.t && m2.t < m1.t + m1.l + K && m1.t + m1.l != m2.t + m2.l) {
 				    int m2_index = getNodeId(m2.toStr());
 				    if(m2_index == -1) {
@@ -75,8 +85,11 @@ MemsGraph::MemsGraph(ReferenceGraph& g, MemsList& ml, const int& K) {
 				    addEdge(m1_index, m2_index, w);
 				}
 			    } else {
+				//Esoni diversi
+				//std::cout << "2" << std::endl;
 				std::vector<int> curr_edge { g.rank(m1.t-1), g.rank(m2.t-1) };
 				if(g.contain(curr_edge)) {
+				    //std::cout << "." << std::endl;
 				    if(m1.t + m1.l >= g.select(g.rank(m1.t-1) + 1) - K && m2.t <= g.select(g.rank(m2.t-1)) + K) {
 					int m2_index = getNodeId(m2.toStr());
 					if(m2_index == -1) {
@@ -95,13 +108,12 @@ MemsGraph::MemsGraph(ReferenceGraph& g, MemsList& ml, const int& K) {
 			}
 		    }
 		}
-		
 		i++;
 	    }
 	}
 	curr_p++;
     }
-
+    /**
     int end_index = nodes_index;
     addNode(0, "End");
     for(TNodeEDatNet<TInt, TInt>::TNodeI NI = Graph->BegNI(); NI < Graph->EndNI(); NI++) {
@@ -109,6 +121,7 @@ MemsGraph::MemsGraph(ReferenceGraph& g, MemsList& ml, const int& K) {
     	    Graph->AddEdge(NI.GetId(), end_index, 0);
     	}
     }
+    **/
     subpaths = std::vector<std::vector<std::vector<int> > >(Graph->GetNodes(), { std::vector<std::vector<int> > { std::vector<int> { } } });
 }
 
@@ -121,7 +134,6 @@ std::vector<std::vector<int> > MemsGraph::rec_visit(const TNodeEDatNet<TInt, TIn
     if(subpaths[node_id][0].size() != 0) {
 	return subpaths[node_id];
     }
-    
     int out = node.GetOutDeg();
     if(out == 0) {
 	std::vector<std::vector<int> > starting_paths { std::vector<int> { node_id } };
@@ -148,16 +160,21 @@ std::vector<std::vector<int> > MemsGraph::rec_visit(const TNodeEDatNet<TInt, TIn
 
 void MemsGraph::saveOutput(std::ostream& os) {
     for(std::vector<int> path : paths) {
-	os << path;
+	std::vector<std::string> path_s (path.size(), "");
+	unsigned int i = 0;
+	while(i<path.size()) {
+	    path_s[i] = labels.GetDat(labels.GetKey(labels.GetKeyId(path[i]))).GetCStr() ;
+	    i++;
+	}
+	os << path_s;
     }
 }
 
-/** void MemsGraph::saveImage(const std::string& patt) {
+void MemsGraph::saveImage(const std::string& patt) {
     std::ofstream myfile;
     myfile.open(patt + ".dot");
     
     std::string dot = "digraph G {\n graph [splines=true overlap=false]\n node  [shape=ellipse, width=0.3, height=0.3]\n";
-    
     for (TNodeEDatNet<TInt, TInt>::TNodeI NI = Graph->BegNI(); NI < Graph->EndNI(); NI++) { 
 	dot += " " + std::to_string(NI.GetId()) + " [label=\"" + labels.GetDat(labels.GetKey(labels.GetKeyId(NI.GetId()))).GetCStr() + "\"];\n";
     }
@@ -172,4 +189,4 @@ void MemsGraph::saveOutput(std::ostream& os) {
     if(system(("dot -Tpng ./" + patt + ".dot -o ./" + patt + ".png").c_str()) != 0) {
 	std::cerr << "System call error" << std::endl;
     }
-} **/
+}

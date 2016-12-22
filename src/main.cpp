@@ -1,10 +1,10 @@
-/**x
+/**
    type* name; -> pointer declaration
    type& name; -> reference declaration
 
    &var -> pointer to var
    *pointer_var -> var
-   **/
+**/
 
 #include <iostream>
 #include <fstream>
