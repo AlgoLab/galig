@@ -21,6 +21,7 @@ int main(int argc, char* argv[]) {
     string edges = argv[3];
     int K = atoi(argv[4]);
     string out_file = argv[5];
+    float perc = atof(argv[6]);
 
     cout << "Starting..." << endl;
     MemsReader mr = MemsReader(mems);
@@ -33,12 +34,10 @@ int main(int argc, char* argv[]) {
 
     while(mr.hasPattern()) {
 	pair<string, MemsList> p = mr.popPattern();
-	outFile << p.first << "\n";
 	MemsGraph mg (g, p.second, K);
 	//mg.saveImage("./out/" + p.first);
 	mg.visit();
-	mg.saveOutput(outFile);
-	outFile << "\n-------------------------------------------------------\n";
+	mg.saveOutput(outFile, p.first, perc);
     }
     outFile.close();
     cout << "Ending." << endl;

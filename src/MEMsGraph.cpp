@@ -6,7 +6,6 @@ TStr toTStr(const std::string& s) {
 
 std::ostream& operator<<(std::ostream& os, const std::vector<std::string>& vect) {
     for(std::string s : vect) {
-	//os << i << " ";
 	os << s << " ";
     }
     os << "\n";
@@ -20,39 +19,49 @@ TStr MemsGraph::toTStr(const std::string& s) {
 int MemsGraph::getNodeId(const std::string& mem) {
     int index;
     try {
-	index = MEMsToIndex.at(mem);
+	index = MemToIndex.at(mem);
     } catch (const std::out_of_range& oor) {
 	index = -1;
     }
     return index;
 }
 
-void MemsGraph::addNode(const int& exon_index, const std::string& label) {
-    MEMsToIndex.insert({label, nodes_index});
-    Graph->AddNode(nodes_index, exon_index);
+bool MemsGraph::isNode(Mem m) {
+    try {
+	MemToIndex.at(m.toStr());
+	return true;
+    }
+    catch (const std::out_of_range& oor) {
+	return false;
+    }
+}
+
+void MemsGraph::addNode(Mem mem) {
+    std::string label = mem.toStr();
+    IndexToMem.insert({nodes_index, mem});
+    MemToIndex.insert({label, nodes_index});
+    Graph->AddNode(nodes_index);
     labels.AddDat(nodes_index, toTStr(label));
     nodes_index++;
 }
 
-void MemsGraph::addEdge(const int& exon_index_1, const int& exon_index_2, const int& w) {
-    Graph->AddEdge(exon_index_1, exon_index_2, w);
+void MemsGraph::addEdge(Mem mem1, Mem mem2) {
+    Graph->AddEdge(MemToIndex.at(mem1.toStr()), MemToIndex.at(mem2.toStr()));
 }
 
 MemsGraph::MemsGraph(ReferenceGraph& g, MemsList& ml, const int& K) {
-    //std::cout << ".." << std::endl;
-    Graph = TNodeEDatNet<TInt, TInt>::New();
-    addNode(0, "Start");
+    Graph = TNGraph::New();
+    addNode(Mem(0,0,0));
     int curr_p = 1;
-    int plen = ml.getLength();
+    plen = ml.getLength();
+    this->K = K;
     while(curr_p < plen) {
 	std::forward_list<Mem> mems1 = ml.getMems(curr_p);
 	for(auto it1=mems1.begin(); it1!=mems1.end(); ++it1) {
 	    Mem m1 = (*it1);
-	    int m1_index = getNodeId(m1.toStr());
-	    if(m1_index == -1) {
-	    	m1_index = nodes_index;
-	     	addNode(m1_index, m1.toStr());
-	    	addEdge(0, m1_index, 0);
+	    if(!isNode(m1)) {
+	     	addNode(m1);
+	    	addEdge(Mem(0,0,0), m1);
 	    }
 	    int i = m1.p + 1;
 	    while(i < plen && i < m1.p + m1.l + K) {
@@ -66,12 +75,11 @@ MemsGraph::MemsGraph(ReferenceGraph& g, MemsList& ml, const int& K) {
 				//Stesso esone
 				//std::cout << "1" << std::endl;
 				if(m2.t > m1.t && m2.t < m1.t + m1.l + K && m1.t + m1.l != m2.t + m2.l) {
-				    int m2_index = getNodeId(m2.toStr());
-				    if(m2_index == -1) {
+				    if(!isNode(m2)) {
 				    	//std::cout << "1 Adding " << m2.toStr() << std::endl;
-				    	m2_index = nodes_index;
-				    	addNode(m2_index, m2.toStr());
+				    	addNode(m2);
 				    }
+				    /**
 				    int wt = m2.t - m1.t - m1.l;
 				    int wp = m2.p - m1.p - m1.l;
 				    int w;
@@ -81,8 +89,9 @@ MemsGraph::MemsGraph(ReferenceGraph& g, MemsList& ml, const int& K) {
 				    else {
 				    	w = max(wt, wp);
 				    }
+				    **/
 				    //std::cout << "1 Adding " << m1.toStr() << " -> " << m2.toStr() << std::endl;
-				    addEdge(m1_index, m2_index, w);
+				    addEdge(m1, m2);
 				}
 			    } else {
 				//Esoni diversi
@@ -91,16 +100,16 @@ MemsGraph::MemsGraph(ReferenceGraph& g, MemsList& ml, const int& K) {
 				if(g.contain(curr_edge)) {
 				    //std::cout << "." << std::endl;
 				    if(m1.t + m1.l >= g.select(g.rank(m1.t-1) + 1) - K && m2.t <= g.select(g.rank(m2.t-1)) + K) {
-					int m2_index = getNodeId(m2.toStr());
-					if(m2_index == -1) {
+					if(!isNode(m2)) {
 					    //std::cout << "2 Adding " << m2.toStr() << std::endl;
-					    m2_index = nodes_index;
-					    addNode(m2_index, m2.toStr());
+					    addNode(m2);
 					}
+					/**
 					int wt = (g.select(g.rank(m1.t-1) + 1) - m1.t - m1.l) + (m2.t - g.select(g.rank(m2.t-1)) - 1);
 					int wp = abs(m2.p - m1.p - m1.l);
 					int w = max(wt, wp);
-					addEdge(m1_index, m2_index, w);
+					**/
+					addEdge(m1, m2);
 					//std::cout << "2 Adding " << m1.toStr() << " -> " << m2.toStr() << std::endl;
 				    }
 				}
@@ -113,15 +122,7 @@ MemsGraph::MemsGraph(ReferenceGraph& g, MemsList& ml, const int& K) {
 	}
 	curr_p++;
     }
-    /**
-    int end_index = nodes_index;
-    addNode(0, "End");
-    for(TNodeEDatNet<TInt, TInt>::TNodeI NI = Graph->BegNI(); NI < Graph->EndNI(); NI++) {
-    	if(NI.GetOutDeg() == 0 && NI.GetId() != end_index) {
-    	    Graph->AddEdge(NI.GetId(), end_index, 0);
-    	}
-    }
-    **/
+
     subpaths = std::vector<std::vector<std::vector<int> > >(Graph->GetNodes(), { std::vector<std::vector<int> > { std::vector<int> { } } });
 }
 
@@ -129,7 +130,7 @@ void MemsGraph::visit() {
     paths = rec_visit(Graph->BegNI());
 }
 
-std::vector<std::vector<int> > MemsGraph::rec_visit(const TNodeEDatNet<TInt, TInt>::TNodeI node) {
+std::vector<std::vector<int> > MemsGraph::rec_visit(const TNGraph::TNodeI node) {
     int node_id = node.GetId();
     if(subpaths[node_id][0].size() != 0) {
 	return subpaths[node_id];
@@ -145,7 +146,7 @@ std::vector<std::vector<int> > MemsGraph::rec_visit(const TNodeEDatNet<TInt, TIn
     while(i < out) {
 	int child_id = node.GetOutNId(i);
 	i++;
-	TNodeEDatNet<TInt, TInt>::TNodeI child = Graph->GetNI(child_id);
+	TNGraph::TNodeI child = Graph->GetNI(child_id);
 	std::vector<std::vector<int> > starting_paths = rec_visit(child);
 
 	for(std::vector<int> sp : starting_paths) {
@@ -158,15 +159,21 @@ std::vector<std::vector<int> > MemsGraph::rec_visit(const TNodeEDatNet<TInt, TIn
     return paths;
 }
 
-void MemsGraph::saveOutput(std::ostream& os) {
+void MemsGraph::saveOutput(std::ostream& os, std::string p, const float& perc) {
     for(std::vector<int> path : paths) {
 	std::vector<std::string> path_s (path.size(), "");
-	unsigned int i = 0;
-	while(i<path.size()) {
-	    path_s[i] = labels.GetDat(labels.GetKey(labels.GetKeyId(path[i]))).GetCStr() ;
-	    i++;
+	Mem starting_mem = IndexToMem.at(path[1]);
+	Mem ending_mem = IndexToMem.at(path[path.size()-1]);
+	if(ending_mem.p + ending_mem.l - starting_mem.p >= perc*plen) {
+	    unsigned int i = 1;
+	    while(i<path.size()) {
+		path_s[i-1] = labels.GetDat(labels.GetKey(labels.GetKeyId(path[i]))).GetCStr();
+		i++;
+	    }
+	    os << "--- " << p << "\n";
+	    os << path_s;
+	    os << "\n";
 	}
-	os << path_s;
     }
 }
 
@@ -175,12 +182,12 @@ void MemsGraph::saveImage(const std::string& patt) {
     myfile.open(patt + ".dot");
     
     std::string dot = "digraph G {\n graph [splines=true overlap=false]\n node  [shape=ellipse, width=0.3, height=0.3]\n";
-    for (TNodeEDatNet<TInt, TInt>::TNodeI NI = Graph->BegNI(); NI < Graph->EndNI(); NI++) { 
+    for (TNGraph::TNodeI NI = Graph->BegNI(); NI < Graph->EndNI(); NI++) { 
 	dot += " " + std::to_string(NI.GetId()) + " [label=\"" + labels.GetDat(labels.GetKey(labels.GetKeyId(NI.GetId()))).GetCStr() + "\"];\n";
     }
     
-    for (TNodeEDatNet<TInt, TInt>::TEdgeI EI = Graph->BegEI(); EI < Graph->EndEI(); EI++) { 
-	dot += " " + std::to_string(EI.GetSrcNId()) + " -> " + std::to_string(EI.GetDstNId()) + " [label=\" " + std::to_string(EI.GetDat()) + "\"];\n";
+    for (TNGraph::TEdgeI EI = Graph->BegEI(); EI < Graph->EndEI(); EI++) { 
+	dot += " " + std::to_string(EI.GetSrcNId()) + " -> " + std::to_string(EI.GetDstNId()) + ";\n";
     }
     dot += "}";
     

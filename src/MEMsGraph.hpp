@@ -15,21 +15,25 @@
 class MemsGraph {
 private:
     int nodes_index = 0;
-    TPt<TNodeEDatNet<TInt, TInt> > Graph;
+    int plen = 0;
+    int K = 0;
+    PNGraph Graph;
     TIntStrH labels;
-    std::unordered_map<std::string, int> MEMsToIndex;
+    std::unordered_map<std::string, int> MemToIndex;
+    std::unordered_map<int, Mem> IndexToMem;
     std::vector<std::vector<std::vector<int> > > subpaths;
     std::vector<std::vector<int> > paths;
 
     TStr toTStr(const std::string& s);
-    void addNode(const int& exon_index, const std::string& label);
-    void addEdge(const int& exon_index_1, const int& exon_index_2, const int& w);
+    void addNode(Mem mem);
+    void addEdge(Mem mem1, Mem Mem2);
     int getNodeId(const std::string& mem);
-    std::vector<std::vector<int> > rec_visit(const TNodeEDatNet<TInt, TInt>::TNodeI node);
+    bool isNode(Mem m);
+    std::vector<std::vector<int> > rec_visit(const TNGraph::TNodeI node);
 public:
     MemsGraph(ReferenceGraph &g, MemsList& ml, const int& K);
     void saveImage(const std::string& patt);
-    void saveOutput(std::ostream& os);
+    void saveOutput(std::ostream& os, std::string p, const float& perc);
     void visit();
 };
 
