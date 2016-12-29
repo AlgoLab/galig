@@ -49,19 +49,25 @@ void MemsGraph::addEdge(Mem mem1, Mem mem2) {
     Graph->AddEdge(MemToIndex.at(mem1.toStr()), MemToIndex.at(mem2.toStr()));
 }
 
-MemsGraph::MemsGraph(ReferenceGraph& g, MemsList& ml, const int& K) {
+MemsGraph::MemsGraph(ReferenceGraph& g, MemsList& ml, const int& K, const float& perc) {
     Graph = TNGraph::New();
     addNode(Mem(0,0,0));
     int curr_p = 1;
     plen = ml.getLength();
+    this->perc = perc;
     this->K = K;
     while(curr_p < plen) {
 	std::forward_list<Mem> mems1 = ml.getMems(curr_p);
 	for(auto it1=mems1.begin(); it1!=mems1.end(); ++it1) {
 	    Mem m1 = (*it1);
 	    if(!isNode(m1)) {
-	     	addNode(m1);
-	    	addEdge(Mem(0,0,0), m1);
+		if(m1.p <= (1-perc)*plen) {
+		    addNode(m1);
+		    addEdge(Mem(0,0,0), m1);
+		}
+		else {
+		    continue;
+		}
 	    }
 	    int i = m1.p + 1;
 	    while(i < plen && i < m1.p + m1.l + K) {
@@ -159,7 +165,7 @@ std::vector<std::vector<int> > MemsGraph::rec_visit(const TNGraph::TNodeI node) 
     return paths;
 }
 
-void MemsGraph::saveOutput(std::ostream& os, std::string p, const float& perc) {
+void MemsGraph::saveOutput(std::ostream& os, std::string p) {
     for(std::vector<int> path : paths) {
 	std::vector<std::string> path_s (path.size(), "");
 	Mem starting_mem = IndexToMem.at(path[1]);

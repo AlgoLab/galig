@@ -34,10 +34,10 @@ int main(int argc, char* argv[]) {
 
     while(mr.hasPattern()) {
 	pair<string, MemsList> p = mr.popPattern();
-	MemsGraph mg (g, p.second, K);
+	MemsGraph mg (g, p.second, K, perc);
 	//mg.saveImage("./out/" + p.first);
 	mg.visit();
-	mg.saveOutput(outFile, p.first, perc);
+	mg.saveOutput(outFile, p.first);
     }
     outFile.close();
     cout << "Ending." << endl;
