@@ -17,7 +17,7 @@ private:
     int nodes_index = 0;
     int plen = 0;
     int K = 0;
-    int perc = 0;
+    float perc = 0;
     PNGraph Graph;
     TIntStrH labels;
     std::unordered_map<std::string, int> MemToIndex;
@@ -32,7 +32,7 @@ private:
     bool isNode(Mem m);
     std::vector<std::vector<int> > rec_visit(const TNGraph::TNodeI node);
 public:
-  MemsGraph(ReferenceGraph &g, MemsList& ml, const int& K, const float& perc);
+    MemsGraph(ReferenceGraph &g, MemsList& ml, const int& K, const float& perc);
     void saveImage(const std::string& patt);
     void saveOutput(std::ostream& os, std::string p);
     void visit();

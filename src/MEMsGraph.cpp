@@ -166,6 +166,7 @@ std::vector<std::vector<int> > MemsGraph::rec_visit(const TNGraph::TNodeI node) 
 }
 
 void MemsGraph::saveOutput(std::ostream& os, std::string p) {
+    bool f = true;
     for(std::vector<int> path : paths) {
 	std::vector<std::string> path_s (path.size(), "");
 	Mem starting_mem = IndexToMem.at(path[1]);
@@ -176,9 +177,11 @@ void MemsGraph::saveOutput(std::ostream& os, std::string p) {
 		path_s[i-1] = labels.GetDat(labels.GetKey(labels.GetKeyId(path[i]))).GetCStr();
 		i++;
 	    }
-	    os << "--- " << p << "\n";
+	    if(f) {
+		os << "\n\n--- " << p << "\n";
+		f = false;
+	    }
 	    os << path_s;
-	    os << "\n";
 	}
     }
 }
