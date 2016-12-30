@@ -76,48 +76,46 @@ MemsGraph::MemsGraph(ReferenceGraph& g, MemsList& ml, const int& K, const float&
 		    Mem m2 = (*it2);
 		    //std::cout << "Checking " << m1.toStr() << " -> "<< m2.toStr() << std::endl;
 		    if(m1.p + m1.l < m2.p + m2.l) {
-			if(m1.t != m2.t && m1.t + m1.l != m2.t + m2.l) {
-			    if(g.rank(m1.t - 1) == g.rank(m2.t - 1)) {
-				//Stesso esone
-				//std::cout << "1" << std::endl;
-				if(m2.t > m1.t && m2.t < m1.t + m1.l + K && m1.t + m1.l != m2.t + m2.l) {
+			if(g.rank(m1.t - 1) == g.rank(m2.t - 1)) {
+			    //Stesso esone
+			    //std::cout << "1" << std::endl;
+			    if(m2.t > m1.t && m2.t < m1.t + m1.l + K && m1.t + m1.l != m2.t + m2.l) {
+				if(!isNode(m2)) {
+				    //std::cout << "1 Adding " << m2.toStr() << std::endl;
+				    addNode(m2);
+				}
+				/**
+				   int wt = m2.t - m1.t - m1.l;
+				   int wp = m2.p - m1.p - m1.l;
+				   int w;
+				   if(wt<0 || wp<0) {
+				   w = abs(wt - wp);
+				   }
+				   else {
+				   w = max(wt, wp);
+				   }
+				**/
+				//std::cout << "1 Adding " << m1.toStr() << " -> " << m2.toStr() << std::endl;
+				addEdge(m1, m2);
+			    }
+			} else {
+			    //Esoni diversi
+			    //std::cout << "2" << std::endl;
+			    std::vector<int> curr_edge { g.rank(m1.t-1), g.rank(m2.t-1) };
+			    if(g.contain(curr_edge)) {
+				//std::cout << "." << std::endl;
+				if(m1.t + m1.l >= g.select(g.rank(m1.t-1) + 1) - K && m2.t <= g.select(g.rank(m2.t-1)) + K) {
 				    if(!isNode(m2)) {
-				    	//std::cout << "1 Adding " << m2.toStr() << std::endl;
-				    	addNode(m2);
+					//std::cout << "2 Adding " << m2.toStr() << std::endl;
+					addNode(m2);
 				    }
 				    /**
-				    int wt = m2.t - m1.t - m1.l;
-				    int wp = m2.p - m1.p - m1.l;
-				    int w;
-				    if(wt<0 || wp<0) {
-				    	w = abs(wt - wp);
-				    }
-				    else {
-				    	w = max(wt, wp);
-				    }
+				       int wt = (g.select(g.rank(m1.t-1) + 1) - m1.t - m1.l) + (m2.t - g.select(g.rank(m2.t-1)) - 1);
+				       int wp = abs(m2.p - m1.p - m1.l);
+				       int w = max(wt, wp);
 				    **/
-				    //std::cout << "1 Adding " << m1.toStr() << " -> " << m2.toStr() << std::endl;
 				    addEdge(m1, m2);
-				}
-			    } else {
-				//Esoni diversi
-				//std::cout << "2" << std::endl;
-				std::vector<int> curr_edge { g.rank(m1.t-1), g.rank(m2.t-1) };
-				if(g.contain(curr_edge)) {
-				    //std::cout << "." << std::endl;
-				    if(m1.t + m1.l >= g.select(g.rank(m1.t-1) + 1) - K && m2.t <= g.select(g.rank(m2.t-1)) + K) {
-					if(!isNode(m2)) {
-					    //std::cout << "2 Adding " << m2.toStr() << std::endl;
-					    addNode(m2);
-					}
-					/**
-					int wt = (g.select(g.rank(m1.t-1) + 1) - m1.t - m1.l) + (m2.t - g.select(g.rank(m2.t-1)) - 1);
-					int wp = abs(m2.p - m1.p - m1.l);
-					int w = max(wt, wp);
-					**/
-					addEdge(m1, m2);
-					//std::cout << "2 Adding " << m1.toStr() << " -> " << m2.toStr() << std::endl;
-				    }
+				    //std::cout << "2 Adding " << m1.toStr() << " -> " << m2.toStr() << std::endl;
 				}
 			    }
 			}
@@ -166,7 +164,6 @@ std::vector<std::vector<int> > MemsGraph::rec_visit(const TNGraph::TNodeI node) 
 }
 
 void MemsGraph::saveOutput(std::ostream& os, std::string p) {
-    bool f = true;
     for(std::vector<int> path : paths) {
 	std::vector<std::string> path_s (path.size(), "");
 	Mem starting_mem = IndexToMem.at(path[1]);
@@ -177,10 +174,7 @@ void MemsGraph::saveOutput(std::ostream& os, std::string p) {
 		path_s[i-1] = labels.GetDat(labels.GetKey(labels.GetKeyId(path[i]))).GetCStr();
 		i++;
 	    }
-	    if(f) {
-		os << "\n\n--- " << p << "\n";
-		f = false;
-	    }
+	    os << p << " ";
 	    os << path_s;
 	}
     }
@@ -189,17 +183,17 @@ void MemsGraph::saveOutput(std::ostream& os, std::string p) {
 void MemsGraph::saveImage(const std::string& patt) {
     std::ofstream myfile;
     myfile.open(patt + ".dot");
-    
+
     std::string dot = "digraph G {\n graph [splines=true overlap=false]\n node  [shape=ellipse, width=0.3, height=0.3]\n";
     for (TNGraph::TNodeI NI = Graph->BegNI(); NI < Graph->EndNI(); NI++) { 
 	dot += " " + std::to_string(NI.GetId()) + " [label=\"" + labels.GetDat(labels.GetKey(labels.GetKeyId(NI.GetId()))).GetCStr() + "\"];\n";
     }
-    
+
     for (TNGraph::TEdgeI EI = Graph->BegEI(); EI < Graph->EndEI(); EI++) { 
 	dot += " " + std::to_string(EI.GetSrcNId()) + " -> " + std::to_string(EI.GetDstNId()) + ";\n";
     }
     dot += "}";
-    
+
     myfile << dot;
     myfile.close();
     if(system(("dot -Tpng ./" + patt + ".dot -o ./" + patt + ".png").c_str()) != 0) {
