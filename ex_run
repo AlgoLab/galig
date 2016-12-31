@@ -1,0 +1,16 @@
+#!/bin/bash
+
+P=$1
+L=$2
+K=$3
+
+rm -rf ./out/
+mkdir -p ./out/
+
+rm ./tmp/T.fa_1.idx
+
+echo -e ">P\n"$P > ./example/P.fa
+./bMEM/backwardMEM -l=$L ./tmp/T.fa ./example/P.fa &> ./tmp/mems
+rm ./stopwatch.txt
+rm ./lock.txt
+./bin/main ./tmp/mems ./tmp/e_lens ./tmp/edges $K out/output 0.75

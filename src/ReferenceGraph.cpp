@@ -64,10 +64,6 @@ int ReferenceGraph::setupBitVector(const std::string& fpath) {
 	BV[i] = 1;
     }
     bitVector = sdsl::rrr_vector<>(BV);
-    //for(unsigned int i=0; i<bitVector.size(); ++i) {
-    //std::cout << bitVector[i];
-    //}
-    std::cout << std::endl;
     select_BV = sdsl::rrr_vector<>::select_1_type(&bitVector);
     rank_BV = sdsl::rrr_vector<>::rank_1_type(&bitVector);
     return e_lens.size();
@@ -91,9 +87,5 @@ bool ReferenceGraph::contain(std::vector<int> edge) {
 
 ReferenceGraph::ReferenceGraph(const std::string& exons_file_path, const std::string& edges_file_path) {
     int nex = setupBitVector(exons_file_path);
-    //Extracting edges from file
     setupEdges(edges_file_path, nex);
-    //for(std::vector<int> e : edges) {
-    //std::cout << e[0] << " -> " << e[1] << std::endl;
-    //}
 }

@@ -39,9 +39,13 @@ def extractInfo(genomic, gene_annotation):
             T += str(exon_seq) + "|"
             e_lens.append(str(len(str(exon_seq))))
             added_exs.append(exon.id)
-            exs_pos.append([int(start),int(end)])
+            exs_pos.append("{},{}".format(int(start),int(end)))
 
   in_handle.close()
+
+  f = open("./tmp/e_pos", "w")
+  f.write("{}".format("\n".join(exs_pos)))
+  f.close()
   
   f = open("./tmp/T.fa", "w")
   f.write(">T\n{}\n".format(T))
@@ -55,7 +59,7 @@ def extractInfo(genomic, gene_annotation):
   for i in range(0,len(added_exs)):
     for j in range(0,len(added_exs)):
       if i != j:
-        if exs_pos[i][1] <= exs_pos[j][0]:
+        if int(exs_pos[i].split(",")[1]) <= int(exs_pos[j].split(",")[0]):
           edg_string += "{},{}\n".format(i+1,j+1)
     
   f = open("./tmp/edges", "w")
@@ -65,20 +69,6 @@ def extractInfo(genomic, gene_annotation):
 def main(genomic, gene_annotation):
   print("Extracting splicing graph (T.fa, e_lens, edges)...")
   extractInfo(genomic, gene_annotation)
-
-  '''
-  print("Extracting patterns...")
-  patterns_fa = list(SeqIO.parse("{}".format(rna_seqs), "fasta"))
-  n = 0
-  for pattern in patterns_fa:
-    p = pattern.seq
-    f = open("./tmp/patterns", "a")
-    f.write("{}\n".format(str(p)))
-    f.close()
-    n+=1
-    if n%100 == 0:
-      print("{}".format(n))
-  '''
 
 if __name__ == '__main__':
   #Genomic, annotation, rna-seq reads

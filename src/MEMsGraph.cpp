@@ -70,7 +70,7 @@ MemsGraph::MemsGraph(ReferenceGraph& g, MemsList& ml, const int& K, const float&
 		}
 	    }
 	    int i = m1.p + 1;
-	    while(i < plen && i < m1.p + m1.l + K) {
+	    while(i < plen && i <= m1.p + m1.l + K) {
 		std::forward_list<Mem> mems2 = ml.getMems(i);
 		for(auto it2=mems2.begin(); it2!=mems2.end(); ++it2) {
 		    Mem m2 = (*it2);
@@ -79,7 +79,7 @@ MemsGraph::MemsGraph(ReferenceGraph& g, MemsList& ml, const int& K, const float&
 			if(g.rank(m1.t - 1) == g.rank(m2.t - 1)) {
 			    //Stesso esone
 			    //std::cout << "1" << std::endl;
-			    if(m2.t > m1.t && m2.t < m1.t + m1.l + K && m1.t + m1.l != m2.t + m2.l) {
+			    if(m2.t > m1.t && m2.t <= m1.t + m1.l + K && m1.t + m1.l < m2.t + m2.l) {
 				if(!isNode(m2)) {
 				    //std::cout << "1 Adding " << m2.toStr() << std::endl;
 				    addNode(m2);
@@ -100,11 +100,11 @@ MemsGraph::MemsGraph(ReferenceGraph& g, MemsList& ml, const int& K, const float&
 			    }
 			} else {
 			    //Esoni diversi
-			    //std::cout << "2" << std::endl;
+			    //std::cout << g.rank(m1.t-1) << ", " << g.rank(m2.t-1) << std::endl;
 			    std::vector<int> curr_edge { g.rank(m1.t-1), g.rank(m2.t-1) };
 			    if(g.contain(curr_edge)) {
-				//std::cout << "." << std::endl;
-				if(m1.t + m1.l >= g.select(g.rank(m1.t-1) + 1) - K && m2.t <= g.select(g.rank(m2.t-1)) + K) {
+				//std::cout << m1.toStr() << " " << m2.toStr() << ", " << g.select(g.rank(m1.t-1) + 1) << " " << g.select(g.rank(m2.t-1)) << std::endl;
+				if(m1.t + m1.l >= g.select(g.rank(m1.t-1) + 1) + 1 - K && m2.t <= g.select(g.rank(m2.t-1)) + 1 + 1 + K) {
 				    if(!isNode(m2)) {
 					//std::cout << "2 Adding " << m2.toStr() << std::endl;
 					addNode(m2);
