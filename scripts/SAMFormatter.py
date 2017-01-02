@@ -24,7 +24,7 @@ class SAMFormatter:
         self.rna_seqs = {}
         for elem in rna_seqs:
             self.rna_seqs.update({elem.id:elem.seq})
-        print(self.rna_seqs)
+        #print(self.rna_seqs)
         
         #Bit Vector Setup
         with open("./tmp/T.fa") as t:
