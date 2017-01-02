@@ -19,3 +19,4 @@ python3 ./scripts/prepareInput.py $genomic $annotation
 rm ./stopwatch.txt
 rm ./lock.txt
 ./bin/main ./tmp/mems ./tmp/e_lens ./tmp/edges $K $out $perc
+python3 ./scripts/SAMFormatter.py $out $rnaseqs

@@ -22,11 +22,13 @@ def extractInfo(genomic, gene_annotation):
   e_lens = []
   added_exs = []
   exs_pos = []
+  gene_name = ""
   
   for rec in GFF.parse(in_handle, limit_info=dict(gff_type = ["gene", "transcript", "exon"])):
     chromosome = rec.id
     ref_genomic = genomic_dict[chromosome]
     for gene in rec.features:
+      gene_name = gene.id
       for transcript in gene.sub_features:
         for exon in transcript.sub_features:
           if(not(exon.id in added_exs)):
@@ -43,6 +45,10 @@ def extractInfo(genomic, gene_annotation):
 
   in_handle.close()
 
+  f = open("./tmp/gene_name", "w")
+  f.write(gene_name)
+  f.close()
+  
   f = open("./tmp/e_pos", "w")
   f.write("{}".format("\n".join(exs_pos)))
   f.close()
