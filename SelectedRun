@@ -1,21 +1,11 @@
 #!/bin/bash
 
-L=(7 5) #(30 15 7)
-K=(10 5)
-P=(75)
+l=7 #(30 15 7)
+k=5
+p=75
 
-for gene in $(ls ~/data/Toxoplasma/Genes_200/)
-do
+while read gene; do
     echo "### "$gene" ###"
-    for l in "${L[@]}"
-    do
-	for k in "${K[@]}"
-	do
-	    for p in "${P[@]}"
-	    do
-		mkdir -p /home/prj_gralign/data/Toxo_res/2912/$l/$k/$p/
-		/usr/bin/time -v -o /home/prj_gralign/data/Toxo_res/${gene}_${l}_${k}_${p}.time ./run ~/data/Toxoplasma/genomic.fasta ~/data/Toxoplasma/Genes_200/$gene/$gene.gff ~/data/Toxoplasma/Genes_200/$gene/$gene.fa $l $k /home/prj_gralign/data/Toxo_res/2912/$l/$k/$p/${gene}.out 0.$p
-	    done
-	done
-    done
-done
+    mkdir -p /home/prj_gralign/data/Toxo_res/0301/$l/$k/$p/
+    /usr/bin/time -v -o /home/prj_gralign/data/Toxo_res/${gene}_${l}_${k}_${p}.time ./run ~/data/Toxoplasma/genomic.fasta ~/data/Toxoplasma/Genes_200/$gene/$gene.gff ~/data/Toxoplasma/Genes_200/$gene/$gene.fa $l $k /home/prj_gralign/data/Toxo_res/0301/$l/$k/$p/${gene} 0.$p
+done < 75

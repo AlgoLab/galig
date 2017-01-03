@@ -43,7 +43,8 @@ class SAMFormatter:
         out.write("@HD\n")
         out.write("@SQ\n")
         for (p_id, mems) in self.outs:
-            out.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(p_id, 0, self.gene_name, self.getStart(mems[0]), 255, self.getCIGAR(mems), "*", 0, 0, self.rna_seqs[p_id], "*"))
+            rna_seq = self.rna_seqs[p_id]
+            out.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(p_id, 0, self.gene_name, self.getStart(mems[0]), 255, self.getCIGAR(mems, len(rna_seq)), "*", 0, 0, rna_seq, "*"))
 
     #Utils
     def extractMEM(self, string):
@@ -54,7 +55,7 @@ class SAMFormatter:
         id = self.bv.rank(mem[0])
         return self.exs_pos[id-1][0] + (mem[0] - self.bv.select(id))
 
-    def getCIGAR(self, mems):
+    def getCIGAR(self, mems, m):
         CIGAR = ""
         i = 0
         while i<len(mems):
@@ -87,7 +88,7 @@ class SAMFormatter:
                             #Case 3
                             #print("3")
                             CIGAR += "{}I".format(abs(errors_P))
-                            CIGAR += "{}M".format(mems[i][2-abs(errors_P)])
+                            CIGAR += "{}M".format(mems[i][2]-abs(errors_P))
                         elif errors_T < 0:
                             #Case 4
                             errs = abs(errors_P) - abs(errors_T)
@@ -223,6 +224,9 @@ class SAMFormatter:
                             CIGAR += "{}I".format(errors_T2)
                             CIGAR += "{}M".format(mems[i][2])
             i+=1
+        final_dels = m - mems[-1][1] - mems[-1][2] + 1
+        if  final_dels != 0:
+            CIGAR += "{}D".format(final_dels)
         return CIGAR
 
 if __name__ == '__main__':
