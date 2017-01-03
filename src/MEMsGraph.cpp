@@ -166,16 +166,21 @@ std::vector<std::vector<int> > MemsGraph::rec_visit(const TNGraph::TNodeI node) 
 void MemsGraph::saveOutput(std::ostream& os, std::string p) {
     for(std::vector<int> path : paths) {
 	std::vector<std::string> path_s (path.size(), "");
-	Mem starting_mem = IndexToMem.at(path[1]);
-	Mem ending_mem = IndexToMem.at(path[path.size()-1]);
-	if(ending_mem.p + ending_mem.l - starting_mem.p >= perc*plen) {
-	    unsigned int i = 1;
-	    while(i<path.size()) {
-		path_s[i-1] = labels.GetDat(labels.GetKey(labels.GetKeyId(path[i]))).GetCStr();
-		i++;
+	try {
+	    Mem starting_mem = IndexToMem.at(path[1]);
+	    Mem ending_mem = IndexToMem.at(path[path.size()-1]);
+	    if(ending_mem.p + ending_mem.l - starting_mem.p >= perc*plen) {
+		unsigned int i = 1;
+		while(i<path.size()) {
+		    path_s[i-1] = labels.GetDat(labels.GetKey(labels.GetKeyId(path[i]))).GetCStr();
+		    i++;
+		}
+		os << p << " ";
+		os << path_s;
 	    }
-	    os << p << " ";
-	    os << path_s;
+	}
+	catch(const std::out_of_range& oor) {
+	    continue;
 	}
     }
 }

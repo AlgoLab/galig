@@ -32,7 +32,9 @@ int main(int argc, char* argv[]) {
     ofstream outFile;
     outFile.open(out_file);
 
+    int i = 0;
     while(mr.hasPattern()) {
+	i++;
 	pair<string, MemsList> p = mr.popPattern();
 	MemsGraph mg (g, p.second, K, perc);
 	//mg.saveImage("./out/" + p.first);
