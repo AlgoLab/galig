@@ -15,8 +15,15 @@ rm -rf ./out/
 mkdir -p ./out/
 
 python3 ./scripts/prepareInput.py $genomic $annotation
-./bMEM/backwardMEM -l=$L ./tmp/T.fa $rnaseqs &> ./tmp/mems
+/usr/bin/time --output=$out\_mems.time ./bMEM/backwardMEM -l=$L ./tmp/T.fa $rnaseqs &> ./tmp/mems
 rm ./stopwatch.txt
 rm ./lock.txt
-./bin/main ./tmp/mems ./tmp/e_lens ./tmp/edges $K $out $perc
-python3 ./scripts/SAMFormatter.py $out $rnaseqs
+
+/usr/bin/time --output=$out\_align.time sh -c "./bin/main ./tmp/mems ./tmp/e_lens ./tmp/real_edges ./tmp/added_edges ${K} ${out} ${perc} ; python3 ./scripts/SAMFormatter.py ${out} ${rnaseqs}"
+
+python3 ./scripts/counter.py $out
+
+samtools view -bS $out.sam > $out.bam
+
+#samtools sort $out.bam $out.sort
+#samtools index $out.sort.bam
