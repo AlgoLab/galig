@@ -31,19 +31,30 @@ std::vector<int> ReferenceGraph::extractExonsLengths(const std::string& fpath) {
     return e_lens;
 }
 
-void ReferenceGraph::setupEdges(const std::string& fpath, int nex) {
+void ReferenceGraph::setupEdges(const std::string& fpath1, const std::string& fpath2, int nex) {
     std::string line;
     edges.resize(nex+1);
     for(int i = 0; i <= nex; i++) {
 	edges[i] = std::vector< int>(nex, 0);
     }
-    std::ifstream edgesFile(fpath);
-    if (edgesFile.is_open()) {
-	while(getline(edgesFile,line)) {
+    std::ifstream edgesFile1(fpath1);
+    if (edgesFile1.is_open()) {
+	while(getline(edgesFile1,line)) {
 	    std::vector<int> edge = extractEdge(line);
 	    edges[edge[0]][edge[1]] = 1;
 	}
-	edgesFile.close();
+	edgesFile1.close();
+    }
+    else {
+	std::cout << "Unable to open edges file" << std::endl;
+    }
+    std::ifstream edgesFile2(fpath2);
+    if (edgesFile2.is_open()) {
+	while(getline(edgesFile2,line)) {
+	    std::vector<int> edge = extractEdge(line);
+	    edges[edge[0]][edge[1]] = 1;
+	}
+	edgesFile2.close();
     }
     else {
 	std::cout << "Unable to open edges file" << std::endl;
@@ -85,7 +96,7 @@ bool ReferenceGraph::contain(std::vector<int> edge) {
     }
 }
 
-ReferenceGraph::ReferenceGraph(const std::string& exons_file_path, const std::string& edges_file_path) {
+ReferenceGraph::ReferenceGraph(const std::string& exons_file_path, const std::string& real_edges_file_path, const std::string& added_edges_file_path) {
     int nex = setupBitVector(exons_file_path);
-    setupEdges(edges_file_path, nex);
+    setupEdges(real_edges_file_path, added_edges_file_path, nex);
 }

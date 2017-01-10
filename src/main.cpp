@@ -18,17 +18,15 @@ using namespace std;
 int main(int argc, char* argv[]) {
     string mems = argv[1];
     string e_lens = argv[2];
-    string edges = argv[3];
-    int K = atoi(argv[4]);
-    string out_file = argv[5];
-    float perc = atof(argv[6]);
-
+    string real_edges = argv[3];
+    string added_edges = argv[4];
+    int K = atoi(argv[5]);
+    string out_file = argv[6];
+    float perc = atof(argv[7]);
     cout << "Starting..." << endl;
     MemsReader mr = MemsReader(mems);
     mr.readMEMsFile();
-    //mr.print();
-    ReferenceGraph g (e_lens, edges);
-
+    ReferenceGraph g (e_lens, real_edges, added_edges);
     ofstream outFile;
     outFile.open(out_file);
 

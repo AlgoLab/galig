@@ -70,6 +70,7 @@ MemsGraph::MemsGraph(ReferenceGraph& g, MemsList& ml, const int& K, const float&
 		}
 	    }
 	    int i = m1.p + 1;
+	    //int i = m1.p + m1.l;
 	    while(i < plen && i <= m1.p + m1.l + K) {
 		std::forward_list<Mem> mems2 = ml.getMems(i);
 		for(auto it2=mems2.begin(); it2!=mems2.end(); ++it2) {
