@@ -20,10 +20,11 @@ int main(int argc, char* argv[]) {
     string e_lens = argv[2];
     string real_edges = argv[3];
     string added_edges = argv[4];
-    int K = atoi(argv[5]);
-    string out_file = argv[6];
-    float perc = atof(argv[7]);
-    cout << "Starting..." << endl;
+    int L = atoi(argv[5]);
+    int K = atoi(argv[6]);
+    string out_file = argv[7];
+    float perc = (100.0-2*L)/100.0;
+    cout << "\tStarting..." << endl;
     MemsReader mr = MemsReader(mems);
     mr.readMEMsFile();
     ReferenceGraph g (e_lens, real_edges, added_edges);
@@ -40,5 +41,5 @@ int main(int argc, char* argv[]) {
 	mg.saveOutput(outFile, p.first);
     }
     outFile.close();
-    cout << "Ending." << endl;
+    cout << "\tEnding." << endl;
 }

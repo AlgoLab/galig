@@ -7,8 +7,7 @@ TStr toTStr(const std::string& s) {
 std::ostream& operator<<(std::ostream& os, const std::vector<std::string>& vect) {
     for(std::string s : vect) {
 	os << s << " ";
-    }
-    os << "\n";
+    };
     return os;
 }
 
@@ -45,8 +44,9 @@ void MemsGraph::addNode(Mem mem) {
     nodes_index++;
 }
 
-void MemsGraph::addEdge(Mem mem1, Mem mem2) {
+void MemsGraph::addEdge(Mem mem1, Mem mem2, int w) {
     Graph->AddEdge(MemToIndex.at(mem1.toStr()), MemToIndex.at(mem2.toStr()));
+    weights.AddDat(toTStr(mem1.toStr() + mem2.toStr()), w);
 }
 
 MemsGraph::MemsGraph(ReferenceGraph& g, MemsList& ml, const int& K, const float& perc) {
@@ -63,7 +63,7 @@ MemsGraph::MemsGraph(ReferenceGraph& g, MemsList& ml, const int& K, const float&
 	    if(!isNode(m1)) {
 		if(m1.p <= (1-perc)*plen) {
 		    addNode(m1);
-		    addEdge(Mem(0,0,0), m1);
+		    addEdge(Mem(0,0,0), m1, 0);
 		}
 		else {
 		    continue;
@@ -85,19 +85,17 @@ MemsGraph::MemsGraph(ReferenceGraph& g, MemsList& ml, const int& K, const float&
 				    //std::cout << "1 Adding " << m2.toStr() << std::endl;
 				    addNode(m2);
 				}
-				/**
-				   int wt = m2.t - m1.t - m1.l;
-				   int wp = m2.p - m1.p - m1.l;
-				   int w;
-				   if(wt<0 || wp<0) {
-				   w = abs(wt - wp);
-				   }
-				   else {
-				   w = max(wt, wp);
-				   }
-				**/
+				int wt = m2.t - m1.t - m1.l;
+				int wp = m2.p - m1.p - m1.l;
+				int w;
+				if(wt<0 || wp<0) {
+				  w = abs(wt - wp);
+				}
+				else {
+				  w = max(wt, wp);
+				}
 				//std::cout << "1 Adding " << m1.toStr() << " -> " << m2.toStr() << std::endl;
-				addEdge(m1, m2);
+				addEdge(m1, m2, w);
 			    }
 			} else {
 			    //Esoni diversi
@@ -110,12 +108,10 @@ MemsGraph::MemsGraph(ReferenceGraph& g, MemsList& ml, const int& K, const float&
 					//std::cout << "2 Adding " << m2.toStr() << std::endl;
 					addNode(m2);
 				    }
-				    /**
-				       int wt = (g.select(g.rank(m1.t-1) + 1) - m1.t - m1.l) + (m2.t - g.select(g.rank(m2.t-1)) - 1);
-				       int wp = abs(m2.p - m1.p - m1.l);
-				       int w = max(wt, wp);
-				    **/
-				    addEdge(m1, m2);
+				    int wt = (g.select(g.rank(m1.t-1) + 1) - m1.t - m1.l) + (m2.t - g.select(g.rank(m2.t-1)) - 1);
+				    int wp = abs(m2.p - m1.p - m1.l);
+				    int w = max(wt, wp);
+				    addEdge(m1, m2, w);
 				    //std::cout << "2 Adding " << m1.toStr() << " -> " << m2.toStr() << std::endl;
 				}
 			    }
@@ -165,24 +161,49 @@ std::vector<std::vector<int> > MemsGraph::rec_visit(const TNGraph::TNodeI node) 
 }
 
 void MemsGraph::saveOutput(std::ostream& os, std::string p) {
+    int best_w = -1;
+    int path_id = -1;
+    int best_path_id = -1;
     for(std::vector<int> path : paths) {
-	std::vector<std::string> path_s (path.size(), "");
+	path_id++;
+	int w = 0;
 	try {
 	    Mem starting_mem = IndexToMem.at(path[1]);
 	    Mem ending_mem = IndexToMem.at(path[path.size()-1]);
 	    if(ending_mem.p + ending_mem.l - starting_mem.p >= perc*plen) {
+	    //if(ending_mem.p + ending_mem.l - starting_mem.p >= perc*plen) {
+		w = (starting_mem.p - 1) + (plen - (ending_mem.p + ending_mem.l - 1));
 		unsigned int i = 1;
 		while(i<path.size()) {
-		    path_s[i-1] = labels.GetDat(labels.GetKey(labels.GetKeyId(path[i]))).GetCStr();
+		    w += weights.GetDat(weights.GetKey(weights.GetKeyId(toTStr(IndexToMem.at(path[i-1]).toStr() + IndexToMem.at(path[i]).toStr()))));
 		    i++;
 		}
-		os << p << " ";
-		os << path_s;
+		if(best_w == -1) {
+		    best_w = w;
+		    best_path_id = path_id;
+		}
+		else {
+		    if(w < best_w) {
+			best_w = w;
+			best_path_id = path_id;
+		    }
+		}
 	    }
 	}
 	catch(const std::out_of_range& oor) {
 	    continue;
 	}
+    }
+    if(best_path_id != -1) {
+	std::vector<std::string> path_s (paths[best_path_id].size(), "");
+	unsigned int i = 1;
+	while(i<paths[best_path_id].size()) {
+	    path_s[i-1] = labels.GetDat(labels.GetKey(labels.GetKeyId(paths[best_path_id][i]))).GetCStr();
+	    i++;
+	}
+	os << p << " ";
+	os << path_s;
+	os << best_w << "\n";
     }
 }
 

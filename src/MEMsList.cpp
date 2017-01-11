@@ -15,5 +15,5 @@ std::forward_list<Mem> MemsList::getMems(const int& i) {
 }
 
 int MemsList::getLength() {
-    return length;
+    return length - 1;
 }

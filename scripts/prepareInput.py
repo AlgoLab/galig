@@ -42,8 +42,8 @@ def extractInfo(genomic, gene_annotation):
             end = exon.location.end
             strand = exon.location.strand
             exon_seq = ref_genomic[start:end].seq
-            if strand < 0:
-              exon_seq = reverseAndComplement(exon_seq)
+            #if strand < 0:
+            #  exon_seq = reverseAndComplement(exon_seq)
             T += str(exon_seq) + "|"
             e_lens.append(str(len(str(exon_seq))))
             added_exs.append(exon.id)
@@ -93,7 +93,6 @@ def extractInfo(genomic, gene_annotation):
   f.close()
 
 def main(genomic, gene_annotation):
-  print("Extracting splicing graph (T.fa, e_lens, edges)...")
   extractInfo(genomic, gene_annotation)
 
 if __name__ == '__main__':

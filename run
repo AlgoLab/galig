@@ -6,24 +6,28 @@ rnaseqs=$3
 L=$4
 K=$5
 out=$6
-perc=$7
 
 rm -rf ./tmp/
 mkdir -p ./tmp/
 
 rm -rf ./out/
 mkdir -p ./out/
-
+echo "Preprocessing..."
 python3 ./scripts/prepareInput.py $genomic $annotation
+echo "MEMs Computation..."
 /usr/bin/time --output=$out\_mems.time ./bMEM/backwardMEM -l=$L ./tmp/T.fa $rnaseqs &> ./tmp/mems
 rm ./stopwatch.txt
 rm ./lock.txt
 
-/usr/bin/time --output=$out\_align.time sh -c "./bin/main ./tmp/mems ./tmp/e_lens ./tmp/real_edges ./tmp/added_edges ${K} ${out} ${perc} ; python3 ./scripts/SAMFormatter.py ${out} ${rnaseqs}"
+echo "Aligning..."
+/usr/bin/time --output=$out\_align.time sh -c "./bin/main ./tmp/mems ./tmp/e_lens ./tmp/real_edges ./tmp/added_edges ${L} ${K} ${out} ; python3 ./scripts/SAMFormatter.py ${out} ${rnaseqs}"
 
-python3 ./scripts/counter.py $out
+echo "Postprocessing..."
+python3 ./scripts/formatter.py $out
+python3 ./scripts/edgesFormatter.py $out
+python3 ./scripts/newEdgesFormatter.py $out
 
-samtools view -bS $out.sam > $out.bam
+#samtools view -bS $out.sam > $out.bam
 
 #samtools sort $out.bam $out.sort
 #samtools index $out.sort.bam

@@ -60,7 +60,6 @@ int MemsReader::extractLength(std::string line) {
 }
 
 void MemsReader::readMEMsFile() {
-    std::cout << "Reading patterns..." << std::endl;
     patterns.clear();
     const int& max = 1000000;
     bool flag = false;
@@ -106,7 +105,6 @@ void MemsReader::readMEMsFile() {
 	    }
 	}
 	if(memsFile.eof()) {
-	    std::cout << "All patterns read" << std::endl;
 	    memsFile.close();
 	}
     }

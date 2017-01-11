@@ -20,6 +20,7 @@ private:
     float perc = 0;
     PNGraph Graph;
     TIntStrH labels;
+    TStrIntH weights;
     std::unordered_map<std::string, int> MemToIndex;
     std::unordered_map<int, Mem> IndexToMem;
     std::vector<std::vector<std::vector<int> > > subpaths;
@@ -27,7 +28,7 @@ private:
 
     TStr toTStr(const std::string& s);
     void addNode(Mem mem);
-    void addEdge(Mem mem1, Mem Mem2);
+    void addEdge(Mem mem1, Mem Mem2, int w);
     int getNodeId(const std::string& mem);
     bool isNode(Mem m);
     std::vector<std::vector<int> > rec_visit(const TNGraph::TNodeI node);
