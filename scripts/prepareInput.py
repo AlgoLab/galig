@@ -14,7 +14,7 @@ def reverseAndComplement(text):
       new_text += elem
   return new_text
 
-def extractInfo(genomic, gene_annotation):
+def extractInfo(genomic, gene_annotation, out):
   genomic_dict = SeqIO.index(genomic, "fasta")
   in_handle = open(gene_annotation)
 
@@ -31,7 +31,7 @@ def extractInfo(genomic, gene_annotation):
   for rec in GFF.parse(in_handle, limit_info=dict(gff_type = ["gene", "transcript", "exon"])):
     chromosome = rec.id
     ref_genomic = genomic_dict[chromosome]
-    chromo_len = len(ref_genomic)
+    #chromo_len = len(ref_genomic)
     for gene in rec.features:
       gene_name = gene.id
       for transcript in gene.sub_features:
@@ -57,23 +57,23 @@ def extractInfo(genomic, gene_annotation):
   
   in_handle.close()
 
-  f = open("./tmp/gene_info", "w")
+  f = open("{}/tmp/gene_info".format(out), "w")
   f.write("{}\n{}\n{}".format(chromosome, chromo_len, gene_name))
   f.close()
   
-  f = open("./tmp/e_pos", "w")
+  f = open("{}/tmp/e_pos".format(out), "w")
   f.write("{}".format("\n".join(exs_pos)))
   f.close()
   
-  f = open("./tmp/T.fa", "w")
+  f = open("{}/tmp/T.fa".format(out), "w")
   f.write(">T\n{}\n".format(T))
   f.close()
   
-  f = open("./tmp/e_lens", "w")
+  f = open("{}/tmp/e_lens".format(out), "w")
   f.write("{}".format("\n".join(e_lens)))
   f.close()
 
-  f = open("./tmp/real_edges", "w")
+  f = open("{}/tmp/real_edges".format(out), "w")
   f.write("{}".format(real_edg_string))
   f.close()
 
@@ -92,9 +92,9 @@ def extractInfo(genomic, gene_annotation):
   f.write("{}".format(edg_string))
   f.close()
 
-def main(genomic, gene_annotation):
-  extractInfo(genomic, gene_annotation)
+def main(genomic, gene_annotation, out):
+  extractInfo(genomic, gene_annotation, out)
 
 if __name__ == '__main__':
-  #Genomic, annotation, rna-seq reads
-  main(sys.argv[1], sys.argv[2])
+  #Genomic, annotation, outs
+  main(sys.argv[1], sys.argv[2], sys.argv[3])
