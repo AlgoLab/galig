@@ -294,7 +294,7 @@ class SAMFormatter:
                             elif errors_P > errors_T1 + errors_T2:
                                 CIGAR += "{}I".format(errors_P - errors_T1 - errors_T2)
                                 if intron != 0:
-                                    CIGAR = CIGAR[:j1] + "{}M".format(errors_T1)
+                                    CIGAR += "{}M".format(errors_T1)
                                     CIGAR += "{}N".format(intron)
                                     CIGAR += "{}M".format(errors_T2 + mems[i][2])
                                 else:
