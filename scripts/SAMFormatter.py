@@ -19,13 +19,7 @@ class SAMFormatter:
             [self.chromo, self.chromo_len, self.gene_name] = g.read().split("\n")
 
         #Rna-Seqs extraction
-        ### !!!BAD!!!
-        rna_seqs = list(SeqIO.parse(rna_seqs_file, "fasta"))
-        self.rna_seqs = {}
-        for elem in rna_seqs:
-            self.rna_seqs.update({elem.id:elem.seq})
-        #print(self.rna_seqs)
-        
+        self.rna_seqs = SeqIO.index(rna_seqs_file, "fasta")
         #Bit Vector Setup
         with open("./tmp/T.fa") as t:
             text = t.read().split("\n")[1]
@@ -43,8 +37,12 @@ class SAMFormatter:
         out.write("@HD\tVN:1.4\n")
         out.write("@SQ\tSN:{}\tLN:{}\n".format(self.chromo, self.chromo_len))
         for (p_id, mems) in self.outs:
-            rna_seq = self.rna_seqs[p_id]
-            out.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(p_id, 0, self.chromo, self.getStart(mems[0]), 255, self.getCIGAR(mems, len(rna_seq)), "*", 0, 0, rna_seq, "*"))
+            f = 0
+            if p_id[-1] == "'":
+                f = 16
+                p_id = p_id[:-1]
+            rna_seq = self.rna_seqs[p_id].seq
+            out.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(p_id, f, self.chromo, self.getStart(mems[0]), 255, self.getCIGAR(mems, len(rna_seq)), "*", 0, 0, rna_seq, "*"))
 
     #Utils
     def extractMEM(self, string):

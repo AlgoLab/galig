@@ -15,6 +15,14 @@
 
 using namespace std;
 
+/**
+std::ostream& operator<<(std::ostream& os, const std::vector<std::string>& vect) {
+    for(std::string s : vect) {
+	os << s << " ";
+    };
+    return os;
+}**/
+
 int main(int argc, char* argv[]) {
     string mems = argv[1];
     string e_lens = argv[2];
@@ -34,11 +42,30 @@ int main(int argc, char* argv[]) {
     int i = 0;
     while(mr.hasPattern()) {
 	i++;
-	pair<string, MemsList> p = mr.popPattern();
-	MemsGraph mg (g, p.second, K, perc);
-	//mg.saveImage("./out/" + p.first);
-	mg.visit();
-	mg.saveOutput(outFile, p.first);
+	pair<string, MemsList> p1 = mr.popPattern();
+	pair<string, MemsList> p2 = mr.popPattern();
+	MemsGraph mg1 (g, p1.second, K, perc);
+	MemsGraph mg2 (g, p2.second, K, perc);
+	//mg.saveImage(out_file + p.first);
+	mg1.visit();
+	mg2.visit();
+	pair<int, string> out1 (mg1.getOutput());
+	pair<int, string> out2 (mg2.getOutput());
+	if(out1.first >= 0 && out2.first >= 0) {
+	    if(out1.first <= out2.first) {
+		outFile << p1.first << " " << out1.second << " " << out1.first << "\n";
+	    }
+	    else {
+		outFile << p2.first << " " << out2.second << " " << out2.first << "\n";
+	    }
+	}
+	else if(out1.first == -1 && out2.first >= 0) {
+		outFile << p2.first << " " << out2.second << " " << out2.first << "\n";
+	}
+	else if(out1.first >= 0 && out2.first == -1) {
+	    outFile << p1.first << " " << out1.second << " " << out1.first << "\n";
+	}
+	//mg1.saveOutput(outFile, p.first);
     }
     outFile.close();
     cout << "\tEnding." << endl;

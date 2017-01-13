@@ -2,6 +2,8 @@ import sys, os
 
 from BCBio import GFF
 from Bio import SeqIO
+from Bio.Seq import Seq
+from Bio.SeqRecord import SeqRecord
 
 def reverseAndComplement(text):
   text = text[::-1]
@@ -14,7 +16,7 @@ def reverseAndComplement(text):
       new_text += elem
   return new_text
 
-def extractInfo(genomic, gene_annotation, out):
+def extractInfo(genomic, gene_annotation, rna, out):
   genomic_dict = SeqIO.index(genomic, "fasta")
   in_handle = open(gene_annotation)
 
@@ -57,6 +59,18 @@ def extractInfo(genomic, gene_annotation, out):
   
   in_handle.close()
 
+  f = open("{}/tmp/Ps.fa".format(out), "w")
+  for record in SeqIO.parse(rna, "fasta"):
+    id1 = record.id
+    seq1 = record.seq
+    record = SeqRecord(seq1, id=id1, description="")
+    SeqIO.write(record, f, "fasta")
+    id2 = id1 + "'"
+    seq2 = reverseAndComplement(seq1)
+    record = SeqRecord(Seq(seq2), id=id2, description="")
+    SeqIO.write(record, f, "fasta")
+  f.close()
+
   f = open("{}/tmp/gene_info".format(out), "w")
   f.write("{}\n{}\n{}".format(chromosome, chromo_len, gene_name))
   f.close()
@@ -92,9 +106,9 @@ def extractInfo(genomic, gene_annotation, out):
   f.write("{}".format(edg_string))
   f.close()
 
-def main(genomic, gene_annotation, out):
-  extractInfo(genomic, gene_annotation, out)
+def main(genomic, gene_annotation, rna, out):
+  extractInfo(genomic, gene_annotation, rna, out)
 
 if __name__ == '__main__':
   #Genomic, annotation, outs
-  main(sys.argv[1], sys.argv[2], sys.argv[3])
+  main(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4])

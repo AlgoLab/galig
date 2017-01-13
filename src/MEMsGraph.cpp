@@ -160,6 +160,56 @@ std::vector<std::vector<int> > MemsGraph::rec_visit(const TNGraph::TNodeI node) 
     return paths;
 }
 
+std::pair<int, std::string> MemsGraph::getOutput() {
+    int best_w = -1;
+    int path_id = -1;
+    int best_path_id = -1;
+    for(std::vector<int> path : paths) {
+	path_id++;
+	int w = 0;
+	try {
+	    Mem starting_mem = IndexToMem.at(path[1]);
+	    Mem ending_mem = IndexToMem.at(path[path.size()-1]);
+	    if(ending_mem.p + ending_mem.l - starting_mem.p >= perc*plen) {
+		w = (starting_mem.p - 1) + (plen - (ending_mem.p + ending_mem.l - 1));
+		unsigned int i = 1;
+		while(i<path.size()) {
+		    w += weights.GetDat(weights.GetKey(weights.GetKeyId(toTStr(IndexToMem.at(path[i-1]).toStr() + IndexToMem.at(path[i]).toStr()))));
+		    i++;
+		}
+		if(best_w == -1) {
+		    best_w = w;
+		    best_path_id = path_id;
+		}
+		else {
+		    if(w < best_w) {
+			best_w = w;
+			best_path_id = path_id;
+		    }
+		}
+	    }
+	}
+	catch(const std::out_of_range& oor) {
+	    continue;
+	}
+    }
+    std::pair<int, std::string> out (-1, "");
+    if(best_path_id != -1) {
+	//std::vector<std::string> path_s (paths[best_path_id].size(), "");
+	std::string path_s = "";
+	unsigned int i = 1;
+	while(i<paths[best_path_id].size()) {
+	    path_s += labels.GetDat(labels.GetKey(labels.GetKeyId(paths[best_path_id][i]))).GetCStr();
+	    path_s += " ";
+	    //path_s[i-1] = labels.GetDat(labels.GetKey(labels.GetKeyId(paths[best_path_id][i]))).GetCStr();
+	    i++;
+	}
+	out.first = best_w;
+	out.second = path_s;
+    }
+    return out;
+}
+
 void MemsGraph::saveOutput(std::ostream& os, std::string p) {
     int best_w = -1;
     int path_id = -1;
@@ -223,7 +273,7 @@ void MemsGraph::saveImage(const std::string& patt) {
 
     myfile << dot;
     myfile.close();
-    if(system(("dot -Tpng ./" + patt + ".dot -o ./" + patt + ".png").c_str()) != 0) {
+    if(system(("dot -Tpng " + patt + ".dot -o " + patt + ".png").c_str()) != 0) {
 	std::cerr << "System call error" << std::endl;
     }
 }

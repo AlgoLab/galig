@@ -5,6 +5,7 @@
 
 //=================================
 // included dependencies
+#include <string>
 #include <unordered_map>
 
 #include "MEMsList.hpp"
@@ -37,6 +38,7 @@ public:
     void saveImage(const std::string& patt);
     void saveOutput(std::ostream& os, std::string p);
     void visit();
+    std::pair<int, std::string> getOutput();
 };
 
 #endif
