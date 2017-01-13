@@ -9,6 +9,7 @@
 
 //=================================
 // included dependencies
+#include <iostream>
 #include <string>
 #include <vector>
 #include <forward_list>
@@ -40,6 +41,7 @@ public:
     void addMem(const int& t, const int& p, const int& l);
     std::forward_list<Mem> getMems(const int& i);
     int getLength();
+    void print();
 };
 
 #endif

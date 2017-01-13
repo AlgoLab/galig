@@ -35,7 +35,7 @@ void ReferenceGraph::setupEdges(const std::string& fpath1, const std::string& fp
     std::string line;
     edges.resize(nex+1);
     for(int i = 0; i <= nex; i++) {
-	edges[i] = std::vector< int>(nex, 0);
+	edges[i] = std::vector< int>(nex+1, 0);
     }
     std::ifstream edgesFile1(fpath1);
     if (edgesFile1.is_open()) {
@@ -59,6 +59,14 @@ void ReferenceGraph::setupEdges(const std::string& fpath1, const std::string& fp
     else {
 	std::cout << "Unable to open edges file" << std::endl;
     }
+    /**
+    for(auto l : edges) {
+	for(auto e : l) {
+	    std:: cout << e << " ";
+	}
+	std::cout << std::endl;
+    }
+    **/
 }
 
 int ReferenceGraph::setupBitVector(const std::string& fpath) {

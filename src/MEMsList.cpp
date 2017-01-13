@@ -17,3 +17,16 @@ std::forward_list<Mem> MemsList::getMems(const int& i) {
 int MemsList::getLength() {
     return length - 1;
 }
+
+void MemsList::print() {
+    int i = 0;
+    while(i<this->getLength()) {
+	std::forward_list<Mem> l = this->getMems(i);
+	std::cout << i << std::endl;
+	for(std::forward_list<Mem>::iterator it1=l.begin(); it1 != l.end(); ++it1) {
+	    Mem m = (*it1);
+	    std::cout << m.toStr() << std::endl;
+	}
+	i++;
+    }
+}
