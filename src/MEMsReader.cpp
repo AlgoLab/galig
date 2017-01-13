@@ -5,6 +5,14 @@ MemsReader::MemsReader(const std::string& fpath) {
     memsFile.open(fpath);
 }
 
+int MemsReader::numPatterns() {
+    int num = 0;
+    for(std::forward_list<std::pair<std::string, MemsList> >::iterator it=patterns.begin(); it != patterns.end(); ++it) {
+	num++;
+    }
+    return num;
+}
+
 void MemsReader::addPattern(const std::string& pattern_id, const int& pattern_length, std::forward_list<std::vector<int> > MEMs) {
     MemsList ml (pattern_length);
     /**
@@ -26,6 +34,9 @@ bool MemsReader::hasPattern() {
     return !patterns.empty();
 }
 std::pair<std::string, MemsList> MemsReader::popPattern() {
+    if(patterns.empty()) {
+	std::cout << "empty" << std::endl;
+    }
     std::pair<std::string, MemsList> p = patterns.front();
     patterns.pop_front();
     return p;
@@ -73,7 +84,14 @@ void MemsReader::readMEMsFile() {
 	    if(line.length() != 0) {
 		if(line.at(0) == '#') {
 		    if(flag) {
+			addPattern(pattern_id, pattern_length, MEMs);
+			i++;
+			//std::cout << "Pattern " << i << std::endl;
+			MEMs.clear();
+			flag = false;
+			/**
 			if(MEMs.empty()) {
+			    std::cout << "@@@" << std::endl;
 			    MEMs.clear();
 			    flag = false;
 			}
@@ -85,6 +103,7 @@ void MemsReader::readMEMsFile() {
 			    MEMs.clear();
 			    flag = false;
 			}
+			**/
 		    }
 		    else {
 			if(line.substr(0,7).compare("# P.len") == 0) {

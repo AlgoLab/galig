@@ -26,6 +26,7 @@ public:
     void print();
     bool hasPattern();
     std::pair<std::string, MemsList> popPattern();
+    int numPatterns();
 };
 
 #endif

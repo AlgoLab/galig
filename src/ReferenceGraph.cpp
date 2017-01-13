@@ -59,14 +59,6 @@ void ReferenceGraph::setupEdges(const std::string& fpath1, const std::string& fp
     else {
 	std::cout << "Unable to open edges file" << std::endl;
     }
-    /**
-    for(auto l : edges) {
-	for(auto e : l) {
-	    std:: cout << e << " ";
-	}
-	std::cout << std::endl;
-    }
-    **/
 }
 
 int ReferenceGraph::setupBitVector(const std::string& fpath) {

@@ -56,7 +56,7 @@ MemsGraph::MemsGraph(ReferenceGraph& g, MemsList& ml, const int& K, const float&
     plen = ml.getLength();
     this->perc = perc;
     this->K = K;
-    while(curr_p < plen) {
+    while(curr_p < plen) {	
 	std::forward_list<Mem> mems1 = ml.getMems(curr_p);
 	for(auto it1=mems1.begin(); it1!=mems1.end(); ++it1) {
 	    Mem m1 = (*it1);
@@ -79,7 +79,6 @@ MemsGraph::MemsGraph(ReferenceGraph& g, MemsList& ml, const int& K, const float&
 		    if(m1.p + m1.l < m2.p + m2.l) {
 			if(g.rank(m1.t - 1) == g.rank(m2.t - 1)) {
 			    //Stesso esone
-			    //std::cout << "1" << std::endl;
 			    if(m2.t > m1.t && m2.t <= m1.t + m1.l + K && m1.t + m1.l < m2.t + m2.l) {
 				if(!isNode(m2)) {
 				    //std::cout << "1 Adding " << m2.toStr() << std::endl;
@@ -123,7 +122,6 @@ MemsGraph::MemsGraph(ReferenceGraph& g, MemsList& ml, const int& K, const float&
 	}
 	curr_p++;
     }
-
     subpaths = std::vector<std::vector<std::vector<int> > >(Graph->GetNodes(), { std::vector<std::vector<int> > { std::vector<int> { } } });
 }
 
