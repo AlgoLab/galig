@@ -6,13 +6,14 @@ from BitVector import BV
 class SAMFormatter:
     def __init__(self, out_file, rna_seqs_file):
         self.out_file = out_file
+
         #Output reader
         with open(out_file) as o:
             self.outs = []
             for line in o.read().split("\n"):
                 if line != "":
                     l = line.split(" ")
-                    self.outs.append((l[0],[self.extractMEM(m) for m in l[1:-2]]))
+                    self.outs.append((l[0],[self.extractMEM(m) for m in l[1:-2]],int(l[-1])))
 
         #Gene_name extraction
         with open("./tmp/gene_info") as g:
@@ -20,6 +21,7 @@ class SAMFormatter:
 
         #Rna-Seqs extraction
         self.rna_seqs = SeqIO.index(rna_seqs_file, "fasta")
+
         #Bit Vector Setup
         with open("./tmp/T.fa") as t:
             text = t.read().split("\n")[1]
@@ -32,17 +34,34 @@ class SAMFormatter:
                 if line != "":
                     self.exs_pos.append([int(n) for n in line.split(",")])
 
+        #Edges Setup
+        self.edges = []
+        self.new_edges = []
+        with open("./tmp/real_edges") as a:
+            es = a.read().split("\n")
+            for e in es:
+                if e != "":
+                    self.edges.append(e)
+        with open("./tmp/added_edges") as a:
+            es = a.read().split("\n")
+            for e in es:
+                if e != "":
+                    self.new_edges.append(e)
+
     def format(self):
         out = open(self.out_file + ".sam", "w")
         out.write("@HD\tVN:1.4\n")
         out.write("@SQ\tSN:{}\tLN:{}\n".format(self.chromo, self.chromo_len))
-        for (p_id, mems) in self.outs:
+        for (p_id, mems, err) in self.outs:
             f = 0
             if p_id[-1] == "'":
                 f = 16
                 p_id = p_id[:-1]
             rna_seq = self.rna_seqs[p_id].seq
-            out.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(p_id, f, self.chromo, self.getStart(mems[0]), 255, self.getCIGAR(mems, len(rna_seq)), "*", 0, 0, rna_seq, "*"))
+            cigar, clips = self.getCIGAR(mems, len(rna_seq))
+            MAPQ = err-clips
+            used_edges, used_nedges, altAccDon = self.getUsedEdges(mems)
+            out.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\tUE:A:{}\tUN:A:{}\tAD:A:{}\n".format(p_id, f, self.chromo, self.getStart(mems[0]), MAPQ, cigar, "*", 0, 0, rna_seq, "*", ";".join(used_edges), ";".join(used_nedges), ";".join(altAccDon)))
 
     #Utils
     def extractMEM(self, string):
@@ -53,14 +72,42 @@ class SAMFormatter:
         id = self.bv.rank(mem[0])
         return self.exs_pos[id-1][0] + (mem[0] - self.bv.select(id))
 
+    def getUsedEdges(self, mems):
+        edges_u = []
+        newEdges_u = []
+        altAccDon = []
+        i = 0
+        while i<len(mems)-1:
+            e1 = self.bv.rank(mems[i][0] - 1)
+            e2 = self.bv.rank(mems[i+1][0] - 1)
+            if e1 != e2:
+                if "{},{}".format(e1, e2) in self.edges:
+                    edges_u.append("{},{}".format(e1, e2))
+                elif "{},{}".format(e1, e2) in self.new_edges:
+                    edges_u.append("{},{}".format(e1, e2))
+                    newEdges_u.append("{},{}".format(e1, e2))
+                suff = self.bv.select(e1 + 1) - (mems[i][0] + mems[i][2])
+                pref = (mems[i+1][0]) - self.bv.select(e2) - 1
+                if suff != 0 or pref != 0:
+                    altAccDon.append("{},{}-{},{}".format(e1, e2, suff, pref))
+            i+=1
+        if edges_u == []:
+            edges_u.append(str(self.bv.rank(mems[0][0] - 1)))
+        if newEdges_u == []:
+            newEdges_u.append(".")
+        if altAccDon == []:
+            altAccDon== ["."]
+        return edges_u, newEdges_u, altAccDon
 
     def getCIGAR(self, mems, m):
         CIGAR = ""
         i = 0
+        clips = 0
         while i<len(mems):
             if i == 0:
                 if mems[i][1] != 1:
                     CIGAR += "{}S".format(mems[i][1]-1)
+                    clips += mems[i][1]-1
                 CIGAR += "{}M".format(mems[i][2])
             else:
                 ##################################################################
@@ -209,7 +256,7 @@ class SAMFormatter:
                                 CIGAR += "{}N".format(intron)
                                 CIGAR += "{}D".format(abs(errors_P) + errors_T2)
                             else:
-                                CIGAR += "{}I".format(errors_T1 + abs(errors_P) + errors_T2)
+                                CIGAR += "{}D".format(errors_T1 + abs(errors_P) + errors_T2)
                             CIGAR += "{}M".format(mems[i][2]-abs(errors_P))
                     #------------------------------------------------
                     else:
@@ -319,12 +366,13 @@ class SAMFormatter:
                                         CIGAR += "{}M".format(errors_T2 - tot_ins + mems[i][2])
                                     else:
                                         CIGAR += "{}D".format(tot_ins)
-                                        CIGAR += "{}M".format(errors_P + mems[i][2])
+                                        CIGAR += "{}M".format(errors_T2 - tot_ins + mems[i][2])
             i+=1
         final_dels = m - mems[-1][1] - mems[-1][2] + 1
         if  final_dels != 0:
             CIGAR += "{}S".format(final_dels)
-        return CIGAR
+            clips += final_dels
+        return CIGAR, clips
 
 if __name__ == '__main__':
     #Outfile, rna_seqs
