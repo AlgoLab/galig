@@ -23,7 +23,12 @@ int main(int argc, char* argv[]) {
     int L = atoi(argv[5]);
     int K = atoi(argv[6]);
     string out_file = argv[7];
-    float perc = (100.0-2*L)/100.0;
+    float perc = (100-2*L);
+    const int MIN_PERC = 80;
+    if(perc < MIN_PERC) {
+      perc = MIN_PERC;
+    }
+    perc = 80;
 
     MemsReader mr = MemsReader(mems);
     mr.readMEMsFile();
@@ -42,10 +47,22 @@ int main(int argc, char* argv[]) {
 	mg1.visit();
 	mg2.visit();
 
-	pair<int, string> out1 (mg1.getOutput());
-	pair<int, string> out2 (mg2.getOutput());
+        list<string> out1 (mg1.getOutput());
+	list<string> out2 (mg2.getOutput());
 
+	if(out1.size() > 0) {
+	    for(string s : out1) {
+		outFile << p1.first << " " << s << "\n";
+	    }
+	}
+	else if(out2.size() > 0) {
+	    for(string s : out2) {
+		outFile << p2.first << " " << s << "\n";
+	    }
+	}
+	/**
         if(out1.first >= 0 && out2.first >= 0) {
+	    cout << "1" << endl;
 	    if(out1.first <= out2.first) {
 		outFile << p1.first << " " << out1.second << " " << out1.first << "\n";
 	    }
@@ -54,11 +71,14 @@ int main(int argc, char* argv[]) {
 	    }
 	}
 	else if(out1.first == -1 && out2.first >= 0) {
+	    cout << "2" << endl;
 	    outFile << p2.first << " " << out2.second << " " << out2.first << "\n";
 	}
 	else if(out1.first >= 0 && out2.first == -1) {
+	    cout << "2" << endl;
 	    outFile << p1.first << " " << out1.second << " " << out1.first << "\n";
 	}
+	**/
     }
     outFile.close();
 }

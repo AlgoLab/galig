@@ -1,8 +1,6 @@
 import sys
 from Bio import SeqIO
 
-import editdistance
-
 from BitVector import BV
 
 class SAMFormatter:
@@ -15,8 +13,7 @@ class SAMFormatter:
             for line in o.read().split("\n"):
                 if line != "":
                     l = line.split(" ")
-                    self.outs.append((l[0],[self.extractMEM(m) for m in l[1:-1]]))
-        print(self.outs[-1])
+                    self.outs.append((l[0],[self.extractMEM(m) for m in l[1:-2]],int(l[-1])))
 
         #Gene_name extraction
         with open("./tmp/gene_info") as g:
@@ -27,8 +24,8 @@ class SAMFormatter:
 
         #Bit Vector Setup
         with open("./tmp/T.fa") as t:
-            self.text = t.read().split("\n")[1]
-            self.bv = BV(self.text)
+            text = t.read().split("\n")[1]
+            self.bv = BV(text)
 
         #Exons Position Setup
         with open("./tmp/e_pos") as f:
@@ -55,16 +52,16 @@ class SAMFormatter:
         out = open(self.out_file + ".sam", "w")
         out.write("@HD\tVN:1.4\n")
         out.write("@SQ\tSN:{}\tLN:{}\n".format(self.chromo, self.chromo_len))
-        for (p_id, mems) in self.outs:
+        for (p_id, mems, err) in self.outs:
             f = 0
             if p_id[-1] == "'":
                 f = 16
                 p_id = p_id[:-1]
             rna_seq = self.rna_seqs[p_id].seq
-            cigar, err, clips = self.getCIGAR(mems, rna_seq)
-            if err/(len(rna_seq)-clips)*100 <= 7:
-                used_edges, used_nedges, altAccDon = self.getUsedEdges(mems)
-                out.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\tER:A:{}\tUE:A:{}\tUN:A:{}\tAD:A:{}\n".format(p_id, f, self.chromo, self.getStart(mems[0]), 255, cigar, "*", 0, 0, rna_seq, "*", err, ";".join(used_edges), ";".join(used_nedges), ";".join(altAccDon)))
+            cigar, clips = self.getCIGAR(mems, len(rna_seq))
+            MAPQ = err-clips
+            used_edges, used_nedges, altAccDon = self.getUsedEdges(mems)
+            out.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\tER:A:{}\tUE:A:{}\tUN:A:{}\tAD:A:{}\n".format(p_id, 0, self.chromo, self.getStart(mems[0]), 255, cigar, "*", 0, 0, rna_seq, "*", f, ";".join(used_edges), ";".join(used_nedges), ";".join(altAccDon)))
 
     #Utils
     def extractMEM(self, string):
@@ -101,21 +98,16 @@ class SAMFormatter:
             altAccDon.append(".")
         return edges_u, newEdges_u, altAccDon
 
-    def getCIGAR(self, mems, rna_seq):
+    def getCIGAR(self, mems, m):
         CIGAR = ""
         i = 0
-        errs = 0
         clips = 0
-        last_pos = 0
-        text = ""
-        m = len(rna_seq)
         while i<len(mems):
             if i == 0:
                 if mems[i][1] != 1:
                     CIGAR += "{}S".format(mems[i][1]-1)
                     clips += mems[i][1]-1
                 CIGAR += "{}M".format(mems[i][2])
-                last_pos = mems[i][0]
             else:
                 ##################################################################
                 id1 = self.bv.rank(mems[i-1][0])
@@ -125,16 +117,16 @@ class SAMFormatter:
                     errors_T = mems[i][0] - mems[i-1][0] - mems[i-1][2]
                     #------------------------------------------------
                     if errors_P == 0:
-                        if errors_T < 0:
+                       if errors_T < 0:
                             #Case 1
                             #print("1")
                             CIGAR += "{}I".format(abs(errors_T))
                             CIGAR += "{}M".format(mems[i][2]-abs(errors_T))
-                        elif errors_T > 0:
-                            #Case 2
-                            #print("2")
-                            CIGAR += "{}D".format(abs(errors_T))
-                            CIGAR += "{}M".format(mems[i][2])
+                       elif errors_T > 0:
+                           #Case 2
+                           #print("2")
+                           CIGAR += "{}D".format(abs(errors_T))
+                           CIGAR += "{}M".format(mems[i][2])
                     #------------------------------------------------
                     elif errors_P < 0:
                         if errors_T == 0:
@@ -195,8 +187,6 @@ class SAMFormatter:
                     errors_T1 = self.bv.select(self.bv.rank(mems[i-1][0]) + 1) - mems[i-1][0] - mems[i-1][2]
                     errors_T2 = mems[i][0] - self.bv.select(self.bv.rank(mems[i][0])) - 1
                     intron = self.exs_pos[id2-1][0] - self.exs_pos[id1-1][1]
-                    text += self.text[last_pos-1:self.bv.select(self.bv.rank(mems[i-1][0]) + 1)-1]
-                    last_pos = self.bv.select(self.bv.rank(mems[i][0])) + 1
                     #------------------------------------------------
                     if errors_P == 0:
                         if errors_T1 == 0 and errors_T2 == 0:
@@ -381,10 +371,7 @@ class SAMFormatter:
         if  final_dels != 0:
             CIGAR += "{}S".format(final_dels)
             clips += final_dels
-
-        text += self.text[last_pos-1:mems[-1][0]+mems[-1][2]-1]
-        errs = editdistance.eval(text, rna_seq[mems[0][1]-1:mems[-1][1]+mems[-1][2]-1])
-        return CIGAR, errs, clips
+        return CIGAR, clips
 
 if __name__ == '__main__':
     #Outfile, rna_seqs
