@@ -1,0 +1,30 @@
+#!/bin/bash
+
+genomic=$1
+annotation=$2
+rnaseqs=$3
+L=$4
+K=$5
+name=$6
+out=$7
+
+HD=..
+
+rm -rf ./tmp/
+mkdir -p ./tmp/
+mkdir -p ${out}/${name}
+
+echo "Preprocessing..."
+/usr/bin/time -v --append --output=${out}/${name}/pre.time python3 ${HD}/scripts/prepareInput.py ${genomic} ${annotation} ${rnaseqs} .
+
+echo "MEMs Computation..."
+/usr/bin/time -v --append --output=${out}/${name}/mems.time ${HD}/bMEM/backwardMEM -l=${L} ./tmp/T.fa ./tmp/Ps.fa &> ./tmp/mems
+rm ./stopwatch.txt
+rm ./lock.txt
+
+echo "Aligning..."
+mkdir -p ${out}
+/usr/bin/time -v --append --output=${out}/${name}/align.time bash -c "${HD}/bin/main ./tmp/mems ./tmp/e_lens ./tmp/real_edges ./tmp/added_edges ${L} ${K} ${out}/${name}/${name} ; python3 ${HD}/scripts/SAMFormatter.py ${out}/${name}/${name} ${rnaseqs}"
+
+
+rm -rf ./tmp/

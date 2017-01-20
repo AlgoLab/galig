@@ -16,7 +16,6 @@ class SAMFormatter:
                 if line != "":
                     l = line.split(" ")
                     self.outs.append((l[0],[self.extractMEM(m) for m in l[1:-1]]))
-        print(self.outs[-1])
 
         #Gene_name extraction
         with open("./tmp/gene_info") as g:
