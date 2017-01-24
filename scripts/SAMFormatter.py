@@ -64,7 +64,7 @@ class SAMFormatter:
                 p_id = p_id[:-1]
             rna_seq = self.rna_seqs[p_id].seq
             cigar, err, clips = self.getCIGAR(mems_list, rna_seq)
-            if err/(len(rna_seq))*100 <= 7:
+            if int(err/(len(rna_seq)))*100 <= 7:
                 used_edges, used_nedges, altAccDon = self.getUsedEdges(mems_list)
                 out.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\tER:A:{}\tUE:A:{}\tUN:A:{}\tAD:A:{}\n".format(p_id, f, self.chromo, self.getStart(mems_list[0]), 255, cigar, "*", 0, 0, rna_seq, "*", err, ";".join(used_edges), ";".join(used_nedges), ";".join(altAccDon)))
                 mems_out.write("{}\t{}\n".format(p_id, mems))
