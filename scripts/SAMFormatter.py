@@ -15,7 +15,8 @@ class SAMFormatter:
             for line in o.read().split("\n"):
                 if line != "":
                     l = line.split(" ")
-                    self.outs.append((l[0],[self.extractMEM(m) for m in l[1:-1]]))
+                    self.outs.append((l[0]," ".join(l[1:-1])))
+                    #self.outs.append((l[0],[self.extractMEM(m) for m in l[1:-1]]))
 
         #Gene_name extraction
         with open("./tmp/gene_info") as g:
@@ -52,23 +53,31 @@ class SAMFormatter:
 
     def format(self):
         out = open(self.out_file + ".sam", "w")
+        mems_out = open(self.out_file + "_confirmed", "w")
         out.write("@HD\tVN:1.4\n")
         out.write("@SQ\tSN:{}\tLN:{}\n".format(self.chromo, self.chromo_len))
         for (p_id, mems) in self.outs:
+            mems_list = self.extractMEMs(mems)
             f = 0
             if p_id[-1] == "'":
                 f = 16
                 p_id = p_id[:-1]
             rna_seq = self.rna_seqs[p_id].seq
-            cigar, err, clips = self.getCIGAR(mems, rna_seq)
-            if err/(len(rna_seq)-clips)*100 <= 7:
-                used_edges, used_nedges, altAccDon = self.getUsedEdges(mems)
-                out.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\tER:A:{}\tUE:A:{}\tUN:A:{}\tAD:A:{}\n".format(p_id, f, self.chromo, self.getStart(mems[0]), 255, cigar, "*", 0, 0, rna_seq, "*", err, ";".join(used_edges), ";".join(used_nedges), ";".join(altAccDon)))
+            cigar, err, clips = self.getCIGAR(mems_list, rna_seq)
+            if err/(len(rna_seq))*100 <= 7:
+                used_edges, used_nedges, altAccDon = self.getUsedEdges(mems_list)
+                out.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\tER:A:{}\tUE:A:{}\tUN:A:{}\tAD:A:{}\n".format(p_id, f, self.chromo, self.getStart(mems_list[0]), 255, cigar, "*", 0, 0, rna_seq, "*", err, ";".join(used_edges), ";".join(used_nedges), ";".join(altAccDon)))
+                mems_out.write("{}\t{}\n".format(p_id, mems))
+        mems_out.close()
+        out.close()
 
     #Utils
-    def extractMEM(self, string):
-        string_mem = string[1:-1].split(",")
-        return [int(string_mem[0]), int(string_mem[1]), int(string_mem[2])]
+    def extractMEMs(self, string):
+        mems = []
+        for s in string.split(" "):
+            string_mem = s[1:-1].split(",")
+            mems.append([int(string_mem[0]), int(string_mem[1]), int(string_mem[2])])
+        return mems
 
     def getStart(self, mem):
         id = self.bv.rank(mem[0])
@@ -382,7 +391,7 @@ class SAMFormatter:
             clips += final_dels
 
         text += self.text[last_pos-1:mems[-1][0]+mems[-1][2]-1]
-        errs = editdistance.eval(text, rna_seq[mems[0][1]-1:mems[-1][1]+mems[-1][2]-1])
+        errs = editdistance.eval(text, rna_seq)
         return CIGAR, errs, clips
 
 if __name__ == '__main__':

@@ -24,11 +24,6 @@ int main(int argc, char* argv[]) {
     int K = atoi(argv[6]);
     string out_file = argv[7];
     float perc = (100-2*L);
-    const int MIN_PERC = 80;
-    if(perc < MIN_PERC) {
-      perc = MIN_PERC;
-    }
-    perc = 80;
 
     MemsReader mr = MemsReader(mems);
     mr.readMEMsFile();
