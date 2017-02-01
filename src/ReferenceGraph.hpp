@@ -8,7 +8,7 @@
 #include <string>
 #include <vector>
 
-#include "sdsl/bit_vectors.hpp"
+#include "../backwardMEM/libs/sdsl-lite/include/sdsl/bit_vectors.hpp"
 
 class ReferenceGraph {
 private:

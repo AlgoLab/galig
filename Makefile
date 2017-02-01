@@ -15,10 +15,12 @@ else
 
 VPATH = $(SRC_DIR)
 
-INCLUDE_FLAGS:= -I$(LOC_DIR)/include/ \
-                -I$(LOC_DIR)/include/snap-core/ \
-                -I$(LOC_DIR)/include/glib-core/	\
-		-I$(BASE_DIR)/include
+SNAP = Snap-2.3
+
+INCLUDE_FLAGS:= \
+		-I$(BASE_DIR)/backwardMEM/libs/sdsl-lite/include \
+                -I$(3RD_DIR)/$(SNAP)/snap-core/ \
+                -I$(3RD_DIR)/$(SNAP)/glib-core/
 
 # Pre-processor flags
 CPPFLAGS= $(INCLUDE_FLAGS)
@@ -34,7 +36,7 @@ LDFLAGS+=-Wl,--gc-sections -fopenmp
 
 # Define libraries
 LIBS:= \
-        -L${LOC_DIR}/lib
+        -L$(BASE_DIR)/backwardMEM/libs/sdsl-lite/lib \
 
 ######
 #
@@ -52,7 +54,7 @@ OBJS_main = \
 	ReferenceGraph.o \
 	MEMsGraph.o \
         main.o
-LIBS_main= $(LIBS) $(LOC_DIR)/include/snap-core/Snap.o -lrt -lsdsl -ldivsufsort -ldivsufsort64
+LIBS_main= $(LIBS) $(3RD_DIR)/$(SNAP)/snap-core/Snap.o -lrt -lsdsl -ldivsufsort -ldivsufsort64
 
 #
 # END List of programs
@@ -75,6 +77,12 @@ all: $(addprefix $(BIN_DIR)/, $(PROGRAMS))
 prerequisites:
 	@echo '* Building pre-requisites...' ; \
 	$(MAKE) -C $(3RD_DIR) prerequisites
+
+# Clean the pre-requisites
+.PHONY: clean-prerequisites
+clean-prerequisites:
+	@echo '* Cleaning pre-requisites...' ; \
+	$(MAKE) -C $(3RD_DIR) clean-prerequisites
 
 ######
 #
