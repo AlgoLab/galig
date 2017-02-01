@@ -3,7 +3,7 @@
 A splicing graph aligner
 
 ```bash
-git clone git@github.com:AlgoLab/galig.git
+git clone --recursive git@github.com:AlgoLab/galig.git
 cd galig
 make prerequisites
 make
