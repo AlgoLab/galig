@@ -4,6 +4,7 @@ local/
 tmp/
 out/
 FullRun
+*~
 
 # Compiled Object files
 *.slo
