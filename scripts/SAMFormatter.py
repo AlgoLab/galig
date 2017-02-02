@@ -63,7 +63,6 @@ class SAMFormatter:
                 f = 16
                 p_id = p_id[:-1]
             rna_seq = self.rna_seqs[p_id].seq
-            print(p_id)
             cigar, err, clips = self.getCIGAR(mems_list, rna_seq)
             if int(err/(len(rna_seq))*100) <= 7:
                 used_edges, used_nedges, altAccDon = self.getUsedEdges(mems_list)
@@ -128,7 +127,10 @@ class SAMFormatter:
                     poss_text = self.text[mems[i][0]-initial_clips-1:mems[i][0]-1]
                     try:
                         bar = poss_text.index("|")
-                        text += self.text[mems[i][0]-initial_clips-2] + poss_text[:bar] + poss_text[bar+1:]
+                        try:
+                            text += self.text[mems[i][0]-initial_clips-2] + poss_text[:bar] + poss_text[bar+1:]
+                        except IndexError:
+                            text += poss_text[:bar] + poss_text[bar+1:]
                     except ValueError:
                         text += poss_text
                 CIGAR += "{}M".format(mems[i][2])
@@ -401,15 +403,16 @@ class SAMFormatter:
             poss_text = self.text[last_pos-1:mems[-1][0]+mems[-1][2]-1+final_dels]
             try:
                 bar = poss_text.index("|")
-                text += poss_text[:bar] + poss_text[bar+1:] + self.text[mems[-1][0]+mems[-1][2]-1+final_dels]
+                try:
+                    text += poss_text[:bar] + poss_text[bar+1:] + self.text[mems[-1][0]+mems[-1][2]-1+final_dels]
+                except IndexError:
+                    text += poss_text[:bar] + poss_text[bar+1:]
             except ValueError:
                 text += poss_text
+        else:
+            text += self.text[last_pos-1:mems[-1][0]+mems[-1][2]-1+final_dels]
 
         errs = editdistance.eval(text, rna_seq)
-        print(text)
-        print(rna_seq)
-        print(errs)
-        print(CIGAR)
         return CIGAR, errs, clips
 
 if __name__ == '__main__':
