@@ -1,52 +1,47 @@
 #include <iostream>
+#include <string>
 #include <fstream>
 
-#include "MEMsReader.hpp"
-#include "ReferenceGraph.hpp"
+#include "FastaReader.hpp"
+#include "SplicingGraph.hpp"
+#include "bMEM.hpp"
+#include "utils.hpp"
+
+#include "MEMsList.hpp"
 #include "MEMsGraph.hpp"
 
-using namespace std;
-
 int main(int argc, char* argv[]) {
-  string mems = argv[1];
-  string e_lens = argv[2];
-  string real_edges = argv[3];
-  string added_edges = argv[4];
-  int L = atoi(argv[5]);
-  int K = atoi(argv[6]);
-  string out_file = argv[7];
-  float perc = (100-2*L);
+    std::string genomic = argv[1];
+    std::string annotation = argv[2];
+    std::string rna_seqs = argv[3];
+    int L = std::stoi(argv[4]);
+    int K = std::stoi(argv[5]);
 
-  MemsReader mr = MemsReader(mems);
-  mr.readMEMsFile();
+    FastaReader fastas (rna_seqs);
+    SplicingGraph sg (genomic, annotation);
+    //sg.print();
+    BackwardMEM bm (sg.getText(), genomic);
+    int i = 0;
+    std::ofstream outFile;
+    outFile.open(genomic + "_res");
+    while(i<fastas.getSize()) {
+        std::pair<std::string, std::string> seq = fastas.getEntry(i);
+        //std::string x = reverse_and_complement(seq.second);
+        std::list<Mem> mems = bm.getMEMs(seq.second,L);
+        //bm.printMEMs();
+        MemsList ml (seq.second.size());
+        for(const Mem& mem : mems) {
+            ml.addMem(mem);
+        }
+        MemsGraph mg (sg, ml, K, 80);
+        //mg.saveImage(seq.first);
+        mg.visit();
+        std::list<std::string> out (mg.getOutput());
+        ++i;
 
-  ReferenceGraph g (e_lens, real_edges, added_edges);
-  ofstream outFile;
-  outFile.open(out_file);
-
-  while(mr.hasPattern()) {
-	pair<string, MemsList> p1 = mr.popPattern();
-	pair<string, MemsList> p2 = mr.popPattern();
-
-	MemsGraph mg1 (g, p1.second, K, perc);
-	MemsGraph mg2 (g, p2.second, K, perc);
-
-	mg1.visit();
-	mg2.visit();
-
-    list<string> out1 (mg1.getOutput());
-	list<string> out2 (mg2.getOutput());
-
-	if(out1.size() > 0) {
-      for(string s : out1) {
-		outFile << p1.first << " " << s << "\n";
-      }
-	}
-	else if(out2.size() > 0) {
-      for(string s : out2) {
-		outFile << p2.first << " " << s << "\n";
-      }
-	}
-  }
-  outFile.close();
+        for(std::string s : out) {
+            outFile << seq.first << " " << s << "\n";
+        }
+    }
+    outFile.close();
 }

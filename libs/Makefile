@@ -1,45 +1,62 @@
 # Makefile for building the third-party libraries.
 
 # Define a destination directory (local) if it is not already defined (as it should be)
-3RD_DIR ?=$(CURDIR)/../libs
+LOC_DIR ?=$(CURDIR)/../local
 
 .PHONY: prerequisites
 .DEFAULT: prerequisites
-prerequisites: folders backwardMEM snap
+prerequisites: folders snap sdsl
 
 .PHONY: clean-prerequisites
-clean-prerequisites: clean-pre
+clean-prerequisites: clean-snap clean-sdsl
 
 .PHONY: folders
 folders:
 	@echo "* Checking folders..." ; \
-	[ -d $(3RD_DIR) ] || mkdir -p $(3RD_DIR) ; \
-
-
-.PHONY: backwardMEM
-backwardMEM: folders $(3RD_DIR)/../backwardMEM/bin/backwardMEM
-
-bMEM_NAME:=backwardMEM
-$(3RD_DIR)/../backwardMEM/bin/backwardMEM:
-	@echo "* backwardMEM" ;			\
-	cd $(3RD_DIR)/../$(bMEM_NAME)/ &&	\
-	make prerequisites &&			\
-	make					\
+	[ -d $(LOC_DIR) ] || mkdir -p $(LOC_DIR) ; \
+	[ -d $(LOC_DIR)/include ] || mkdir -p $(LOC_DIR)/include ; \
+	[ -d $(LOC_DIR)/lib ] || mkdir -p $(LOC_DIR)/lib ; \
+	[ -f $(LOC_DIR)/fasta.o ] || echo "* Fasta"
 
 .PHONY: snap
-snap: folders $(3RD_DIR)/Snap-2.3/snap-core/
+snap: folders $(LOC_DIR)/include/snap-core/
 
 SNAP_NAME:=Snap-2.3
-$(3RD_DIR)/Snap-2.3/snap-core/:
-	@echo "* SNAP Lirary" ;	\
+$(LOC_DIR)/include/snap-core/:
+	@echo "* SNAP Library" ;	\
 	unzip -o $(SNAP_NAME).zip;	\
-	cd $(SNAP_NAME)/ &&	\
-	make all;
+	if [ -d $(SNAP_NAME)/ ]; then	\
+		cd $(SNAP_NAME)/ &&	\
+		$(MAKE) all;	\
+		ln -sf ../../libs/$(SNAP_NAME)/snap-core $(LOC_DIR)/include/;	\
+		ln -sf ../../libs/$(SNAP_NAME)/glib-core $(LOC_DIR)/include/;	\
+	else \
+		echo "SNAP library not found in the current directory" ; \
+		exit 1 ; \
+	fi
 
-.PHONY: clean-pre
-clean-pre:
-	@echo "* Cleaning Prerequisites..." ; \
-	cd $(3RD_DIR)/../$(bMEM_NAME)/ &&	\
-	make clean && \
-	make clean-prerequisites ; \
-	rm -rf $(3RD_DIR)/$(SNAP_NAME)
+.PHONY: clean-snap
+clean-snap:
+	@echo "* Cleaning SNAP library..." ; \
+	rm -rf $(SNAP_NAME)/
+
+
+.PHONY: sdsl
+sdsl: folders $(LOC_DIR)/include/divsufsort64.h
+
+SDSL_NAME:=sdsl-lite
+$(LOC_DIR)/include/divsufsort64.h:
+	@echo "* SDSL-lite Library" ;	\
+	git clone https://github.com/simongog/sdsl-lite.git;	\
+	if [ -d $(SDSL_NAME)/ ]; then	\
+		cd $(SDSL_NAME)/ &&	\
+		./install.sh $(LOC_DIR)/;	\
+	else \
+		echo "SDSL library not found in the current directory" ; \
+		exit 1 ; \
+	fi
+
+.PHONY: clean-sdsl
+clean-sdsl:
+	@echo "* Cleaning SDSL library..." ; \
+	rm -rf $(SDSL_NAME)/

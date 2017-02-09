@@ -49,7 +49,7 @@ void MemsGraph::addEdge(Mem mem1, Mem mem2, int w) {
   weights.AddDat(toTStr(mem1.toStr() + mem2.toStr()), w);
 }
 
-MemsGraph::MemsGraph(ReferenceGraph& g, MemsList& ml, const int& K, const int& perc) {
+MemsGraph::MemsGraph(SplicingGraph& g, MemsList& ml, const int& K, const int& perc) {
   Graph = TNGraph::New();
   addNode(Mem(0,0,0));
   int curr_p = 1;
@@ -62,7 +62,7 @@ MemsGraph::MemsGraph(ReferenceGraph& g, MemsList& ml, const int& K, const int& p
       Mem m1 = (*it1);
       if(!isNode(m1)) {
 		double u = (((100 - this->perc) * plen) / 100) + 1;
-		if(m1.p <= u + K) {
+		if(m1.p <= u) {
           addNode(m1);
           addEdge(Mem(0,0,0), m1, 0);
 		}
@@ -72,9 +72,7 @@ MemsGraph::MemsGraph(ReferenceGraph& g, MemsList& ml, const int& K, const int& p
       }
       //int i = m1.p + 1;
       int i = m1.p + m1.l - K;
-      if(i<=m1.p) {
-		i = m1.p + 1;//m1.p + m1.l;
-      }
+      if(i<=0) i= m1.p + m1.l;
       while(i < plen && i <= m1.p + m1.l + K) {
 		std::forward_list<Mem> mems2 = ml.getMems(i);
 		for(auto it2=mems2.begin(); it2!=mems2.end(); ++it2) {
