@@ -5,6 +5,9 @@ tmp/
 out/
 FullRun
 *~
+*.idx
+*_res
+libs/sdsl-lite
 
 # Compiled Object files
 *.slo
