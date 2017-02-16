@@ -105,7 +105,7 @@ int main(int argc, char* argv[]) {
         std::pair<std::string, std::string> seq = fastas.getEntry(i);
         std::string read = seq.second;
         std::list<Mem> mems = bm.getMEMs(read,L);
-        MemsGraph mg (sg, mems, L);
+        MemsGraph mg (sg, read, mems, L);
         ++i;
     }
 }

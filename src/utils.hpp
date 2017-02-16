@@ -24,7 +24,7 @@ struct Mem {
         l = l_;
     }
 
-    std::string toStr() {
+    std::string toStr() const {
         return "(" + std::to_string(t) + "," +
             std::to_string(p) + "," +
             std::to_string(l) + ")";
