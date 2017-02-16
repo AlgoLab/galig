@@ -50,7 +50,6 @@ PROGRAMS:=main
 # analyzegraph SNAP library
 OBJS_main = \
 	utils.o \
-	MEMsList.o \
 	FastaReader.o \
 	bMEM.o \
 	SplicingGraph.o \
@@ -58,7 +57,7 @@ OBJS_main = \
 	main.o
 
 #LIBS_main= $(LIBS) $(LOC_DIR)/include/snap-core/Snap.o -lrt -lsdsl -ldivsufsort -ldivsufsort64 -lemon
-LIBS_main= $(LIBS) $(LOC_DIR)/include/snap-core/Snap.o -lrt -lsdsl -ldivsufsort -ldivsufsort64 -lemon
+LIBS_main= $(LIBS) -lrt -lsdsl -ldivsufsort -ldivsufsort64 -lemon
 
 #
 # END List of programs
