@@ -8,7 +8,6 @@
 #include "bMEM.hpp"
 #include "utils.hpp"
 
-#include "MEMsList.hpp"
 #include "MEMsGraph.hpp"
 
 void printHelp() {
@@ -106,11 +105,7 @@ int main(int argc, char* argv[]) {
         std::pair<std::string, std::string> seq = fastas.getEntry(i);
         std::string read = seq.second;
         std::list<Mem> mems = bm.getMEMs(read,L);
-        MemsList ml (seq.second.size());
-        for(const Mem& mem : mems) {
-            ml.addMem(mem);
-        }
-        MemsGraph mg (sg, ml, K, 80);
+        MemsGraph mg (sg, mems, L);
         ++i;
     }
 }

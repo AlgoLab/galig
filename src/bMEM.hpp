@@ -1,15 +1,10 @@
-//=================================
-// include guard
 #ifndef _BMEM_HPP_
 #define _BMEM_HPP_
 
-//=================================
-// included dependencies
 
 #include "sdsl/suffix_trees.hpp"
 #include "sdsl/suffix_array_algorithm.hpp"
 #include "sdsl/csa_wt.hpp"
-//#include "../src/testutils.hpp"
 #include "sdsl/io.hpp"
 #include "sdsl/construct.hpp"
 

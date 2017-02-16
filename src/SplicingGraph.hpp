@@ -1,10 +1,6 @@
-//=================================
-// include guard
 #ifndef _SPLICING_GRAPH_HPP_
 #define _SPLICING_GRAPH_HPP_
 
-//=================================
-// included dependencies
 #include <iostream>
 #include <fstream>
 #include <list>

@@ -1,9 +1,5 @@
 #include "utils.hpp"
 
-// TStr toTStr(const std::string& s) {
-//     return TStr(s.c_str());
-// }
-
 int e_distance(const std::string& s1, const std::string& s2) {
     const std::size_t len1 = s1.size(), len2 = s2.size();
     std::vector<int> col(len2+1), prevCol(len2+1);

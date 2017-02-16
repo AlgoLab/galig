@@ -7,8 +7,6 @@
 #include <vector>
 #include <algorithm>
 
-//#include "Snap.h"
-
 struct Mem {
     int t;
     int p;
@@ -33,7 +31,6 @@ struct Mem {
     }
 };
 
-//TStr toTStr(const std::string&);
 int e_distance(const std::string&, const std::string&);
 std::string reverse_and_complement(const std::string&);
 bool compareMEMs(const Mem&, const Mem&);
