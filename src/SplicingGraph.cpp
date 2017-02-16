@@ -4,7 +4,12 @@ std::string getExonID(int s, int e) {
     return std::to_string(s) + ":" + std::to_string(e);
 }
 
-SplicingGraph::SplicingGraph(const std::string& fa, const std::string& gff) {
+SplicingGraph::SplicingGraph(const std::string& f) {
+    load(f);
+    setupBitVector();
+}
+
+SplicingGraph::SplicingGraph(const std::string& fa, const std::string& gff, const std::string& index) {
     std::string genomic = FastaReader(fa).getEntry(0).second;
     std::ifstream gffFile;
     std::map<std::string, std::list<std::string> > genes;
@@ -14,7 +19,7 @@ SplicingGraph::SplicingGraph(const std::string& fa, const std::string& gff) {
     std::string line;
     std::string curr_gene = "";
     std::string curr_tr = "";
-    int exons_number = 0;
+    exsN = 0;
     int e_n = 1;
     gffFile.open(gff);
     if(gffFile.is_open()) {
@@ -48,17 +53,19 @@ SplicingGraph::SplicingGraph(const std::string& fa, const std::string& gff) {
                 } catch(const std::out_of_range& oor) {
                     addedExons[pos_ID] = ex;
                     exons.insert(std::pair<std::string, Feature>(ex, f));
-                    ++exons_number;
+                    ++exsN;
                 }
             }
         }
     }
     addedExons.clear();
-    edges.resize(exons_number+1);
-    for(int i = 0; i <= exons_number; i++) {
-        edges[i] = std::vector< int>(exons_number+1, 0);
+    edges.resize(exsN+1);
+    for(int i = 0; i <= exsN; i++) {
+        edges[i] = std::vector< int>(exsN+1, 0);
     }
     T = "|";
+    Exons.resize(exsN+1);
+    int ex_id = 1;
     std::list<std::pair<int, int> > exs_pos;
     int curr_i = 0;
     for(std::map<std::string, std::list<std::string> >::iterator it1=genes.begin(); it1!=genes.end(); ++it1) {
@@ -70,7 +77,10 @@ SplicingGraph::SplicingGraph(const std::string& fa, const std::string& gff) {
                     addedExons.at(e.id);
                 } catch(const std::out_of_range& oor) {
                     addedExons.insert(std::pair<std::string, std::string>(e.id, ""));
-                    T += genomic.substr(e.start-1, e.end-e.start+1) + "|";
+                    std::string curr_ex_string = genomic.substr(e.start-1, e.end-e.start+1);
+                    T += curr_ex_string + "|";
+                    Exons[ex_id] = curr_ex_string;
+                    ++ex_id;
                     curr_i++;
                     exs_pos.push_back(std::pair<int, int> (e.start, e.end));
                     /**
@@ -104,6 +114,11 @@ SplicingGraph::SplicingGraph(const std::string& fa, const std::string& gff) {
     }
     gffFile.close();
 
+    setupBitVector();
+    save(index);
+}
+
+void SplicingGraph::setupBitVector() {
     sdsl::bit_vector BV (T.size(), 0);
     unsigned int i = 0;
     while(i<T.size()) {
@@ -117,19 +132,23 @@ SplicingGraph::SplicingGraph(const std::string& fa, const std::string& gff) {
     rank_BV = sdsl::rrr_vector<>::rank_1_type(&bitVector);
 }
 
-std::string SplicingGraph::getText() {
-    return this->T;
+std::string SplicingGraph::getText() const {
+    return T;
 }
 
-int SplicingGraph::rank(const int& i) {
+std::string SplicingGraph::getExon(const int& i) const {
+    return Exons[i];
+}
+
+int SplicingGraph::rank(const int& i) const {
     return rank_BV(i);
 }
 
-int SplicingGraph::select(const int& i) {
+int SplicingGraph::select(const int& i) const {
     return select_BV(i);
 }
 
-bool SplicingGraph::contain(const std::vector<int>& edge) {
+bool SplicingGraph::contain(const std::vector<int>& edge) const {
     if(edges[edge[0]][edge[1]] == 1) {
         return true;
     } else {
@@ -137,9 +156,9 @@ bool SplicingGraph::contain(const std::vector<int>& edge) {
     }
 }
 
-void SplicingGraph::print() {
-    std::cout << this->T << std::endl;
-    for(std::vector<int> v : this->edges) {
+void SplicingGraph::print() const {
+    std::cout << T << std::endl;
+    for(std::vector<int> v : edges) {
         for(int e : v) {
             std::cout << e << " ";
         }
@@ -151,4 +170,68 @@ void SplicingGraph::print() {
         i++;
     }
     std::cout << std::endl;
+}
+
+void SplicingGraph::save(const std::string path) {
+    std::cout << "Saving SG to disk..." << std::endl;
+    std::ofstream ofile;
+    ofile.open(path + ".sg");
+    ofile << T << "\n";
+    ofile << edges.size() << "\n";
+    for(std::vector<int> v : edges) {
+        for(int e : v) {
+            ofile << e << " ";
+        }
+        ofile << "\n";
+    }
+    ofile.close();
+}
+
+void SplicingGraph::load(const std::string path) {
+    std::cout << "Loading SG from disk..." << std::endl;
+    std::ifstream ifile;
+    int c = 0;
+    int row = 0;
+    std::string line;
+    ifile.open(path);
+    if(ifile.is_open()) {
+        while(getline(ifile,line)) {
+            switch(c) {
+            case 0: {
+                T = line;
+                break;
+            }
+            case 1: {
+                exsN = stoi(line);
+                edges.resize(exsN);
+                for(int i = 0; i < exsN; i++) {
+                    edges[i] = std::vector< int>(exsN, 0);
+                }
+                break;
+            }
+            default: {
+                int column = 0;
+                std::string token;
+                std::string delimiter = " ";
+                std::size_t pos;
+                while((pos = line.find(delimiter)) != std::string::npos) {
+                    token = line.substr(0, pos);
+                    line.erase(0, pos + delimiter.length());
+                    edges[row][column] = stoi(token);
+                    ++column;
+                }
+                ++row;
+            }
+            }
+            ++c;
+        }
+    } else {
+        std::cout << "SG not found!!" << std::endl;
+        exit(EXIT_FAILURE);
+    }
+    ifile.close();
+}
+
+int SplicingGraph::getExonsNumber() const {
+    return exsN;
 }

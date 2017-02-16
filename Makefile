@@ -18,6 +18,7 @@ VPATH = $(SRC_DIR)
 INCLUDE_FLAGS:= -I$(LOC_DIR)/include/ \
                 -I$(LOC_DIR)/include/snap-core/ \
                 -I$(LOC_DIR)/include/glib-core/	\
+				-I$(LOC_DIR)/lemon/include/ \
 		-I$(BASE_DIR)/include
 
 # Pre-processor flags
@@ -34,7 +35,8 @@ LDFLAGS+=-Wl,--gc-sections -fopenmp
 
 # Define libraries
 LIBS:= \
-        -L${LOC_DIR}/lib
+        -L${LOC_DIR}/lib \
+		-L${LOC_DIR}/lemon/lib \
 
 ######
 #
@@ -55,7 +57,8 @@ OBJS_main = \
 	MEMsGraph.o \
 	main.o
 
-LIBS_main= $(LIBS) $(LOC_DIR)/include/snap-core/Snap.o -lrt -lsdsl -ldivsufsort -ldivsufsort64
+#LIBS_main= $(LIBS) $(LOC_DIR)/include/snap-core/Snap.o -lrt -lsdsl -ldivsufsort -ldivsufsort64 -lemon
+LIBS_main= $(LIBS) $(LOC_DIR)/include/snap-core/Snap.o -lrt -lsdsl -ldivsufsort -ldivsufsort64 -lemon
 
 #
 # END List of programs

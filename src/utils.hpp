@@ -2,26 +2,39 @@
 #define _UTILS_HPP_
 
 #include <iostream>
+#include <fstream>
 #include <string>
+#include <vector>
 #include <algorithm>
 
+//#include "Snap.h"
+
 struct Mem {
-  int t;
-  int p;
-  int l;
+    int t;
+    int p;
+    int l;
 
-  Mem(int t_, int p_, int l_) {
-    t = t_;
-	p = p_;
-	l = l_;
-  }
+    Mem() {
+        t = 0;
+        p = 0;
+        l = 0;
+    }
 
-  std::string toStr() {
-	return "(" + std::to_string(t) + "," +
-      std::to_string(p) + "," +
-      std::to_string(l) + ")";
-  }
+    Mem(int t_, int p_, int l_) {
+        t = t_;
+        p = p_;
+        l = l_;
+    }
+
+    std::string toStr() {
+        return "(" + std::to_string(t) + "," +
+            std::to_string(p) + "," +
+            std::to_string(l) + ")";
+    }
 };
 
+//TStr toTStr(const std::string&);
+int e_distance(const std::string&, const std::string&);
 std::string reverse_and_complement(const std::string&);
+bool compareMEMs(const Mem&, const Mem&);
 #endif

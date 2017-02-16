@@ -103,17 +103,25 @@ struct Feature {
 class SplicingGraph {
 private:
     std::string T;
+    std::vector<std::string> Exons;
+    int exsN;
     std::vector<std::vector<int> > edges;
     sdsl::rrr_vector<> bitVector;
     sdsl::rrr_vector<>::select_1_type select_BV;
     sdsl::rrr_vector<>::rank_1_type rank_BV;
+    void setupBitVector();
+    void save(const std::string);
+    void load(const std::string);
 public:
-    SplicingGraph(const std::string& fa, const std::string& gff);
-    std::string getText();
-    int rank(const int& i);
-    int select(const int& i);
-    bool contain(const std::vector<int>& edge);
-    void print();
+    SplicingGraph(const std::string&);
+    SplicingGraph(const std::string&, const std::string&, const std::string&);
+    std::string getText() const;
+    std::string getExon(const int&) const;
+    int rank(const int&) const;
+    int select(const int&) const;
+    bool contain(const std::vector<int>&) const;
+    void print() const;
+    int getExonsNumber() const;
 };
 
 #endif
