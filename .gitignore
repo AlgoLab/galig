@@ -8,6 +8,8 @@ FullRun
 *.idx
 *_res
 libs/sdsl-lite
+libs/CMakeLists.txt
+libs/lemon-1.3.1
 
 # Compiled Object files
 *.slo
