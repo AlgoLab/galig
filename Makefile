@@ -15,18 +15,17 @@ else
 
 VPATH = $(SRC_DIR)
 
-SNAP = Snap-2.3
-
-INCLUDE_FLAGS:= \
-		-I$(BASE_DIR)/backwardMEM/libs/sdsl-lite/include \
-                -I$(3RD_DIR)/$(SNAP)/snap-core/ \
-                -I$(3RD_DIR)/$(SNAP)/glib-core/
+INCLUDE_FLAGS:= -I$(LOC_DIR)/include/ \
+                -I$(LOC_DIR)/include/snap-core/ \
+                -I$(LOC_DIR)/include/glib-core/	\
+				-I$(LOC_DIR)/lemon/include/ \
+		-I$(BASE_DIR)/include
 
 # Pre-processor flags
 CPPFLAGS= $(INCLUDE_FLAGS)
 
 # Common C and C++ flags
-CCXXFLAGS:=-g -std=c++11 -Wall -O2 -march=native -Wno-deprecated -ffunction-sections -fdata-sections -fopenmp
+CCXXFLAGS:=-g -std=c++11 -Wall -O0 -march=native -Wno-deprecated -ffunction-sections -fdata-sections -fopenmp
 # C-only flags
 CFLAGS+= $(CCXXFLAGS)
 # C++-only flags
@@ -36,7 +35,8 @@ LDFLAGS+=-Wl,--gc-sections -fopenmp
 
 # Define libraries
 LIBS:= \
-        -L$(BASE_DIR)/backwardMEM/libs/sdsl-lite/lib \
+        -L${LOC_DIR}/lib \
+		-L${LOC_DIR}/lemon/lib \
 
 ######
 #
@@ -49,12 +49,15 @@ PROGRAMS:=main
 
 # analyzegraph SNAP library
 OBJS_main = \
-	MEMsList.o \
-	MEMsReader.o \
-	ReferenceGraph.o \
+	utils.o \
+	FastaReader.o \
+	bMEM.o \
+	SplicingGraph.o \
 	MEMsGraph.o \
-        main.o
-LIBS_main= $(LIBS) $(3RD_DIR)/$(SNAP)/snap-core/Snap.o -lrt -lsdsl -ldivsufsort -ldivsufsort64
+	main.o
+
+#LIBS_main= $(LIBS) $(LOC_DIR)/include/snap-core/Snap.o -lrt -lsdsl -ldivsufsort -ldivsufsort64 -lemon
+LIBS_main= $(LIBS) -lrt -lsdsl -ldivsufsort -ldivsufsort64 -lemon
 
 #
 # END List of programs
@@ -77,12 +80,6 @@ all: $(addprefix $(BIN_DIR)/, $(PROGRAMS))
 prerequisites:
 	@echo '* Building pre-requisites...' ; \
 	$(MAKE) -C $(3RD_DIR) prerequisites
-
-# Clean the pre-requisites
-.PHONY: clean-prerequisites
-clean-prerequisites:
-	@echo '* Cleaning pre-requisites...' ; \
-	$(MAKE) -C $(3RD_DIR) clean-prerequisites
 
 ######
 #

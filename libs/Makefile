@@ -1,45 +1,89 @@
 # Makefile for building the third-party libraries.
 
 # Define a destination directory (local) if it is not already defined (as it should be)
-3RD_DIR ?=$(CURDIR)/../libs
+LOC_DIR ?=$(CURDIR)/../local
 
 .PHONY: prerequisites
 .DEFAULT: prerequisites
-prerequisites: folders backwardMEM snap
+prerequisites: folders lemon sdsl #snap
 
 .PHONY: clean-prerequisites
-clean-prerequisites: clean-pre
+clean-prerequisites: clean-lemon clean-sdsl #clean-snap
 
 .PHONY: folders
 folders:
 	@echo "* Checking folders..." ; \
-	[ -d $(3RD_DIR) ] || mkdir -p $(3RD_DIR) ; \
+	[ -d $(LOC_DIR) ] || mkdir -p $(LOC_DIR) ; \
+	[ -d $(LOC_DIR)/include ] || mkdir -p $(LOC_DIR)/include ; \
+	[ -d $(LOC_DIR)/lib ] || mkdir -p $(LOC_DIR)/lib ; \
+	[ -d $(LOC_DIR)/lemon ] || mkdir -p $(LOC_DIR)/lemon ; \
+	[ -f $(LOC_DIR)/fasta.o ] || echo "* Fasta"
 
+.PHONY: lemon
+lemon: folders $(LOC_DIR)/lemon/include/
 
-.PHONY: backwardMEM
-backwardMEM: folders $(3RD_DIR)/../backwardMEM/bin/backwardMEM
+LEMON_NAME:=lemon-1.3.1
+$(LOC_DIR)/lemon/include/:
+	@echo "* Lemon Library" ;	\
+	tar -xvf $(LEMON_NAME).tar.gz;	\
+	if [ -d $(LEMON_NAME)/ ]; then	\
+		cd $(LEMON_NAME)/ &&	\
+		mkdir build && cd build; \
+		sed '3d' ../CMakeLists.txt >> tmp; \
+		mv tmp ../CMakeLists.txt; \
+		cmake -DCMAKE_INSTALL_PREFIX=$(LOC_DIR)/lemon/ ..; \
+		make;	\
+		make install; \
+	else \
+		echo "Lemon library not found in the current directory" ; \
+		exit 1 ; \
+	fi
 
-bMEM_NAME:=backwardMEM
-$(3RD_DIR)/../backwardMEM/bin/backwardMEM:
-	@echo "* backwardMEM" ;			\
-	cd $(3RD_DIR)/../$(bMEM_NAME)/ &&	\
-	make prerequisites &&			\
-	make					\
+.PHONY: clean-lemon
+clean-lemon:
+	@echo "* Cleaning lemon library..." ; \
+	rm -rf $(LEMON_NAME)/; \
+	rm -rf $(LOC_DIR)/lemon/
 
 .PHONY: snap
-snap: folders $(3RD_DIR)/Snap-2.3/snap-core/
+snap: folders $(LOC_DIR)/include/snap-core/
 
 SNAP_NAME:=Snap-2.3
-$(3RD_DIR)/Snap-2.3/snap-core/:
-	@echo "* SNAP Lirary" ;	\
+$(LOC_DIR)/include/snap-core/:
+	@echo "* SNAP Library" ;	\
 	unzip -o $(SNAP_NAME).zip;	\
-	cd $(SNAP_NAME)/ &&	\
-	make all;
+	if [ -d $(SNAP_NAME)/ ]; then	\
+		cd $(SNAP_NAME)/ &&	\
+		$(MAKE) all;	\
+		ln -sf ../../libs/$(SNAP_NAME)/snap-core $(LOC_DIR)/include/;	\
+		ln -sf ../../libs/$(SNAP_NAME)/glib-core $(LOC_DIR)/include/;	\
+	else \
+		echo "SNAP library not found in the current directory" ; \
+		exit 1 ; \
+	fi
 
-.PHONY: clean-pre
-clean-pre:
-	@echo "* Cleaning Prerequisites..." ; \
-	cd $(3RD_DIR)/../$(bMEM_NAME)/ &&	\
-	make clean && \
-	make clean-prerequisites ; \
-	rm -rf $(3RD_DIR)/$(SNAP_NAME)
+.PHONY: clean-snap
+clean-snap:
+	@echo "* Cleaning SNAP library..." ; \
+	rm -rf $(SNAP_NAME)/
+
+
+.PHONY: sdsl
+sdsl: folders $(LOC_DIR)/include/divsufsort64.h
+
+SDSL_NAME:=sdsl-lite
+$(LOC_DIR)/include/divsufsort64.h:
+	@echo "* SDSL-lite Library" ;	\
+	git clone https://github.com/simongog/sdsl-lite.git;	\
+	if [ -d $(SDSL_NAME)/ ]; then	\
+		cd $(SDSL_NAME)/ &&	\
+		./install.sh $(LOC_DIR)/;	\
+	else \
+		echo "SDSL library not found in the current directory" ; \
+		exit 1 ; \
+	fi
+
+.PHONY: clean-sdsl
+clean-sdsl:
+	@echo "* Cleaning SDSL library..." ; \
+	rm -rf $(SDSL_NAME)/

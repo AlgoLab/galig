@@ -9,7 +9,12 @@ FullRun
 *_res
 libs/sdsl-lite
 libs/CMakeLists.txt
-libs/lemon-1.3.1
+libs/lemon-1.3.1/
+
+*.dot
+*.sg
+*.png
+*.idx
 
 # Compiled Object files
 *.slo

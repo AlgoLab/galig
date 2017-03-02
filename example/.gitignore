@@ -1,3 +1,4 @@
 tmp/
 out/
-
+*fa.idx
+*fa_res

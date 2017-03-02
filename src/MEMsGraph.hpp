@@ -1,45 +1,36 @@
-//=================================
-// include guard
 #ifndef _MEMSGRAPH_HPP_
 #define _MEMSGRAPH_HPP_
 
-//=================================
-// included dependencies
 #include <string>
-#include <unordered_map>
 #include <list>
 
-#include "MEMsList.hpp"
-#include "ReferenceGraph.hpp"
+#include "utils.hpp"
+#include "SplicingGraph.hpp"
 
-#include "Snap.h"
+#include <lemon/list_graph.h>
 
 class MemsGraph {
 private:
-  int nodes_index = 0;
-  int plen = 0;
-  int K = 0;
-  float perc = 0;
-  PNGraph Graph;
-  TIntStrH labels;
-  TStrIntH weights;
-  std::unordered_map<std::string, int> MemToIndex;
-  std::unordered_map<int, Mem> IndexToMem;
-  std::vector<std::vector<std::vector<int> > > subpaths;
-  std::vector<std::vector<int> > paths;
+    int m;
+    int L;
+    lemon::ListDigraph::Node start;
+    lemon::ListDigraph::Node end;
+    std::vector<lemon::ListDigraph::Node> starting_nodes;
+    std::vector<lemon::ListDigraph::Node> ending_nodes;
 
-  TStr toTStr(const std::string& s);
-  void addNode(Mem mem);
-  void addEdge(Mem mem1, Mem Mem2, int w);
-  int getNodeId(const std::string& mem);
-  bool isNode(Mem m);
-  std::vector<std::vector<int> > rec_visit(const TNGraph::TNodeI node);
+    void combine_MEMs(const SplicingGraph&,
+                      const std::string&,
+                      std::list<Mem>,
+                      const int&,
+                      lemon::ListDigraph&,
+                      lemon::ListDigraph::NodeMap<Mem>&,
+                      lemon::ListDigraph::ArcMap<int>&);
+    void saveImage(const std::string&,
+                   const lemon::ListDigraph&,
+                   const lemon::ListDigraph::NodeMap<Mem>&,
+                   const lemon::ListDigraph::ArcMap<int>&);
 public:
-  MemsGraph(ReferenceGraph &g, MemsList& ml, const int& K, const int& perc);
-  void saveImage(const std::string& patt);
-  void saveOutput(std::ostream& os, std::string p);
-  void visit();
-  std::list<std::string> getOutput();
+    MemsGraph(const SplicingGraph&, const std::string&, std::list<Mem>&, const int&);
 };
 
 #endif
