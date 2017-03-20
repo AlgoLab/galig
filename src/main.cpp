@@ -25,13 +25,12 @@ void printHelp() {
 }
 
 int main(int argc, char* argv[]) {
-    std::string sg_index;
     std::string genomic;
     std::string annotation;
     std::string rna_seqs;
     int L;
     int eps;
-    std::string out = "";
+    std::string out;
 
     int c;
     while (1) {
@@ -47,7 +46,7 @@ int main(int argc, char* argv[]) {
             };
 
         int option_index = 0;
-        c = getopt_long(argc, argv, "g:a:r:l:e:o", long_options, &option_index);
+        c = getopt_long(argc, argv, "g:a:r:l:e:o:", long_options, &option_index);
 
         if (c == -1) {
             break;
@@ -70,7 +69,7 @@ int main(int argc, char* argv[]) {
             eps = std::stoi(optarg);
             break;
         case 'o':
-            out = std::stoi(optarg);
+            out = optarg;
             break;
         default:
             printHelp();
@@ -83,9 +82,11 @@ int main(int argc, char* argv[]) {
     FastaReader fastas (rna_seqs);
     int i = 0;
 
+    std::cout << out << std::endl;
     if(out.compare("") == 0) {
         out = "OUT.mem";
     }
+    std::cout << out << std::endl;
     std::ofstream outFile;
     outFile.open(out);
     while(i<fastas.getSize()) {
