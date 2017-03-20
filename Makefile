@@ -25,7 +25,7 @@ INCLUDE_FLAGS:= -I$(LOC_DIR)/include/ \
 CPPFLAGS= $(INCLUDE_FLAGS)
 
 # Common C and C++ flags
-CCXXFLAGS:=-g -std=c++11 -Wall -O0 -march=native -Wno-deprecated -ffunction-sections -fdata-sections -fopenmp
+CCXXFLAGS:=-g -std=c++11 -Wall -O3 -DNDEBUG -march=native -Wno-deprecated -ffunction-sections -fdata-sections -fopenmp
 # C-only flags
 CFLAGS+= $(CCXXFLAGS)
 # C++-only flags
