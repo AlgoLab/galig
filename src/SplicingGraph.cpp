@@ -9,7 +9,7 @@ SplicingGraph::SplicingGraph(const std::string& f) {
     setupBitVector();
 }
 
-SplicingGraph::SplicingGraph(const std::string& fa, const std::string& gff, const std::string& index) {
+SplicingGraph::SplicingGraph(const std::string& fa, const std::string& gff) {
     std::string genomic = FastaReader(fa).getEntry(0).second;
     
     std::ifstream gffFile;
@@ -127,7 +127,7 @@ SplicingGraph::SplicingGraph(const std::string& fa, const std::string& gff, cons
     gffFile.close();
 
     setupBitVector();
-    save(index);
+    save(fa);
 }
 
 void SplicingGraph::setupBitVector() {

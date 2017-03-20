@@ -29,57 +29,19 @@ MemsGraph::MemsGraph(const SplicingGraph& sg,
 }
 
 void MemsGraph::build(const SplicingGraph& sg, std::list<Mem>& MEMs) {
-    std::cout << "Starting build..." << std::endl;
     std::vector<std::list<Mem> > divided_MEMs (exsN);
     for(const Mem& m : MEMs) {
         divided_MEMs[sg.rank(m.t)-1].push_back(m);
     }
-    std::cout << "Combining MEMs inside each exon..." << std::endl;
     int ex_id = 0;
     for(std::list<Mem> mems : divided_MEMs) {
         combine_MEMs_inside_exon(sg, mems, ++ex_id);
     }
     //save("../Gs/g1.dot");
-    std::cout << "Combining MEMs..." << std::endl;
     combine_MEMs(sg);
     //save("../Gs/g2.dot");
-    std::cout << "Cleaning..." << std::endl;
     link_start_end(sg);
     //save("../Gs/g3.dot");
-}
-
-std::pair<int, std::list<std::list<Mem> > > MemsGraph::visit() {
-    std::list<std::list<Mem> > paths;
-    int min_w = K2;
-    int curr_w;
-    do {
-        lemon::Dijkstra<lemon::ListDigraph> dijkstra(graph, edges_map);
-        dijkstra.run(start,end);
-        if(dijkstra.reached(end)) {
-            curr_w = dijkstra.dist(end);
-            if(curr_w <= min_w) {
-                min_w = curr_w;
-                lemon::Path<lemon::ListDigraph> p = dijkstra.path(end);
-                int i = 0;
-                std::list<Mem> path;
-                for (lemon::Path<lemon::ListDigraph>::ArcIt it(p); it != lemon::INVALID; ++it) {
-                    if(i==0) {
-                        graph.erase(it);
-                    } else {
-                        lemon::ListDigraph::Arc e = it;
-                        lemon::ListDigraph::Node source = graph.source(e);
-                        path.push_back(nodes_map[source]);
-                    }
-                    ++i;
-                }
-                paths.push_back(path);
-            }
-        } else {
-            curr_w = min_w+1;
-        }
-    } while(curr_w <= min_w);
-
-    return std::make_pair(min_w, paths);
 }
 
 void MemsGraph::combine_MEMs_inside_exon(const SplicingGraph& sg,
@@ -189,7 +151,9 @@ void MemsGraph::combine_MEMs_inside_exon(const SplicingGraph& sg,
                                                 lemon::ListDigraph::Node p_ = graph.source(in_n2);
                                                 if(graph.id(p) == graph.id(p_)) {
                                                     //std::cout << nodes_map[p].toStr() << " -> " << nodes_map[node2].toStr() << std::endl;
-                                                    graph.erase(graph.arcFromId(graph.id(in_n2)));
+                                                    if(graph.valid(in_n2)) {
+                                                        graph.erase(in_n2);
+                                                    }
                                                     break;
                                                 }
                                             }
@@ -258,7 +222,9 @@ void MemsGraph::combine_MEMs_inside_exon(const SplicingGraph& sg,
         }
     }
     for(const lemon::ListDigraph::InArcIt a : in_arcs1) {
-        graph.erase(a);
+        if(graph.valid(a)) {
+            graph.erase(a);
+        }
     }
     //save("../Gs/graph_" + std::to_string(ex_id) + "_2.dot");
 
@@ -276,7 +242,9 @@ void MemsGraph::combine_MEMs_inside_exon(const SplicingGraph& sg,
         }
     }
     for(const lemon::ListDigraph::OutArcIt a : out_arcs1) {
-        graph.erase(a);
+        if(graph.valid(a)) {
+            graph.erase(a);
+        }
     }
 
     std::list<lemon::ListDigraph::InArcIt> in_arcs2;
@@ -289,13 +257,14 @@ void MemsGraph::combine_MEMs_inside_exon(const SplicingGraph& sg,
         }
     }
     for(const lemon::ListDigraph::InArcIt a : in_arcs2) {
-        graph.erase(a);
+        if(graph.valid(a)) {
+            graph.erase(a);
+        }
     }
 
     std::list<lemon::ListDigraph::OutArcIt> out_arcs2;
     for(lemon::ListDigraph::OutArcIt out_arc (graph, curr_start); out_arc!=lemon::INVALID; ++out_arc) {
         lemon::ListDigraph::Node s = graph.target(out_arc);
-        Mem Smem = nodes_map[s];
         lemon::Bfs<lemon::ListDigraph> bfs(graph);
         bfs.init();
         bfs.addSource(s);
@@ -307,7 +276,9 @@ void MemsGraph::combine_MEMs_inside_exon(const SplicingGraph& sg,
     }
 
     for(const lemon::ListDigraph::OutArcIt a : out_arcs2) {
-        graph.erase(a);
+        if(graph.valid(a)) {
+            graph.erase(a);
+        }
     }
     //save("../Gs/graph_" + std::to_string(ex_id) + "_3.dot");
 }
@@ -351,12 +322,18 @@ void MemsGraph::combine_MEMs(const SplicingGraph& sg) {
                 }
             }
         }
+
         for(const lemon::ListDigraph::InArcIt a : ending_arcs_D) {
-            graph.erase(a);
+            if(graph.valid(a)) {
+                graph.erase(a);
+            }
         }
     }
+
     for(const lemon::ListDigraph::OutArcIt a : starting_arcs_D) {
-        graph.erase(a);
+        if(graph.valid(a)) {
+            graph.erase(a);
+        }
     }
 }
 
@@ -473,6 +450,42 @@ void MemsGraph::link_start_end(const SplicingGraph& sg) {
             lemon::ListDigraph::Arc arc = graph.addArc(p.second,end);
             edges_map[arc] = p.first;
         }
+}
+
+std::pair<int, std::list<std::list<Mem> > > MemsGraph::visit() {
+    std::list<std::list<Mem> > paths;
+    int min_w = K2;
+    int curr_w;
+    do {
+        lemon::Dijkstra<lemon::ListDigraph> dijkstra(graph, edges_map);
+        dijkstra.run(start,end);
+        if(dijkstra.reached(end)) {
+            curr_w = dijkstra.dist(end);
+            if(curr_w <= min_w) {
+                min_w = curr_w;
+                lemon::Path<lemon::ListDigraph> p = dijkstra.path(end);
+                int i = 0;
+                std::list<Mem> path;
+                for (lemon::Path<lemon::ListDigraph>::ArcIt it(p); it != lemon::INVALID; ++it) {
+                    if(i==0) {
+                        if(graph.valid(it)) {
+                            graph.erase(it);
+                        }
+                    } else {
+                        lemon::ListDigraph::Arc e = it;
+                        lemon::ListDigraph::Node source = graph.source(e);
+                        path.push_back(nodes_map[source]);
+                    }
+                    ++i;
+                }
+                paths.push_back(path);
+            }
+        } else {
+            curr_w = min_w+1;
+        }
+    } while(curr_w <= min_w);
+
+    return std::make_pair(min_w, paths);
 }
 
 void MemsGraph::save(const std::string& s) {

@@ -112,7 +112,7 @@ private:
     void load(const std::string);
 public:
     SplicingGraph(const std::string&);
-    SplicingGraph(const std::string&, const std::string&, const std::string&);
+    SplicingGraph(const std::string&, const std::string&);
     std::string getText() const;
     std::list<int> getParents(const int&) const;
     std::list<int> getSons(const int&) const;
