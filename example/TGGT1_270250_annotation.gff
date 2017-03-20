@@ -1,0 +1,6 @@
+TGGT1_270250	EuPathDB	gene	1	708	.	-	.	ID=TGGT1_270250;description=dense granule protein GRA1;sequence_is_piece=""
+TGGT1_270250	EuPathDB	transcript	1	708	.	-	.	ID=TGGT1_270250-t26_1;Parent=TGGT1_270250
+TGGT1_270250	EuPathDB	exon	1	325	.	-	.	ID=exon_TGGT1_270250-E2;Parent=TGGT1_270250-t26_1;gene_na_feature_id=9227600
+TGGT1_270250	EuPathDB	exon	461	708	.	-	.	ID=exon_TGGT1_270250-E1;Parent=TGGT1_270250-t26_1;gene_na_feature_id=9227600
+TGGT1_270250	EuPathDB	CDS	1	325	.	-	0	ID=TGGT1_270250-t26_1-p1;Parent=TGGT1_270250-t26_1
+TGGT1_270250	EuPathDB	CDS	461	708	.	-	0	ID=TGGT1_270250-t26_1-p1;Parent=TGGT1_270250-t26_1

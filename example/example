@@ -1,0 +1,10 @@
+      1          2             3            4          5               6                7
+|CTAGTGGCTA|TAGGCTCTGA|ATAGCGCTCTCAGAG|CGGATCGGAA|GATATCGCGCAT|CTAGAGACCAAATTAG|GATCGCGATATAGCG|
+
+1 -> 2
+2 -> 3
+3 -> 4
+2 -> 6
+5 -> 6
+6 -> 7
+7 -> 4
