@@ -31,7 +31,7 @@ $(LOC_DIR)/lemon/include/:
 		mkdir build && cd build; \
 		sed '3d' ../CMakeLists.txt >> tmp; \
 		mv tmp ../CMakeLists.txt; \
-		cmake -DCMAKE_INSTALL_PREFIX=$(LOC_DIR)/lemon/ ..; \
+		cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_FLAGS="-g2" -DCMAKE_CXX_FLAGS="-g2" -DCMAKE_INSTALL_PREFIX=$(LOC_DIR)/lemon/ ..; \
 		make;	\
 		make install; \
 	else \
@@ -74,7 +74,7 @@ sdsl: folders $(LOC_DIR)/include/divsufsort64.h
 SDSL_NAME:=sdsl-lite
 $(LOC_DIR)/include/divsufsort64.h:
 	@echo "* SDSL-lite Library" ;	\
-	git clone https://github.com/simongog/sdsl-lite.git;	\
+	#git clone https://github.com/simongog/sdsl-lite.git;	\
 	if [ -d $(SDSL_NAME)/ ]; then	\
 		cd $(SDSL_NAME)/ &&	\
 		./install.sh $(LOC_DIR)/;	\
