@@ -20,7 +20,7 @@ private:
     int K0;
     int K1;
     int K2;
-    int min_w;
+    std::string read;
     int exsN;
     lemon::ListDigraph graph;
     lemon::ListDigraph::NodeMap<Mem> nodes_map;
@@ -29,27 +29,22 @@ private:
     lemon::ListDigraph::Node end;
     std::vector<lemon::ListDigraph::Node> starting_nodes;
     std::vector<lemon::ListDigraph::Node> ending_nodes;
-    std::list<std::list<Mem> > paths;
 
-    void combine_MEMs(const SplicingGraph&,
-                      const std::string&,
-                      std::list<Mem>,
-                      const int&,
-                      lemon::ListDigraph&,
-                      lemon::ListDigraph::NodeMap<Mem>&,
-                      lemon::ListDigraph::ArcMap<int>&);
-    void saveImage(const std::string&,
-                   const lemon::ListDigraph&,
-                   const lemon::ListDigraph::NodeMap<Mem>&,
-                   const lemon::ListDigraph::ArcMap<int>&);
+    void combine_MEMs_inside_exon(const SplicingGraph&,
+                                  std::list<Mem>,
+                                  const int&);
+    void combine_MEMs(const SplicingGraph&);
+    void link_start_end(const SplicingGraph&);
 public:
     MemsGraph(const SplicingGraph&,
               const std::string&,
               std::list<Mem>&,
               const int&,
               const int&);
-    void build();
+    void build(const SplicingGraph&,
+               std::list<Mem>&);
     std::pair<int, std::list<std::list<Mem> > > visit();
+    void save(const std::string&);
     
 };
 

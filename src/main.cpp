@@ -102,21 +102,33 @@ int main(int argc, char* argv[]) {
     int i = 0;
 
     std::ofstream outFile;
-    outFile.open("OUT.mem");
+    outFile.open("../OUT.mem");
     while(i<fastas.getSize()) {
         std::pair<std::string, std::string> seq = fastas.getEntry(i);
         std::string read = seq.second;
         std::list<Mem> mems = bm.getMEMs(read,L);
-        std::cout << seq.first << " ";
-        for(Mem m : mems) {
-            std::cout << m.toStr() << " ";
-        }
-        std::cout << std::endl;
+        // std::cout << seq.first << " ";
+        // for(Mem m : mems) {
+        //     std::cout << m.toStr() << " ";
+        // }
+        // std::cout << std::endl;
         MemsGraph mg (sg, read, mems, L, eps);
+        mg.build(sg, mems);
         std::pair<int, std::list<std::list<Mem> > > paths = mg.visit();
+
+        for(std::list<std::list<Mem> >::iterator p=paths.second.begin(); p!=paths.second.end(); ++p) {
+          outFile << "+ " << seq.first << " " << paths.first << " ";
+          for(std::list<Mem>::iterator m=p->begin(); m!=p->end(); ++m) {
+            outFile << m->toStr() << " ";
+          }
+          outFile << "\n";
+        }
+
+        /**
         std::string read1 = reverse_and_complement(read);
         std::list<Mem> mems1 = bm.getMEMs(read1,L);
-        MemsGraph mg1 (sg, read1, mems1, L, eps);
+        MemsGraph mg1 (sg, read1, mems, L, eps);
+        mg1.build(sg, mems1);
         std::pair<int, std::list<std::list<Mem> > > paths1 = mg1.visit();
 
         int flag = 0;
@@ -133,6 +145,7 @@ int main(int argc, char* argv[]) {
                 flag = 1;
             }
         }
+        std::cout << flag << std::endl;
         switch(flag) {
         case 0:
             break;
@@ -155,13 +168,11 @@ int main(int argc, char* argv[]) {
             }
             break;
         }
+        **/
         ++i;
         if(i%100 == 0) {
             std::cout << "Processed " << i << " reads." << std::endl;
         }
-        //if(i%1000 == 0) {
-        //    bm = BackwardMEM (sg.getText(), genomic);
-        //}
     }
     outFile.close();
 }
