@@ -4,6 +4,7 @@ local/
 tmp/
 out/
 FullRun
+*.mem
 *~
 *.idx
 *_res
