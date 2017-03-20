@@ -97,7 +97,6 @@ int main(int argc, char* argv[]) {
         MemsGraph mg (sg, read, mems, L, eps);
         mg.build(sg, mems);
         std::pair<int, std::list<std::list<Mem> > > paths = mg.visit();
-
         std::string read1 = reverse_and_complement(read);
         std::list<Mem> mems1 = bm.getMEMs(read1,L);
         MemsGraph mg1 (sg, read1, mems, L, eps);

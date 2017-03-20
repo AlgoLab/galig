@@ -119,7 +119,7 @@ public:
     std::string getExon(const int&) const;
     int rank(const int&) const;
     int select(const int&) const;
-    bool contain(const std::vector<int>&) const;
+    bool contain(const int&, const int&) const;
     void print() const;
     int getExonsNumber() const;
 };

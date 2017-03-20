@@ -306,15 +306,17 @@ void MemsGraph::combine_MEMs(const SplicingGraph& sg) {
                 for(lemon::ListDigraph::OutArcIt out_arc (graph, s); out_arc!=lemon::INVALID; ++out_arc) {
                     lemon::ListDigraph::Node n2 = graph.target(out_arc);
                     Mem m2 = nodes_map[n2];
-                    std::string sub_E_2 = son_text.substr(0,m2.t-sg.select(son)-1-1);
-                    std::string sub_E = sub_E_1 + sub_E_2;
-                    std::string sub_P = read.substr(m1.p+m1.l-1,m2.p-m1.p-m1.l);
-                    int err = e_distance(sub_P, sub_E);
-                    if(err<K2) {
-                        lemon::ListDigraph::Arc arc = graph.addArc(n1,n2);
-                        edges_map[arc] = err;
-                        flag = true;
-                        starting_arcs_D.push_back(out_arc);
+                    if(m1.p+m1.l <= m2.p && sg.contain(ex_id, son)) {
+                        std::string sub_E_2 = son_text.substr(0,m2.t-sg.select(son)-1-1);
+                        std::string sub_E = sub_E_1 + sub_E_2;
+                        std::string sub_P = read.substr(m1.p+m1.l-1,m2.p-m1.p-m1.l);
+                        int err = e_distance(sub_P, sub_E);
+                        if(err<K2) {
+                            lemon::ListDigraph::Arc arc = graph.addArc(n1,n2);
+                            edges_map[arc] = err;
+                            flag = true;
+                            starting_arcs_D.push_back(out_arc);
+                        }
                     }
                 }
                 if(flag) {

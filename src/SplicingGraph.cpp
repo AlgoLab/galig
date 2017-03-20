@@ -65,7 +65,7 @@ SplicingGraph::SplicingGraph(const std::string& fa, const std::string& gff) {
     sons.resize(exsN+1);
     for(int i = 0; i <= exsN; i++) {
         edges[i] = std::vector< int>(exsN+1, 0);  
-  }
+    }
     T = "|";
     Exons.resize(exsN+1);
     int ex_id = 1;
@@ -168,8 +168,8 @@ int SplicingGraph::select(const int& i) const {
     return select_BV(i);
 }
 
-bool SplicingGraph::contain(const std::vector<int>& edge) const {
-    if(edges[edge[0]][edge[1]] == 1) {
+bool SplicingGraph::contain(const int& x, const int& y) const {
+    if(edges[x][y] == 1) {
         return true;
     } else {
         return false;
