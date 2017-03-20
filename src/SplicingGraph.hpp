@@ -100,6 +100,8 @@ class SplicingGraph {
 private:
     std::string T;
     std::vector<std::string> Exons;
+    std::vector<std::list<int> > parents;
+    std::vector<std::list<int> > sons;
     int exsN;
     std::vector<std::vector<int> > edges;
     sdsl::rrr_vector<> bitVector;
@@ -112,6 +114,8 @@ public:
     SplicingGraph(const std::string&);
     SplicingGraph(const std::string&, const std::string&, const std::string&);
     std::string getText() const;
+    std::list<int> getParents(const int&) const;
+    std::list<int> getSons(const int&) const;
     std::string getExon(const int&) const;
     int rank(const int&) const;
     int select(const int&) const;

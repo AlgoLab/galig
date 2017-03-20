@@ -2,6 +2,9 @@
 #include <string>
 #include <fstream>
 #include <algorithm>
+#include <utility>
+#include <list>
+
 
 #include "FastaReader.hpp"
 #include "SplicingGraph.hpp"
@@ -20,7 +23,7 @@ void printHelp() {
     std::cout << "  -a, --annotation <path>" << std::endl;
     std::cout << "  -r, --reads <path>" << std::endl;
     std::cout << "  -l, --L <int>: MEMs length" << std::endl;
-    std::cout << "  -k, --K <int>: " << std::endl;
+    std::cout << "  -e, --eps <int>: " << std::endl;
     std::cout << "  -v, --verbose:" << std::endl;
 }
 
@@ -31,7 +34,7 @@ int main(int argc, char* argv[]) {
     std::string annotation;
     std::string rna_seqs;
     int L;
-    int K;
+    int eps;
 
     int c;
     while (1) {
@@ -44,12 +47,12 @@ int main(int argc, char* argv[]) {
                 {"annotation", required_argument, 0, 'a'},
                 {"reads",  required_argument, 0, 'r'},
                 {"L",  required_argument, 0, 'l'},
-                {"K",    required_argument, 0, 'k'},
+                {"eps",    required_argument, 0, 'e'},
                 {0, 0, 0, 0}
             };
 
         int option_index = 0;
-        c = getopt_long(argc, argv, "1:2:g:a:r:l:k:v", long_options, &option_index);
+        c = getopt_long(argc, argv, "1:2:g:a:r:l:e:v", long_options, &option_index);
 
         if (c == -1) {
             break;
@@ -76,8 +79,8 @@ int main(int argc, char* argv[]) {
         case 'l':
             L = std::stoi(optarg);
             break;
-        case 'k':
-            K = std::stoi(optarg);
+        case 'e':
+            eps = std::stoi(optarg);
             break;
         case 'v':
             std::cout << "verbose" << std::endl;
@@ -87,45 +90,78 @@ int main(int argc, char* argv[]) {
             exit(EXIT_FAILURE);
         }
     }
-
     //if(mode) {
     SplicingGraph sg (genomic, annotation, sg_index);
-    //sg.print();
+    sg.print();
     //exit(0);
     //}
     //else {
     //SplicingGraph sg (sg_index);
-    //sg.print();
     FastaReader fastas (rna_seqs);
     BackwardMEM bm (sg.getText(), genomic);
     int i = 0;
-    //std::ofstream outFile;
-    //outFile.open(genomic + "_res");
+
+    std::ofstream outFile;
+    outFile.open("OUT.mem");
     while(i<fastas.getSize()) {
         std::pair<std::string, std::string> seq = fastas.getEntry(i);
         std::string read = seq.second;
         std::list<Mem> mems = bm.getMEMs(read,L);
-        MemsGraph mg (sg, read, mems, L);
+        std::cout << seq.first << " ";
+        for(Mem m : mems) {
+            std::cout << m.toStr() << " ";
+        }
+        std::cout << std::endl;
+        MemsGraph mg (sg, read, mems, L, eps);
+        std::pair<int, std::list<std::list<Mem> > > paths = mg.visit();
+        std::string read1 = reverse_and_complement(read);
+        std::list<Mem> mems1 = bm.getMEMs(read1,L);
+        MemsGraph mg1 (sg, read1, mems1, L, eps);
+        std::pair<int, std::list<std::list<Mem> > > paths1 = mg1.visit();
+
+        int flag = 0;
+        if(paths.first <= paths1.first) {
+            if(paths.second.size() != 0) {
+                flag = 1;
+            } else if(paths1.second.size() != 0) {
+                flag = 2;
+            }
+        } else {
+            if(paths1.second.size() != 0) {
+                flag = 2;
+            } else if(paths1.second.size() != 0) {
+                flag = 1;
+            }
+        }
+        switch(flag) {
+        case 0:
+            break;
+        case 1:
+            for(std::list<std::list<Mem> >::iterator p=paths.second.begin(); p!=paths.second.end(); ++p) {
+                outFile << "+ " << seq.first << " " << paths.first << " ";
+                for(std::list<Mem>::iterator m=p->begin(); m!=p->end(); ++m) {
+                    outFile << m->toStr() << " ";
+                }
+                outFile << "\n";
+            }
+            break;
+        case 2:
+            for(std::list<std::list<Mem> >::iterator p=paths1.second.begin(); p!=paths1.second.end(); ++p) {
+                outFile << "- " << seq.first << " " << paths.first << " ";
+                for(std::list<Mem>::iterator m=p->begin(); m!=p->end(); ++m) {
+                    outFile << m->toStr() << " ";
+                }
+                outFile << "\n";
+            }
+            break;
+        }
         ++i;
+        if(i%100 == 0) {
+            std::cout << "Processed " << i << " reads." << std::endl;
+        }
+        //if(i%1000 == 0) {
+        //    bm = BackwardMEM (sg.getText(), genomic);
+        //}
     }
+    outFile.close();
 }
-        /**
-           MemsList ml (seq.second.size());
-           for(const Mem& mem : mems) {
-           ml.addMem(mem);
-           }
-           MemsGraph mg (sg, ml, K, 80);
-           //mg.saveImage(seq.first);
-           //std::cout << "." << std::endl;
-           //mg.print();
-           mg.visit();
-           std::list<std::string> out (mg.getOutput());
-           ++i;
-           //for(std::string s : out) {
-           //    outFile << seq.first << " " << s << "\n";
-           //}
-           if(i%50 == 0) {
-           std::cout << "Processed " << i << " reads." << std::endl;
-           }
-        **/
-    //outFile.close();

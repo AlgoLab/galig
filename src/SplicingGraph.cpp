@@ -11,6 +11,7 @@ SplicingGraph::SplicingGraph(const std::string& f) {
 
 SplicingGraph::SplicingGraph(const std::string& fa, const std::string& gff, const std::string& index) {
     std::string genomic = FastaReader(fa).getEntry(0).second;
+    
     std::ifstream gffFile;
     std::map<std::string, std::list<std::string> > genes;
     std::map<std::string, std::list<std::string> > transcripts;
@@ -60,14 +61,18 @@ SplicingGraph::SplicingGraph(const std::string& fa, const std::string& gff, cons
     }
     addedExons.clear();
     edges.resize(exsN+1);
+    parents.resize(exsN+1);
+    sons.resize(exsN+1);
     for(int i = 0; i <= exsN; i++) {
-        edges[i] = std::vector< int>(exsN+1, 0);
-    }
+        edges[i] = std::vector< int>(exsN+1, 0);  
+  }
     T = "|";
     Exons.resize(exsN+1);
     int ex_id = 1;
+    std::map<std::string, int> ids_to_index;
     std::list<std::pair<int, int> > exs_pos;
     int curr_i = 0;
+    
     for(std::map<std::string, std::list<std::string> >::iterator it1=genes.begin(); it1!=genes.end(); ++it1) {
         for(std::list<std::string>::iterator it2=it1->second.begin(); it2!=it1->second.end(); ++it2) {
             int last_i = -1;
@@ -77,11 +82,11 @@ SplicingGraph::SplicingGraph(const std::string& fa, const std::string& gff, cons
                     addedExons.at(e.id);
                 } catch(const std::out_of_range& oor) {
                     addedExons.insert(std::pair<std::string, std::string>(e.id, ""));
+                    ids_to_index[e.id] = ex_id;
                     std::string curr_ex_string = genomic.substr(e.start-1, e.end-e.start+1);
                     T += curr_ex_string + "|";
                     Exons[ex_id] = curr_ex_string;
                     ++ex_id;
-                    curr_i++;
                     exs_pos.push_back(std::pair<int, int> (e.start, e.end));
                     /**
                        if(e.strand) {
@@ -92,25 +97,32 @@ SplicingGraph::SplicingGraph(const std::string& fa, const std::string& gff, cons
                        }
                     **/
                 }
+                curr_i = ids_to_index[e.id];
                 if(last_i != -1) {
-                    edges[last_i][curr_i] = 1;
+                    if(edges[last_i][curr_i] == 0 && last_i != curr_i) {
+                        edges[last_i][curr_i] = 1;
+                        parents[curr_i].push_back(last_i);
+                        sons[last_i].push_back(curr_i);
+                    }
                 }
                 last_i = curr_i;
             }
         }
-        int i = 1;
-        for(std::pair<int,int> p1 : exs_pos) {
-            int j = 1;
-            for(std::pair<int,int> p2 : exs_pos) {
-                if(p1.second <= p2.first) {
-                    if(edges[i][j] == 0) {
-                        edges[i][j] = 2;
-                    }
+    }
+    int i = 1;
+    for(std::pair<int,int> p1 : exs_pos) {
+        int j = 1;
+        for(std::pair<int,int> p2 : exs_pos) {
+            if(p1.second <= p2.first) {
+                if(edges[i][j] == 0) {
+                    edges[i][j] = 2;
+                    parents[j].push_back(i);
+                    sons[i].push_back(j);
                 }
-                j++;
             }
-            i++;
+            j++;
         }
+        i++;
     }
     gffFile.close();
 
@@ -134,6 +146,14 @@ void SplicingGraph::setupBitVector() {
 
 std::string SplicingGraph::getText() const {
     return T;
+}
+
+std::list<int> SplicingGraph::getParents(const int& i) const {
+    return parents[i];
+}
+
+std::list<int> SplicingGraph::getSons(const int& i) const {
+    return sons[i];
 }
 
 std::string SplicingGraph::getExon(const int& i) const {
