@@ -5,17 +5,22 @@ Splicing Graph ALigner (SGAL) performs an accurate approximate mapping of RNA-se
 The version of the tool submitted to AlCoB 2017 can be found [here](https://github.com/AlgoLab/galig/tree/v1.0) (release v1.0).
 
 ### Prerequisites
-  * python3 (maybe also python is good enough but I didn't test it)
-  * python3 modules: biopython, bcbio-gff, editdistance
+  * python or python3
+  * biopython
 
 ### Compiling
 ```bash
-git clone --recursive https://github.com/AlgoLab/galig.git
+git clone https://github.com/AlgoLab/galig.git
 cd galig
 make prerequisites
 make
-cd example/
-./run genomic.fa annotation.gff rna_seqs.fa 3 5 gene out
+```
+### Running
+```bash
+# Pattern matching
+./bin/main -g ./example/genomic.fa -a ./example/annotation.gff -r ./example/rna_seqs.fa -l 3 -e 10 -o OUT
+# SAM formatting
+python3 scripts/SAMFormatter.py OUT ./example/genomic.fa.sg ./example/rna_seqs.fa
 ```
 
 The tool has been tested only on 64bit Linux system.
