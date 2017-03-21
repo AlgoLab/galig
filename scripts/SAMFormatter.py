@@ -1,12 +1,10 @@
 import sys
 from Bio import SeqIO
 
-import editdistance
-
 from BitVector import BV
 
 class SAMFormatter:
-    def __init__(self, out_file, rna_seqs_file):
+    def __init__(self, out_file, index_file, rna_seqs_file):
         self.out_file = out_file
 
         #Output reader
@@ -15,126 +13,71 @@ class SAMFormatter:
             for line in o.read().split("\n"):
                 if line != "":
                     l = line.split(" ")
-                    self.outs.append((l[0]," ".join(l[1:-1])))
-                    #self.outs.append((l[0],[self.extractMEM(m) for m in l[1:-1]]))
+                    l.remove("")
+                    self.outs.append([l[0], l[1], l[2], l[3:]])
 
-        #Gene_name extraction
-        with open("./tmp/gene_info") as g:
-            [self.chromo, self.chromo_len, self.gene_name] = g.read().split("\n")
+        #Index reader
+        with open(index_file) as o:
+            line = o.readline()
+            i = 0
+            while line:
+                if i==0:
+                    (self.reference, self.ref_length) = line[:-1].split(" ")
+                if i==1:
+                    self.text = line[:-1]
+                if i==4:
+                    pos_S = line[:-2].split(" ")
+                    self.pos = []
+                    for p in pos_S:
+                        x = p.split(",")
+                        self.pos.append([int(x[0]), int(x[1])])
+                i+=1
+                line = o.readline()
 
         #Rna-Seqs extraction
         self.rna_seqs = SeqIO.index(rna_seqs_file, "fasta")
 
         #Bit Vector Setup
-        with open("./tmp/T.fa") as t:
-            self.text = t.read().split("\n")[1]
-            self.bv = BV(self.text)
-
-        #Exons Position Setup
-        with open("./tmp/e_pos") as f:
-            self.exs_pos = []
-            for line in f.read().split("\n"):
-                if line != "":
-                    self.exs_pos.append([int(n) for n in line.split(",")])
-
-        #Edges Setup
-        self.edges = []
-        self.new_edges = []
-        with open("./tmp/real_edges") as a:
-            es = a.read().split("\n")
-            for e in es:
-                if e != "":
-                    self.edges.append(e)
-        with open("./tmp/added_edges") as a:
-            es = a.read().split("\n")
-            for e in es:
-                if e != "":
-                    self.new_edges.append(e)
+        self.bv = BV(self.text)
 
     def format(self):
         out = open(self.out_file + ".sam", "w")
-        mems_out = open(self.out_file + "_confirmed", "w")
         out.write("@HD\tVN:1.4\n")
-        out.write("@SQ\tSN:{}\tLN:{}\n".format(self.chromo, self.chromo_len))
-        for (p_id, mems) in self.outs:
+        out.write("@SQ\tSN:{}\tLN:{}\n".format(self.reference, self.ref_length))
+        for (strand, p_id, err, mems) in self.outs:
             mems_list = self.extractMEMs(mems)
-            f = 0
-            if p_id[-1] == "'":
+            if strand == "-":
                 f = 16
-                p_id = p_id[:-1]
+            else:
+                f = 0
+            start = self.getStart(mems_list[0])
             rna_seq = self.rna_seqs[p_id].seq
-            cigar, err, clips = self.getCIGAR(mems_list, rna_seq)
-            if int(err/(len(rna_seq))*100) <= 7:
-                used_edges, used_nedges, altAccDon = self.getUsedEdges(mems_list)
-                out.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\tER:A:{}\tUE:A:{}\tUN:A:{}\tAD:A:{}\n".format(p_id, f, self.chromo, self.getStart(mems_list[0]), 255, cigar, "*", 0, 0, rna_seq, "*", err, ";".join(used_edges), ";".join(used_nedges), ";".join(altAccDon)))
-                mems_out.write("{}\t{}\n".format(p_id, mems))
-        mems_out.close()
+            cigar = self.getCIGAR(mems_list, len(rna_seq))
+            out.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\tER:A:{}\n".format(p_id, f, self.reference, start, 255, cigar, "*", 0, 0, rna_seq, "*", err))
         out.close()
 
     #Utils
-    def extractMEMs(self, string):
+    def extractMEMs(self, mems_S):
         mems = []
-        for s in string.split(" "):
+        for s in mems_S:
             string_mem = s[1:-1].split(",")
             mems.append([int(string_mem[0]), int(string_mem[1]), int(string_mem[2])])
         return mems
 
     def getStart(self, mem):
         id = self.bv.rank(mem[0])
-        return self.exs_pos[id-1][0] + (mem[0] - self.bv.select(id))
+        return self.pos[id-1][0] + (mem[0] - self.bv.select(id))
 
-    def getUsedEdges(self, mems):
-        edges_u = []
-        newEdges_u = []
-        altAccDon = []
-        i = 0
-        edges_u.append(str(self.bv.rank(mems[0][0] - 1)))
-        while i<len(mems)-1:
-            e1 = self.bv.rank(mems[i][0] - 1)
-            e2 = self.bv.rank(mems[i+1][0] - 1)
-            if e1 != e2:
-                if "{},{}".format(e1, e2) in self.edges:
-                    edges_u.append(str(e2))
-                elif "{},{}".format(e1, e2) in self.new_edges:
-                    edges_u.append(str(e2))
-                    newEdges_u.append("{},{}".format(e1, e2))
-                suff = self.bv.select(e1 + 1) - (mems[i][0] + mems[i][2])
-                pref = (mems[i+1][0]) - self.bv.select(e2) - 1
-                if suff != 0 or pref != 0:
-                    altAccDon.append("{},{}-{},{}".format(e1, e2, suff, pref))
-            i+=1
-        if newEdges_u == []:
-            newEdges_u.append(".")
-        if altAccDon == []:
-            altAccDon.append(".")
-        return edges_u, newEdges_u, altAccDon
-
-    def getCIGAR(self, mems, rna_seq):
+    def getCIGAR(self, mems, m):
         CIGAR = ""
         i = 0
-        errs = 0
-        clips = 0
-        last_pos = 0
-        text = ""
-        m = len(rna_seq)
         while i<len(mems):
             if i == 0:
-                initial_clips = 0
                 if mems[i][1] != 1:
                     initial_clips = mems[i][1]-1
                     CIGAR += "{}S".format(initial_clips)
-                    clips += mems[i][1]-1
                     poss_text = self.text[mems[i][0]-initial_clips-1:mems[i][0]-1]
-                    try:
-                        bar = poss_text.index("|")
-                        try:
-                            text += self.text[mems[i][0]-initial_clips-2] + poss_text[:bar] + poss_text[bar+1:]
-                        except IndexError:
-                            text += poss_text[:bar] + poss_text[bar+1:]
-                    except ValueError:
-                        text += poss_text
                 CIGAR += "{}M".format(mems[i][2])
-                last_pos = mems[i][0]
             else:
                 ##################################################################
                 id1 = self.bv.rank(mems[i-1][0])
@@ -213,9 +156,7 @@ class SAMFormatter:
                     errors_P = mems[i][1] - mems[i-1][1] - mems[i-1][2]
                     errors_T1 = self.bv.select(self.bv.rank(mems[i-1][0]) + 1) - mems[i-1][0] - mems[i-1][2]
                     errors_T2 = mems[i][0] - self.bv.select(self.bv.rank(mems[i][0])) - 1
-                    intron = self.exs_pos[id2-1][0] - self.exs_pos[id1-1][1]
-                    text += self.text[last_pos-1:self.bv.select(self.bv.rank(mems[i-1][0]) + 1)-1]
-                    last_pos = self.bv.select(self.bv.rank(mems[i][0])) + 1
+                    intron = self.pos[id2-1][0] - self.pos[id1-1][1]
                     #------------------------------------------------
                     if errors_P == 0:
                         if errors_T1 == 0 and errors_T2 == 0:
@@ -399,23 +340,9 @@ class SAMFormatter:
         final_dels = m - mems[-1][1] - mems[-1][2] + 1
         if  final_dels != 0:
             CIGAR += "{}S".format(final_dels)
-            clips += final_dels
-            poss_text = self.text[last_pos-1:mems[-1][0]+mems[-1][2]-1+final_dels]
-            try:
-                bar = poss_text.index("|")
-                try:
-                    text += poss_text[:bar] + poss_text[bar+1:] + self.text[mems[-1][0]+mems[-1][2]-1+final_dels]
-                except IndexError:
-                    text += poss_text[:bar] + poss_text[bar+1:]
-            except ValueError:
-                text += poss_text
-        else:
-            text += self.text[last_pos-1:mems[-1][0]+mems[-1][2]-1+final_dels]
 
-        errs = editdistance.eval(text, rna_seq)
-        return CIGAR, errs, clips
+        return CIGAR
 
-if __name__ == '__main__':
-    #Outfile, rna_seqs
-    f = SAMFormatter(sys.argv[1], sys.argv[2])
-    f.format()
+
+sf = SAMFormatter(sys.argv[1], sys.argv[2], sys.argv[3])
+sf.format()
