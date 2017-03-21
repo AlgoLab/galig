@@ -9,11 +9,11 @@
 
 class FastaReader {
 private:
-  std::vector<std::string> descriptions;
-  std::vector<std::string> sequences;
+    std::vector<std::string> descriptions;
+    std::vector<std::string> sequences;
 public:
-  FastaReader(const std::string&);
-  int getSize();
-  std::pair<std::string, std::string> getEntry(const int&);
+    FastaReader(const std::string&);
+    int getSize();
+    std::pair<std::string, std::string> getEntry(const int&);
 };
 #endif

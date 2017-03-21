@@ -11,7 +11,7 @@ SplicingGraph::SplicingGraph(const std::string& f) {
 
 SplicingGraph::SplicingGraph(const std::string& fa, const std::string& gff) {
     std::string genomic = FastaReader(fa).getEntry(0).second;
-    
+
     std::ifstream gffFile;
     std::map<std::string, std::list<std::string> > genes;
     std::map<std::string, std::list<std::string> > transcripts;
@@ -74,7 +74,7 @@ SplicingGraph::SplicingGraph(const std::string& fa, const std::string& gff) {
     std::map<std::string, int> ids_to_index;
     std::list<std::pair<int, int> > exs_pos;
     int curr_i = 0;
-    
+
     for(std::map<std::string, std::list<std::string> >::iterator it1=genes.begin(); it1!=genes.end(); ++it1) {
         for(std::list<std::string>::iterator it2=it1->second.begin(); it2!=it1->second.end(); ++it2) {
             int last_i = -1;
@@ -181,7 +181,7 @@ bool SplicingGraph::contain(const int& x, const int& y) const {
 void SplicingGraph::print() const {
     std::cout << T << std::endl;
     for(std::vector<int> v : edges) {
-        for(int e : v) {
+        for(const int& e : v) {
             std::cout << e << " ";
         }
         std::cout << std::endl;
@@ -195,7 +195,7 @@ void SplicingGraph::print() const {
 }
 
 void SplicingGraph::save(const std::string path) {
-    std::cout << "Saving SG to disk..." << std::endl;
+    //std::cout << "Saving SG to disk..." << std::endl;
     std::ofstream ofile;
     ofile.open(path + ".sg");
     ofile << reference << " " << ref_length << "\n";
@@ -216,7 +216,7 @@ void SplicingGraph::save(const std::string path) {
 }
 
 void SplicingGraph::load(const std::string path) {
-    std::cout << "Loading SG from disk..." << std::endl;
+    //std::cout << "Loading SG from disk..." << std::endl;
     std::ifstream ifile;
     int c = 0;
     int row = 0;

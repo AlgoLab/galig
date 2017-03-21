@@ -90,7 +90,7 @@ int main(int argc, char* argv[]) {
     while(i<fastas.getSize()) {
         std::pair<std::string, std::string> seq = fastas.getEntry(i);
         std::string read = seq.second;
-        
+
         std::list<Mem> mems = bm.getMEMs(read,L);
 
         MemsGraph mg (sg, read, mems, L, eps);

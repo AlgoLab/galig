@@ -45,7 +45,6 @@ public:
                std::list<Mem>&);
     std::pair<int, std::list<std::list<Mem> > > visit();
     void save(const std::string&);
-    
 };
 
 #endif
