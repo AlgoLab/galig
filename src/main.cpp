@@ -82,11 +82,9 @@ int main(int argc, char* argv[]) {
     FastaReader fastas (rna_seqs);
     int i = 0;
 
-    std::cout << out << std::endl;
     if(out.compare("") == 0) {
         out = "OUT.mem";
     }
-    std::cout << out << std::endl;
     std::ofstream outFile;
     outFile.open(out);
     while(i<fastas.getSize()) {
