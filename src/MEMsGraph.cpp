@@ -117,6 +117,9 @@ void MemsGraph::combine_MEMs_inside_exon(const SplicingGraph& sg,
                                 } else if(gap_P<=0 && gap_E<=0) {
                                     err = abs(gap_P-gap_E);
                                     flag = true;
+                                } else {
+                                    err = abs(gap_P) + abs(gap_E);
+                                    flag = true;
                                 }
                                 if(flag) {
                                     if(err<=K2) {
@@ -276,11 +279,19 @@ void MemsGraph::combine_MEMs(const SplicingGraph& sg) {
                 for(lemon::ListDigraph::OutArcIt out_arc (graph, s); out_arc!=lemon::INVALID; ++out_arc) {
                     lemon::ListDigraph::Node n2 = graph.target(out_arc);
                     Mem m2 = nodes_map[n2];
-                    if(m1.p+m1.l <= m2.p && sg.contain(ex_id, son)) {
+                    if(m1.p<=m2.p && m1.p+m1.l<=m2.p+m2.l && sg.contain(ex_id, son)) {
                         std::string sub_E_2 = son_text.substr(0,m2.t-sg.select(son)-1-1);
                         std::string sub_E = sub_E_1 + sub_E_2;
-                        std::string sub_P = read.substr(m1.p+m1.l-1,m2.p-m1.p-m1.l);
-                        int err = e_distance(sub_P, sub_E);
+                        int len_P = m2.p-m1.p-m1.l;
+                        int err = 0;
+                        std::string sub_P;
+                        if(len_P<0) {
+                            err = abs(len_P);
+                            sub_P = "";
+                        } else {
+                            sub_P = read.substr(m1.p+m1.l-1,len_P);
+                        }
+                        err += e_distance(sub_P, sub_E);
                         if(err<K2) {
                             lemon::ListDigraph::Arc arc = graph.addArc(n1,n2);
                             edges_map[arc] = err;
@@ -343,8 +354,7 @@ void MemsGraph::link_start_end(const SplicingGraph& sg) {
                             std::string p_text = sg.getExon(p);
                             if(sg.select(p+1)-shared_pref_len-sg.select(p)-1>=0) {
                                 sub_E = p_text.substr(sg.select(p+1)-shared_pref_len-sg.select(p)-1, shared_pref_len) + exon_pref;
-                            }
-                            else {
+                            } else {
                                 sub_E = p_text + exon_pref;
                             }
                             int curr_w = e_distance(sub_P, sub_E);
@@ -352,8 +362,7 @@ void MemsGraph::link_start_end(const SplicingGraph& sg) {
                                 w = curr_w;
                             }
                         }
-                    }
-                    else {
+                    } else {
                         sub_E = exon_text.substr(Smem.t-l-sg.select(ex_id)-1, l);
                         w = e_distance(sub_P, sub_E);
                     }
@@ -393,8 +402,7 @@ void MemsGraph::link_start_end(const SplicingGraph& sg) {
                                 w = curr_w;
                             }
                         }
-                    }
-                    else {
+                    } else {
                         sub_E = exon_text.substr(Emem.t+Emem.l-sg.select(ex_id)-1-1, l);
                         w = e_distance(sub_P, sub_E);
                     }
