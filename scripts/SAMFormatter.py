@@ -66,7 +66,7 @@ class SAMFormatter:
 
     def getStart(self, mem):
         id = self.bv.rank(mem[0])
-        return self.pos[id-1][0] + (mem[0] - self.bv.select(id))
+        return self.pos[id-1][0] + (mem[0] - self.bv.select(id)) - 1
 
     def getCIGAR(self, mems, m):
         CIGAR = ""
