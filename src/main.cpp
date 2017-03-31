@@ -22,6 +22,7 @@ void printHelp() {
     std::cout << "  -l, --L <int>: MEMs length" << std::endl;
     std::cout << "  -e, --eps <int>: " << std::endl;
     std::cout << "  -o, --output <path>: output path" << std::endl;
+    std::cout << "  -v, --verbose: explain what is being done and save .dot" << std::endl;
 }
 
 int main(int argc, char* argv[]) {
@@ -31,6 +32,7 @@ int main(int argc, char* argv[]) {
     int L;
     int eps;
     std::string out;
+    bool verbose = false;
 
     int c;
     while (1) {
@@ -42,11 +44,12 @@ int main(int argc, char* argv[]) {
                 {"L",  required_argument, 0, 'l'},
                 {"eps",    required_argument, 0, 'e'},
                 {"output", required_argument, 0, 'o'},
+                {"verbose", no_argument, 0, 'v'},
                 {0, 0, 0, 0}
             };
 
         int option_index = 0;
-        c = getopt_long(argc, argv, "g:a:r:l:e:o:", long_options, &option_index);
+        c = getopt_long(argc, argv, "g:a:r:l:e:o:v", long_options, &option_index);
 
         if (c == -1) {
             break;
@@ -71,6 +74,9 @@ int main(int argc, char* argv[]) {
         case 'o':
             out = optarg;
             break;
+        case 'v':
+            verbose = true;
+            break;
         default:
             printHelp();
             exit(EXIT_FAILURE);
@@ -78,6 +84,9 @@ int main(int argc, char* argv[]) {
     }
 
     SplicingGraph sg (genomic, annotation);
+    if(verbose) {
+        sg.print();
+    }
     BackwardMEM bm (sg.getText(), genomic);
     FastaReader fastas (rna_seqs);
     int i = 0;
@@ -90,18 +99,18 @@ int main(int argc, char* argv[]) {
     while(i<fastas.getSize()) {
         std::pair<std::string, std::string> seq = fastas.getEntry(i);
         std::string read = seq.second;
-
         std::list<Mem> mems = bm.getMEMs(read,L);
 
-        MemsGraph mg (sg, read, mems, L, eps);
+        MemsGraph mg (sg, read, mems, L, eps, verbose);
         mg.build(sg, mems);
         std::pair<int, std::list<std::list<Mem> > > paths = mg.visit();
+
         std::string read1 = reverse_and_complement(read);
         std::list<Mem> mems1 = bm.getMEMs(read1,L);
-        MemsGraph mg1 (sg, read1, mems, L, eps);
+        MemsGraph mg1 (sg, read1, mems, L, eps, verbose);
         mg1.build(sg, mems1);
         std::pair<int, std::list<std::list<Mem> > > paths1 = mg1.visit();
-
+        
         int flag = 0;
         if(paths.first <= paths1.first) {
             if(paths.second.size() != 0) {
@@ -131,7 +140,7 @@ int main(int argc, char* argv[]) {
             break;
         case 2:
             for(std::list<std::list<Mem> >::iterator p=paths1.second.begin(); p!=paths1.second.end(); ++p) {
-                outFile << "- " << seq.first << " " << paths.first << " ";
+                outFile << "- " << seq.first << " " << paths1.first << " ";
                 for(std::list<Mem>::iterator m=p->begin(); m!=p->end(); ++m) {
                     outFile << m->toStr() << " ";
                 }

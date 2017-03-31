@@ -14,13 +14,31 @@
 
 class MemsGraph {
 private:
-    int m;
+    /**
+     * L: L parameter
+     * eps: epsilon parameter
+     * read: read
+     * m: read length
+     * K0: start/end proximity
+     * K1: gap length
+     * K2: errors in gap
+     * exsN: exons number
+     * graph: MEMsGraph
+     * nodes_map: node -> mem
+     * edges_map: edge -> weigth
+     * start: global starting node
+     * end: global ending node
+     * starting_nodes: local starting nodes list (exon)
+     * ending_nodes: local ending nodes list (exon)
+     **/
     int L;
     int eps;
+    std::string read;
+    bool verbose;
+    int m;
     int K0;
     int K1;
     int K2;
-    std::string read;
     int exsN;
     lemon::ListDigraph graph;
     lemon::ListDigraph::NodeMap<Mem> nodes_map;
@@ -40,7 +58,8 @@ public:
               const std::string&,
               std::list<Mem>&,
               const int&,
-              const int&);
+              const int&,
+              const bool&);
     void build(const SplicingGraph&,
                std::list<Mem>&);
     std::pair<int, std::list<std::list<Mem> > > visit();
