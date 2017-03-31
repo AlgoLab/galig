@@ -61,6 +61,7 @@ SplicingGraph::SplicingGraph(const std::string& fa, const std::string& gff) {
             }
         }
     }
+
     addedExons.clear();
     edges.resize(exsN+1);
     parents.resize(exsN+1);
@@ -79,7 +80,8 @@ SplicingGraph::SplicingGraph(const std::string& fa, const std::string& gff) {
         for(std::list<std::string>::iterator it2=it1->second.begin(); it2!=it1->second.end(); ++it2) {
             int last_i = -1;
             for(std::list<std::string>::iterator it3=transcripts[*it2].begin(); it3!=transcripts[*it2].end(); ++it3) {
-                Feature e = exons[*it3];
+                std::string exon_ID = *it3;
+                Feature e = exons[exon_ID];
                 try {
                     addedExons.at(e.id);
                 } catch(const std::out_of_range& oor) {

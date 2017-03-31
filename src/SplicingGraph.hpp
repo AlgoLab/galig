@@ -62,21 +62,29 @@ struct Feature {
             break;
         case 9:
             bool flag = true;
-            std::string delimiter = ";";
+            std::string delimiter = "; "; //GFF: ";"
+            std::string string_to_search; //GFF: "ID"
+            if(type.compare("gene") == 0) {
+                string_to_search = "gene_id \"";
+            } else if(type.compare("transcript") == 0) {
+                string_to_search = "transcript_id \"";
+            } else if(type.compare("exon") == 0) {
+                string_to_search = "exon_id \"";
+            }
             std::size_t pos;
             std::string token;
             std::string subtoken;
             while((pos = elem.find(delimiter)) != std::string::npos) {
                 token = elem.substr(0, pos);
-                if(token.substr(0,2).compare("ID") == 0) {
-                    id = token.substr(3,token.size());
+                if(token.substr(0,string_to_search.size()).compare(string_to_search) == 0) {
+                    id = token.substr(string_to_search.size(),token.size()-string_to_search.size()-1);
                     flag = false;
                     break;
                 }
                 elem.erase(0, pos + delimiter.length());
             }
-            if(flag && elem.substr(0,2).compare("ID") == 0) {
-                id = elem.substr(3,elem.size());
+            if(flag && elem.substr(0,string_to_search.size()).compare(string_to_search) == 0) {
+                id = elem.substr(string_to_search.size(),elem.size()-string_to_search.size()-1);
                 flag = false;
             }
             if(flag) {
