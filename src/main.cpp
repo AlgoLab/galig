@@ -82,7 +82,9 @@ int main(int argc, char* argv[]) {
             exit(EXIT_FAILURE);
         }
     }
-
+    if(verbose) {
+        std::cout << "Starting..." << std::endl;
+    }
     SplicingGraph sg (genomic, annotation);
     if(verbose) {
         sg.print();
@@ -154,4 +156,7 @@ int main(int argc, char* argv[]) {
         }
     }
     outFile.close();
+    if(verbose) {
+        std::cout << "...Ending" << std::endl;
+    }
 }
