@@ -9,7 +9,8 @@ SplicingGraph::SplicingGraph(const std::string& f) {
     setupBitVector();
 }
 
-SplicingGraph::SplicingGraph(const std::string& fa, const std::string& gff) {
+SplicingGraph::SplicingGraph(const std::string& fa,
+                             const std::string& gff) {
     std::string genomic = FastaReader(fa).getEntry(0).second;
 
     std::ifstream gffFile;
@@ -21,7 +22,7 @@ SplicingGraph::SplicingGraph(const std::string& fa, const std::string& gff) {
     std::string curr_gene = "";
     std::string curr_tr = "";
     exsN = 0;
-    int e_n = 1;
+    //int e_n = 1;
     gffFile.open(gff);
     if(gffFile.is_open()) {
         while(getline(gffFile,line)) {
@@ -39,22 +40,12 @@ SplicingGraph::SplicingGraph(const std::string& fa, const std::string& gff) {
                 transcripts.insert(std::pair<std::string, std::list<std::string> >(curr_tr, std::list<std::string> ()));
             }
             else if(f.type.compare("exon") == 0) {
-                std::string pos_ID = getExonID(f.start, f.end);
                 std::string ex = f.id;
-                if(ex == ".") {
-                    try {
-                        f.id = addedExons.at(pos_ID);
-                    } catch(const std::out_of_range& oor) {
-                        f.id = "Exon" + std::to_string(e_n);
-                        ++e_n;
-                    }
-                    ex = f.id;
-                }
                 transcripts.at(curr_tr).push_back(ex);
                 try {
-                    addedExons.at(pos_ID);
+                    addedExons.at(ex);
                 } catch(const std::out_of_range& oor) {
-                    addedExons[pos_ID] = ex;
+                    addedExons[ex] = "";
                     exons.insert(std::make_pair(ex, f));
                     ++exsN;
                 }
@@ -70,6 +61,7 @@ SplicingGraph::SplicingGraph(const std::string& fa, const std::string& gff) {
         edges[i] = std::vector< int>(exsN+1, 0);  
     }
     T = "|";
+
     Exons.resize(exsN+1);
     int ex_id = 1;
     std::map<std::string, int> ids_to_index;
@@ -82,10 +74,11 @@ SplicingGraph::SplicingGraph(const std::string& fa, const std::string& gff) {
             for(std::list<std::string>::iterator it3=transcripts[*it2].begin(); it3!=transcripts[*it2].end(); ++it3) {
                 std::string exon_ID = *it3;
                 Feature e = exons[exon_ID];
+                std::string pos_ID = getExonID(e.start, e.end);
                 try {
-                    addedExons.at(e.id);
+                    addedExons.at(pos_ID);
                 } catch(const std::out_of_range& oor) {
-                    addedExons.insert(std::make_pair(e.id, ""));
+                    addedExons.insert(std::make_pair(pos_ID, ""));
                     ids_to_index[e.id] = ex_id;
                     std::string curr_ex_string = genomic.substr(e.start-1, e.end-e.start+1);
                     T += curr_ex_string + "|";
