@@ -151,7 +151,7 @@ int main(int argc, char* argv[]) {
             break;
         }
         ++i;
-        if(i%100 == 0) {
+        if(i%1000 == 0) {
             std::cout << "Processed " << i << " reads." << std::endl;
         }
     }
