@@ -44,6 +44,8 @@ class SAMFormatter:
         out = open(self.out_file + ".sam", "w")
         out.write("@HD\tVN:1.4\n")
         out.write("@SQ\tSN:{}\tLN:{}\n".format(self.reference, self.ref_length))
+        last_start = ""
+        last_cigar = ""
         for (strand, p_id, err, mems) in self.outs:
             mems_list = self.extractMEMs(mems)
             if strand == "-":
@@ -53,7 +55,11 @@ class SAMFormatter:
             start = self.getStart(mems_list[0])
             rna_seq = self.rna_seqs[p_id].seq
             cigar = self.getCIGAR(mems_list, len(rna_seq))
-            out.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\tER:A:{}\n".format(p_id, f, self.reference, start, 255, cigar, "*", 0, 0, rna_seq, "*", err))
+            #Same alignments is not output
+            if start != last_start or cigar != last_cigar:
+                last_start = start
+                last_cigar = cigar
+                out.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\tER:A:{}\n".format(p_id, f, self.reference, start, 255, cigar, "*", 0, 0, rna_seq, "*", err))
         out.close()
 
     #Utils
