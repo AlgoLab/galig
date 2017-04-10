@@ -48,12 +48,13 @@ class SAMFormatter:
         last_cigar = ""
         for (strand, p_id, err, mems) in self.outs:
             mems_list = self.extractMEMs(mems)
+            rna_seq = self.rna_seqs[p_id].seq
             if strand == "-":
                 f = 16
+                rna_seq = self.reverse_and_complement(rna_seq)
             else:
                 f = 0
             start = self.getStart(mems_list[0])
-            rna_seq = self.rna_seqs[p_id].seq
             cigar = self.getCIGAR(mems_list, len(rna_seq))
             #Same alignments is not output
             if start != last_start or cigar != last_cigar:
@@ -73,6 +74,14 @@ class SAMFormatter:
     def getStart(self, mem):
         id = self.bv.rank(mem[0])
         return self.pos[id-1][0] + (mem[0] - self.bv.select(id)) - 1
+
+    def reverse_and_complement(self, text):
+        text = text[::-1]
+        nucl_bases_dict = {"A":"T", "T":"A", "C":"G", "G":"C", "a":"t", "t":"a", "c":"g", "g":"c", "N":"N", "n":"n"}
+        new_text = ""
+        for elem in text:
+            new_text += nucl_bases_dict[elem]
+        return new_text
 
     def getCIGAR(self, mems, m):
         CIGAR = ""
