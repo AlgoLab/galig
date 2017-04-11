@@ -18,7 +18,7 @@ make
 ### Running
 ```bash
 # Pattern matching
-./bin/main -g ./example/genomic.fa -a ./example/annotation.gff -r ./example/rna_seqs.fa -l 3 -e 10 -o OUT
+./bin/main -g ./example/genomic.fa -a ./example/annotation.gtf -r ./example/rna_seqs.fa -l 3 -e 10 -o OUT
 # SAM formatting
 python3 scripts/SAMFormatter.py OUT ./example/genomic.fa.sg ./example/rna_seqs.fa
 ```
