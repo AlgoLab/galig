@@ -73,10 +73,10 @@ std::list<Mem> BackwardMEM::getMEMs(const std::string& read,
             lb = lb_; rb = lb_;
             size_type p2_ = it->p;
             while(c_ >= l) {
-                for(size_type k = lb_; k < lb; ++k){
+                for(size_type k = lb_; k < lb; ++k) {
                     addMEM(read, c_, p2_, k);
                 }
-                for(size_type k = rb; k < rb_; ++k){
+                for(size_type k = rb; k < rb_; ++k) {
                     addMEM(read, c_, p2_, k);
                 }
                 lb = lb_; rb = rb_;

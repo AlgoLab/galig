@@ -136,7 +136,7 @@ void MemsGraph::combine_MEMs_inside_exon(const SplicingGraph& sg,
                                     flag = true;
                                 }
                                 if(flag) {
-                                    if(err<=K2) {
+                                    if(err <= K2) {
                                         lemon::ListDigraph::Node node2;
                                         try {
                                             node2 = addedNodes.at(m2.toStr());
@@ -224,7 +224,7 @@ void MemsGraph::combine_MEMs_inside_exon(const SplicingGraph& sg,
                     }
                     std::string sub_E = exon_text.substr(Emem.t+Emem.l-sg.select(ex_id)-1-1, Smem.t-Emem.t-Emem.l);
                     int err = e_distance(sub_P, sub_E);
-                    if(err<=K2) {
+                    if(err <= K2) {
                         lemon::ListDigraph::Arc arc = graph.addArc(e,s);
                         edges_map[arc] = err;
                     }
@@ -243,14 +243,15 @@ void MemsGraph::combine_MEMs_inside_exon(const SplicingGraph& sg,
     if(verbose) {
         save("Graphs/g" + std::to_string(ex_id) + "_2.dot");
     }
+
     /**
      *     Fase 4 - Removing paths
-     * Vengono eliminati dai figli dello start:
+     * Vengono eliminati:
      *   I. i MEMs figli di START che sono interni sia al pattern che all'esone
      *   II. i MEMs padri di END che sono interni sia al pattern che all'esone
      *   III. i MEMs rimasti figli di START da cui non si raggiunge l'END
      **/
-
+    /**
     // I
     std::list<lemon::ListDigraph::OutArcIt> out_arcs1;
     for(lemon::ListDigraph::OutArcIt out_arc (graph, curr_start); out_arc!=lemon::INVALID; ++out_arc) {
@@ -298,12 +299,13 @@ void MemsGraph::combine_MEMs_inside_exon(const SplicingGraph& sg,
             graph.erase(a);
         }
     }
+    **/
 }
 
 void MemsGraph::combine_MEMs(const SplicingGraph& sg) {
     /**
      * I sinks del nodo ex_id vengono combinati con i sources
-     * di tutti i suoi figli (son).
+     * di tutti i suoi figli (sons).
      **/
     int ex_id = 0;
     std::list<lemon::ListDigraph::OutArcIt> starting_arcs_D;
@@ -339,14 +341,16 @@ void MemsGraph::combine_MEMs(const SplicingGraph& sg) {
                         int len_P = m2.p-m1.p-m1.l;
                         int err = 0;
                         std::string sub_P;
-                        if(len_P<0) {
-                            err = abs(len_P);
+                        if(len_P == 0) {
+                            err = 0;
+                        } else if(len_P<0) {
                             sub_P = "";
+                            err = abs(len_P) + e_distance(sub_P, sub_E);
                         } else {
                             sub_P = read.substr(m1.p+m1.l-1,len_P);
+                            err = e_distance(sub_P, sub_E);
                         }
-                        err += e_distance(sub_P, sub_E);
-                        if(err<K2) {
+                        if(err <= K2) {
                             lemon::ListDigraph::Arc arc = graph.addArc(n1,n2);
                             edges_map[arc] = err;
                             flag = true;
