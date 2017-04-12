@@ -171,7 +171,7 @@ class SAMFormatter:
                     errors_P = mems[i][1] - mems[i-1][1] - mems[i-1][2]
                     errors_T1 = self.bv.select(self.bv.rank(mems[i-1][0]) + 1) - mems[i-1][0] - mems[i-1][2]
                     errors_T2 = mems[i][0] - self.bv.select(self.bv.rank(mems[i][0])) - 1
-                    intron = self.pos[id2-1][0] - self.pos[id1-1][1]
+                    intron = self.pos[id2-1][0] - self.pos[id1-1][1] - 1
                     #------------------------------------------------
                     if errors_P == 0:
                         if errors_T1 == 0 and errors_T2 == 0:
