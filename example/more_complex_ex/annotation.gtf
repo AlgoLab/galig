@@ -1,0 +1,6 @@
+ex	ensembl	gene	1	230	.	+	.	gene_id "gene";
+ex	ensembl	transcript	1	230	.	+	.	gene_id "gene"; transcript_id "T1";
+ex	ensembl	exon	1	50	.	+	.	gene_id "gene"; transcript_id "T1"; exon_number "1"; exon_id "exon1"
+ex	ensembl	exon	61	110	.	+	.	gene_id "gene"; transcript_id "T1"; exon_number "2"; exon_id "exon2"
+ex	ensembl	exon	121	170	.	+	.	gene_id "gene"; transcript_id "T1"; exon_number "3"; exon_id "exon3"
+ex	ensembl	exon	181	230	.	+	.	gene_id "gene"; transcript_id "T1"; exon_number "4"; exon_id "exon4"
