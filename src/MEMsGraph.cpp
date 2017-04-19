@@ -310,8 +310,7 @@ void MemsGraph::combine_MEMs(const SplicingGraph& sg) {
     int ex_id = 0;
     std::list<lemon::ListDigraph::OutArcIt> starting_arcs_D;
     while(ex_id<exsN) {
-        lemon::ListDigraph::Node s = starting_nodes[ex_id];
-        lemon::ListDigraph::Node e = ending_nodes[ex_id];
+        lemon::ListDigraph::Node E_Ex = ending_nodes[ex_id];
         ++ex_id;
         std::string curr_exon_text = sg.getExon(ex_id);
         std::list<int> sons = sg.getSons(ex_id);
@@ -321,7 +320,7 @@ void MemsGraph::combine_MEMs(const SplicingGraph& sg) {
             int son = *it;
             lemon::ListDigraph::Node s = starting_nodes[son-1];
             std::string son_text = sg.getExon(son);
-            for(lemon::ListDigraph::InArcIt in_arc (graph, e); in_arc!=lemon::INVALID; ++in_arc) {
+            for(lemon::ListDigraph::InArcIt in_arc (graph, E_Ex); in_arc!=lemon::INVALID; ++in_arc) {
                 lemon::ListDigraph::Node n1 = graph.source(in_arc);
                 Mem m1 = nodes_map[n1];
                 if(verbose) {
@@ -332,7 +331,10 @@ void MemsGraph::combine_MEMs(const SplicingGraph& sg) {
                 for(lemon::ListDigraph::OutArcIt out_arc (graph, s); out_arc!=lemon::INVALID; ++out_arc) {
                     lemon::ListDigraph::Node n2 = graph.target(out_arc);
                     Mem m2 = nodes_map[n2];
-                    if(m1.p<=m2.p && m1.p+m1.l<=m2.p+m2.l && sg.contain(ex_id, son)) {
+                    if(verbose) {
+                        std::cout << m1.toStr() << " -> " << m2.toStr() << std::endl;
+                    }
+                    if(m1.p<=m2.p && m1.p+m1.l<=m2.p+m2.l) { //Il controllo sull'arco è già fatto prendendo solo i sons
                         if(verbose) {
                             std::cout << "4" << std::endl;
                         }
