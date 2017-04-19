@@ -343,11 +343,11 @@ void MemsGraph::combine_MEMs(const SplicingGraph& sg) {
                         int len_P = m2.p-m1.p-m1.l;
                         int err = 0;
                         std::string sub_P;
-                        if(len_P == 0) {
+                        if(len_P <= 0) {
                             err = 0;
-                        } else if(len_P<0) {
-                            sub_P = "";
-                            err = abs(len_P) + e_distance(sub_P, sub_E);
+                        //} else if(len_P<0) {
+                        //    sub_P = "";
+                        //    err = abs(len_P) + e_distance(sub_P, sub_E);
                         } else {
                             sub_P = read.substr(m1.p+m1.l-1,len_P);
                             err = e_distance(sub_P, sub_E);
