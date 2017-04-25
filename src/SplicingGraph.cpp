@@ -52,8 +52,11 @@ SplicingGraph::SplicingGraph(const std::string& fa,
             }
         }
     }
-
+    
     addedExons.clear();
+    //Questo prima exsN è una stima superiore del vero numero di esoni,
+    //dato che lo stesso esone può essere messo in due trascritti con ID diverso.
+    //Nella passata successiva, mi baso sulla combinazione start_end
     edges.resize(exsN+1);
     parents.resize(exsN+1);
     sons.resize(exsN+1);
@@ -69,9 +72,12 @@ SplicingGraph::SplicingGraph(const std::string& fa,
     int curr_i = 0;
 
     for(std::map<std::string, std::list<std::string> >::iterator it1=genes.begin(); it1!=genes.end(); ++it1) {
+        //Forall gene
         for(std::list<std::string>::iterator it2=it1->second.begin(); it2!=it1->second.end(); ++it2) {
+            //Forall transcript in gene
             int last_i = -1;
             for(std::list<std::string>::iterator it3=transcripts[*it2].begin(); it3!=transcripts[*it2].end(); ++it3) {
+                //Forall exon in transcript
                 std::string exon_ID = *it3;
                 Feature e = exons[exon_ID];
                 std::string pos_ID = getExonID(e.start, e.end);
@@ -106,6 +112,7 @@ SplicingGraph::SplicingGraph(const std::string& fa,
             }
         }
     }
+
     int i = 1;
     for(const std::pair<int,int>& p1 : Exons_Pos) {
         int j = 1;
@@ -195,7 +202,7 @@ void SplicingGraph::save(const std::string path) {
     ofile.open(path + ".sg");
     ofile << reference << " " << ref_length << "\n";
     ofile << T << "\n";
-    ofile << edges.size() << "\n";
+    ofile << exsN << "\n";
     for(const std::vector<int>& v : edges) {
         for(const int& e : v) {
             ofile << e << " ";

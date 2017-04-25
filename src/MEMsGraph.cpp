@@ -334,7 +334,7 @@ void MemsGraph::combine_MEMs(const SplicingGraph& sg) {
                     if(verbose) {
                         std::cout << m1.toStr() << " -> " << m2.toStr() << std::endl;
                     }
-                    if(m1.p<=m2.p && m1.p+m1.l<=m2.p+m2.l) { //Il controllo sull'arco è già fatto prendendo solo i sons
+                    if(m1.p<m2.p && m1.p+m1.l<m2.p+m2.l) { //Il controllo sull'arco è già fatto prendendo solo i sons
                         if(verbose) {
                             std::cout << "4" << std::endl;
                         }
@@ -343,11 +343,10 @@ void MemsGraph::combine_MEMs(const SplicingGraph& sg) {
                         int len_P = m2.p-m1.p-m1.l;
                         int err = 0;
                         std::string sub_P;
-                        if(len_P <= 0) {
+                        if(len_P == 0) {
                             err = 0;
-                        //} else if(len_P<0) {
-                        //    sub_P = "";
-                        //    err = abs(len_P) + e_distance(sub_P, sub_E);
+                        } else if(len_P<0) {
+                            err = abs(len_P);
                         } else {
                             sub_P = read.substr(m1.p+m1.l-1,len_P);
                             err = e_distance(sub_P, sub_E);
@@ -427,6 +426,8 @@ void MemsGraph::link_start_end(const SplicingGraph& sg) {
                         std::string exon_pref = exon_text.substr(0, exon_pref_len);
                         w = l;
                         for(const int& p : parents) {
+                            //Si guarda solo il padre, se è lungo abbastanza (IF), si prende il suffisso,
+                            //altrimenti tutto il testo e basta (senza andare indietro ancora)
                             std::string p_text = sg.getExon(p);
                             if(sg.select(p+1)-shared_pref_len-sg.select(p)-1>=0) {
                                 if(verbose) {
@@ -447,7 +448,7 @@ void MemsGraph::link_start_end(const SplicingGraph& sg) {
                         if(verbose) {
                             std::cout << "7" << std::endl;
                         }
-                        sub_E = exon_text.substr(Smem.t-l-sg.select(ex_id)-1, l);
+                        sub_E = exon_text.substr(Smem.t-l-sg.select(ex_id)-1-1, l);
                         w = e_distance(sub_P, sub_E);
                     }
                 }
