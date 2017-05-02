@@ -21,16 +21,19 @@ std::string reverse_and_complement(const std::string& s) {
     for(char c : s) {
         switch(c) {
         case 'A':
-            rs += "T";
+            rs += 'T';
             break;
         case 'C':
-            rs += "G";
+            rs += 'G';
             break;
         case 'G':
-            rs += "C";
+            rs += 'C';
             break;
         case 'T':
-            rs += "A";
+            rs += 'A';
+            break;
+        case 'N':
+            rs += 'N';
             break;
         default:
             break;
