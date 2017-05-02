@@ -177,6 +177,9 @@ class SAMFormatter:
                     intron = self.pos[id2-1][0] - self.pos[id1-1][1] - 1
                     #------------------------------------------------
                     if errors_P == 0:
+                        CIGAR += "{}N".format(intron + errors_T1 + errors_T2)
+                        CIGAR += "{}M".format(mems[i][2])
+                        '''
                         if errors_T1 == 0 and errors_T2 == 0:
                             #print("9")
                             if intron != 0:
@@ -213,8 +216,13 @@ class SAMFormatter:
                             else:
                                 CIGAR += "{}D".format(errors_T1 + errors_T2)
                             CIGAR += "{}M".format(mems[i][2])
+                        '''
                     #------------------------------------------------
                     elif errors_P < 0:
+                        CIGAR += "{}D".format(abs(errors_P))
+                        CIGAR += "{}N".format(intron + errors_T1 + errors_T2 - 1)
+                        CIGAR += "{}M".format(mems[i][2]-abs(errors_P))
+                        '''
                         if errors_T1 == 0 and errors_T2 == 0:
                             #print("13")
                             if intron != 0:
@@ -245,8 +253,27 @@ class SAMFormatter:
                             else:
                                 CIGAR += "{}D".format(errors_T1 + abs(errors_P) + errors_T2)
                             CIGAR += "{}M".format(mems[i][2]-abs(errors_P))
+                        '''
                     #------------------------------------------------
                     else:
+                        #CIGAR += "{}I".format(abs(errors_P))
+                        #CIGAR += "{}N".format(intron + errors_T1 + errors_T2 - 1)
+                        #CIGAR += "{}M".format(mems[i][2]-abs(errors_P))
+                        '''
+                        if errors_T1 + errors_T2 == errors_P:
+                            prev_matches = 0
+                            f1 = True
+                            j1 = 0
+                            while f1:
+                                j1-=1
+                                if j1<=-len(CIGAR) or CIGAR[:-1][j1] in ["I", "D", "N", "S"]:
+                                    f1 = False
+                                    prev_matches += int(CIGAR[:-1][j1+1:])
+                            CIGAR = CIGAR[:j1] + "{}M".format(prev_matches + errors_T1)
+                            CIGAR += "{}N".format(intron)
+                            CIGAR += "{}M".format(errors_T2 + mems[i][2])
+                        elif errors_T1 + errors_T2 < errors_P:
+                        '''
                         if errors_T1 == 0 and errors_T2 == 0:
                             CIGAR += "{}I".format(errors_P)
                             if intron != 0:
@@ -277,13 +304,19 @@ class SAMFormatter:
                                 else:
                                     CIGAR += "{}M".format(errors_T1 + mems[i][2])
                             else:
+                                prev_matches = 0
+                                f1 = True
+                                j1 = 0
+                                while f1:
+                                    j1-=1
+                                    if j1<=-len(CIGAR) or CIGAR[:-1][j1] in ["I", "D", "N", "S"]:
+                                        f1 = False
+                                        prev_matches += int(CIGAR[:-1][j1+1:])
+                                CIGAR =  CIGAR[:j1] + "{}M".format(prev_matches + errors_P)
                                 CIGAR += "{}D".format(errors_T1 - errors_P)
                                 if intron != 0:
-                                    CIGAR += "{}M".format(errors_P)
                                     CIGAR += "{}N".format(intron)
-                                    CIGAR += "{}M".format(mems[i][2])
-                                else:
-                                    CIGAR += "{}M".format(errors_P + mems[i][2])
+                                CIGAR += "{}M".format(mems[i][2])
                         elif errors_T1 == 0 and errors_T2 > 0:
                             if errors_P == errors_T2:
                                 if intron != 0:
