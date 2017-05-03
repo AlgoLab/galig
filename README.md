@@ -20,7 +20,7 @@ make
 # Pattern matching
 ./bin/main -g ./example/genomic.fa -a ./example/annotation.gtf -r ./example/rna_seqs.fa -l 3 -e 10 -o OUT
 # SAM formatting
-python3 scripts/SAMFormatter.py OUT ./example/genomic.fa.sg ./example/rna_seqs.fa
+python3 scripts/SAMFormatter.py OUT ./example/annotation.gtf.sg ./example/rna_seqs.fa
 ```
 
 The tool has been tested only on 64bit Linux system.

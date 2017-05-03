@@ -10,10 +10,11 @@ SplicingGraph::SplicingGraph(const std::string& f) {
 }
 
 SplicingGraph::SplicingGraph(const std::string& fa,
-                             const std::string& gff) {
+                             const std::string& gtf) {
     std::string genomic = FastaReader(fa).getEntry(0).second;
+    ref_length = genomic.size();
 
-    std::ifstream gffFile;
+    std::ifstream gtfFile;
     std::map<std::string, std::list<std::string> > genes;
     std::map<std::string, std::list<std::string> > transcripts;
     std::map<std::string, Feature> exons;
@@ -23,13 +24,12 @@ SplicingGraph::SplicingGraph(const std::string& fa,
     std::string curr_tr = "";
     exsN = 0;
     //int e_n = 1;
-    gffFile.open(gff);
-    if(gffFile.is_open()) {
-        while(getline(gffFile,line)) {
+    gtfFile.open(gtf);
+    if(gtfFile.is_open()) {
+        while(getline(gtfFile,line)) {
             Feature f (line);
             if(f.type.compare("gene") == 0) {
                 reference = f.seqid;
-                ref_length = f.end - f.start;
                 curr_gene = f.id;
                 genes.insert(std::make_pair(curr_gene, std::list<std::string> ()));
                 addedExons.clear();
@@ -52,7 +52,7 @@ SplicingGraph::SplicingGraph(const std::string& fa,
             }
         }
     }
-    
+
     addedExons.clear();
     //Questo prima exsN è una stima superiore del vero numero di esoni,
     //dato che lo stesso esone può essere messo in due trascritti con ID diverso.
@@ -128,10 +128,10 @@ SplicingGraph::SplicingGraph(const std::string& fa,
         }
         i++;
     }
-    gffFile.close();
+    gtfFile.close();
 
     setupBitVector();
-    save(fa);
+    save(gtf);
 }
 
 void SplicingGraph::setupBitVector() {
