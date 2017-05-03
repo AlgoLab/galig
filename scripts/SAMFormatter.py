@@ -62,7 +62,7 @@ class SAMFormatter:
             if start != last_start or cigar != last_cigar:
                 last_start = start
                 last_cigar = cigar
-                out.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\tER:H:{}\tFP:H:{}\n".format(p_id, f, self.reference, start, 255, cigar, "*", 0, 0, rna_seq, "*", err, end))
+                out.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\tER:A:{}\tFP:A:{}\n".format(p_id, f, self.reference, start, 255, cigar, "*", 0, 0, rna_seq, "*", err, end))
                 out_mems.write("{} {} {} {}\n".format(strand, p_id, err, ' '.join(mems)))
         out.close()
         out_mems.close()
