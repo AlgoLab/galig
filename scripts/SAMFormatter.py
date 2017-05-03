@@ -56,12 +56,13 @@ class SAMFormatter:
             else:
                 f = 0
             start = self.getStart(mems_list[0])
+            end = self.getEnd(mems_list[-1])
             cigar = self.getCIGAR(mems_list, len(rna_seq))
             #Same alignments is not output
             if start != last_start or cigar != last_cigar:
                 last_start = start
                 last_cigar = cigar
-                out.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\tER:A:{}\n".format(p_id, f, self.reference, start, 255, cigar, "*", 0, 0, rna_seq, "*", err))
+                out.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\tER:H:{}\tFP:H:{}\n".format(p_id, f, self.reference, start, 255, cigar, "*", 0, 0, rna_seq, "*", err, end))
                 out_mems.write("{} {} {} {}\n".format(strand, p_id, err, ' '.join(mems)))
         out.close()
         out_mems.close()
@@ -77,6 +78,10 @@ class SAMFormatter:
     def getStart(self, mem):
         id = self.bv.rank(mem[0])
         return self.pos[id-1][0] + (mem[0] - self.bv.select(id)) - 1
+
+    def getEnd(self, mem):
+        id = self.bv.rank(mem[0])
+        return self.pos[id-1][0] + (mem[0] + mem[2] - 1 - self.bv.select(id)) - 1
 
     def reverse_and_complement(self, text):
         text = text[::-1]
@@ -391,9 +396,9 @@ class SAMFormatter:
         final_dels = m - mems[-1][1] - mems[-1][2] + 1
         if  final_dels != 0:
             CIGAR += "{}S".format(final_dels)
-
         return CIGAR
 
 
-sf = SAMFormatter(sys.argv[1], sys.argv[2], sys.argv[3])
-sf.format()
+if __name__ == '__main__':
+    sf = SAMFormatter(sys.argv[1], sys.argv[2], sys.argv[3])
+    sf.format()
