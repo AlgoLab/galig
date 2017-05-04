@@ -18,18 +18,35 @@ class Annotation:
         T = "|"
         edges = []
         added_exons = {}
-        self.exons_name = [""]
         ex_index = 1
+
+        self.gene = ""
+        self.transcripts = {}
+        self.exons = {}
+        self.introns = {}
+        self.exons_name = [""]
         self.exons_length = [-1]
+        self.strand = True
         for gene in gtf.features_of_type('gene'):
             chromo = gene.seqid
             sequence = genomic[chromo]
+            self.strand = gene.strand == '+'
+            self.gene = gene.id
             for tr in gtf.children(gene, featuretype='transcript', order_by='start'):
+                t_id = tr.id
+                self.transcripts.update({t_id : tr.start})
+                prev_start = -1
+                Es = []
+                Is = []
                 last_id = -1
                 for ex in gtf.children(tr, featuretype='exon', order_by='start'):
                     start = ex.start
                     end = ex.end
                     ex_posid = str(start) + "_" + str(end)
+                    Es.append([start, end])
+                    if prev_start != -1:
+                        Is.append([prev_start, start-1])
+                    prev_start = end+1
                     if ex_posid not in added_exons:
                         ex_seq = sequence[ex.start-1:ex.end-1+1].seq
                         T += ex_seq + "|"
@@ -40,6 +57,16 @@ class Annotation:
                     if last_id != -1:
                         edges.append((last_id, ex_posid))
                     last_id = ex_posid
+                self.exons.update({t_id : Es})
+                self.introns.update({t_id : Is})
+
+        self.transcripts_length = {}
+        for tr_id,Es in self.exons.items():
+            l = 0
+            for (s,e) in Es:
+                l+=e-s
+            self.transcripts_length.update({tr_id:l})
+
         self.BV = BitVector(T)
 
         self.adj_matrix = []
