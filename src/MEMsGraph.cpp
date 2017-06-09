@@ -389,7 +389,7 @@ void MemsGraph::link_start_end(const SplicingGraph& sg) {
      * sovrapposizioni.
      * -
      * Tutti i MEMs padri di un end locale vengono testati
-     * per vedere se possono essere figli dell'end globale.
+     * per vedere se possono essere padri dell'end globale.
      * Vengono testati anche i padri di questi per eventuali
      * sovrapposizioni.
      **/
