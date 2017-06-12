@@ -18,7 +18,7 @@ def main():
         for line in sam:
             if line[0] != '@':
                 spl_line = line.split('\t')
-                identifier, strand, start, cigar, pos2 = spl_line[0], int(spl_line[1])==0, int(spl_line[3]), spl_line[5], int(spl_line[12].split(":")[2])
+                identifier, strand, start, cigar = spl_line[0], int(spl_line[1])==0, int(spl_line[3]), spl_line[5]
                 found_ids.append(identifier)
                 regex = re.search(".*_(.+)$", identifier)
                 real_start = int(regex.group(1))

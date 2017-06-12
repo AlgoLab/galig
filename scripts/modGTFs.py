@@ -68,8 +68,7 @@ def getExID(x,y):
 
 def main():
     gtf_path = sys.argv[1]
-    out_path = sys.argv[2]
-    P = int(sys.argv[3])
+    P = int(sys.argv[2])
     try:
         gtf = gffutils.FeatureDB("{}.db".format(gtf_path),
                                  keep_order=True)
@@ -81,9 +80,8 @@ def main():
                                  disable_infer_transcripts=True,
                                  merge_strategy='merge',
                                  sort_attribute_values=True)
-    fname = os.path.basename(gtf_path)
-    out = open("{}{}".format(out_path, fname), "w")
-    log = open("{}{}.log".format(out_path, fname), "w")
+    out = open("{}.new.gtf".format(gtf_path), "w")
+    log = open("{}.log".format(gtf_path), "w")
     transcripts = []
     forbidden_exons = []
     for gene in gtf.features_of_type('gene'):
@@ -222,4 +220,14 @@ def main():
     log.close()
 
 if __name__ == '__main__':
-    main()
+    if len(sys.argv) < 3:
+        print("Given a GTF (maybe also GFF), this script produces a new GTF",
+              "containing new transcripts produced by some alternative",
+              "splicing events (exon skipping, mutually exclusive exons,",
+              "competing). The events are added with probability P \\in [0,100].",
+              "",
+              "\tUsage: python3 modGTFs.py /path/to/GTF P",
+              "",
+              sep="\n")
+    else:
+        main()
