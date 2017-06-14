@@ -56,7 +56,6 @@ private:
 public:
     MemsGraph(const SplicingGraph&,
               const std::string&,
-              std::list<Mem>&,
               const int&,
               const int&,
               const bool&);

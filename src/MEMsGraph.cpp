@@ -1,8 +1,9 @@
 #include "MEMsGraph.hpp"
+#include <time.h>
+#include <stdio.h>
 
 MemsGraph::MemsGraph(const SplicingGraph& sg,
                      const std::string& read_,
-                     std::list<Mem>& MEMs,
                      const int& L_,
                      const int& eps_,
                      const bool& verbose_) : nodes_map(graph), edges_map(graph)  {
@@ -27,12 +28,25 @@ MemsGraph::MemsGraph(const SplicingGraph& sg,
 
 void MemsGraph::build(const SplicingGraph& sg,
                       std::list<Mem>& MEMs) {
+    clock_t t1,t2;
+    float t;
+    //-------------------------------------------------
+    if(verbose) {
+        std::cout << MEMs.size() << ",";
+        t1=clock();
+    }
     std::vector<std::list<Mem> > divided_MEMs (exsN);
     for(const Mem& m : MEMs) {
         divided_MEMs[sg.rank(m.t-1)-1].push_back(m);
     }
     if(verbose) {
-        std::cout << "Step 1" << std::endl;
+        t2=clock();
+        t = ((float)t2-(float)t1)/CLOCKS_PER_SEC;
+        printf("%.6f,", t);
+    }
+    //-------------------------------------------------
+    if(verbose) {
+        t1=clock();
     }
     int ex_id = 0;
     for(std::list<Mem>& mems : divided_MEMs) {
@@ -40,20 +54,31 @@ void MemsGraph::build(const SplicingGraph& sg,
     }
     if(verbose) {
         save("Graphs/Graph1.dot");
+        t2=clock();
+        t = ((float)t2-(float)t1)/CLOCKS_PER_SEC;
+        printf("%.6f,", t);
     }
+    //-------------------------------------------------
     if(verbose) {
-        std::cout << "Step 2" << std::endl;
+        t1=clock();
     }
     combine_MEMs(sg);
     if(verbose) {
         save("Graphs/Graph2.dot");
+        t2=clock();
+        t = ((float)t2-(float)t1)/CLOCKS_PER_SEC;
+        printf("%.6f,", t);
     }
+    //-------------------------------------------------
     if(verbose) {
-        std::cout << "Step 3" << std::endl;
+        t1=clock();
     }
     link_start_end(sg);
     if(verbose) {
         save("Graphs/Graph3.dot");
+        t2=clock();
+        t = ((float)t2-(float)t1)/CLOCKS_PER_SEC;
+        printf("%.6f,", t);
     }
 }
 
@@ -112,7 +137,8 @@ void MemsGraph::combine_MEMs_inside_exon(const SplicingGraph& sg,
              * devono essere separati "quasi" (K2) allo stesso modo sia su P che su T.
              * Per stabilire l'errore, bisogna considerare se i due MEMs si overlappano
              * o meno. Se questo errore è "basso" (K3), m2 è aggiunto (se non già aggiunto
-             * precedentemente) e si collegano i due MEMs.
+             * precedentemente) e si collegano i due MEMs. In seguito, si riduce
+             * transitivamente il sottografo.
              **/
             int curr_p = m1.p+m1.l-K2;
             while(curr_p <= m1.p + m1.l + K1 && curr_p < m && m1.t <= sg.select(ex_id+1)-L+1) {
@@ -416,7 +442,8 @@ void MemsGraph::link_start_end(const SplicingGraph& sg) {
             lemon::ListDigraph::Node s = graph.target(out_s);
             Mem Smem = nodes_map[s];
             int w=-1;
-            if(Smem.p <= K0+1) {
+            //if(Smem.p <= K0+1) {
+            if(Smem.p <= L) {
                 int l = Smem.p-1;
                 std::string sub_P = read.substr(0,l);
                 std::string sub_E;
@@ -508,7 +535,8 @@ void MemsGraph::link_start_end(const SplicingGraph& sg) {
             lemon::ListDigraph::Node e = graph.source(in_e);
             Mem Emem = nodes_map[e];
             int w=-1;
-            if(Emem.p+Emem.l >= m-K0+1) {
+            //if(Emem.p+Emem.l >= m-K0+1) {
+            if(Emem.p+Emem.l >= m-L+1) {
                 int l = m-(Emem.p+Emem.l)+1;
                 if(l == 0) {
                     w = 0;
@@ -641,7 +669,9 @@ void MemsGraph::link_start_end(const SplicingGraph& sg) {
 }
 
 std::pair<int, std::list<std::list<Mem> > > MemsGraph::visit() {
+    clock_t t1;
     if(verbose) {
+        clock_t t1 = clock();
         std::cout << "Visit" << std::endl;
     }
     std::list<std::list<Mem> > paths;
@@ -708,6 +738,11 @@ std::pair<int, std::list<std::list<Mem> > > MemsGraph::visit() {
     //     }
     // } while(curr_w <= min_w);
 
+    if(verbose) {
+        clock_t t2 = clock();
+        float t = ((float)t2-(float)t1)/CLOCKS_PER_SEC;
+        printf("%.6f\n", t);
+    }
     return std::make_pair(min_w, paths);
 }
 
