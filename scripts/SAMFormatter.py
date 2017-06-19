@@ -45,33 +45,10 @@ class SAMFormatter:
         out = open(self.out_file + ".sam", "w")
         out.write("@HD\tVN:1.4\n")
         out.write("@SQ\tSN:{}\tLN:{}\n".format(self.reference, self.ref_length))
-
         last_id = ""
         last_start = ""
         last_cigar = ""
-
-        aligns = []
-        best = float('inf')
-        n = 0
-        primary = 0
-
         for (strand, p_id, err, mems) in self.outs:
-            if last_id != "" and last_id != p_id:
-                i = 0
-                for align in aligns:
-                    if i!=primary:
-                        if align[1] == 0:
-                            align[1] = 256
-                        else:
-                            align[1] = 272
-                    out.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\tNM:i:{}\n".format(align[0], align[1], align[2], align[3], align[4], align[5], align[6], align[7], align[8], align[9], align[10], align[11]))
-                    i+=1
-                aligns = []
-                best = float('inf')
-                n = 0
-                primary = 0
-            #New Outs
-            last_id = p_id
             mems_list = self.extractMEMs(mems)
             rna_seq = self.rna_seqs[p_id].seq
             if strand == "-":
@@ -82,26 +59,13 @@ class SAMFormatter:
             start = self.getStart(mems_list[0])
             end = self.getEnd(mems_list[-1])
             cigar = self.getCIGAR(mems_list, len(rna_seq))
-            #Same alignments is output only once
-            if start != last_start or cigar != last_cigar:
+            #Same alignment is not output twice
+            if p_id != last_id or start != last_start or cigar != last_cigar:
+                last_id = p_id
                 last_start = start
                 last_cigar = cigar
-                aligns.append([p_id, f, self.reference, start, 255, cigar, "*", 0, 0, rna_seq, "*", err])
-                if int(err) < best:
-                    best = int(err)
-                    primary = n
-                n+=1
-                #out.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\tNM:i:{}\n".format(p_id, f, self.reference, start, 255, cigar, "*", 0, 0, rna_seq, "*", err))
+                out.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\tER:A:{}\tFP:A:{}\n".format(p_id, f, self.reference, start, 255, cigar, "*", 0, 0, rna_seq, "*", err, end))
                 out_mems.write("{} {} {} {}\n".format(strand, p_id, err, ' '.join(mems)))
-        i = 0
-        for align in aligns:
-            if i!=primary:
-                if align[1] == 0:
-                    align[1] = 256
-                else:
-                    align[1] = 272
-            out.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\tNM:i:{}\n".format(align[0], align[1], align[2], align[3], align[4], align[5], align[6], align[7], align[8], align[9], align[10], align[11]))
-            i+=1
         out.close()
         out_mems.close()
 
