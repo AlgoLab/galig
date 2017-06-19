@@ -3,6 +3,7 @@
 
 #include <string>
 #include <list>
+#include <forward_list>
 #include <utility>
 
 #include "utils.hpp"
@@ -47,21 +48,20 @@ private:
     lemon::ListDigraph::Node end;
     std::vector<lemon::ListDigraph::Node> starting_nodes;
     std::vector<lemon::ListDigraph::Node> ending_nodes;
-
-    void combine_MEMs_inside_exon(const SplicingGraph&,
-                                  std::list<Mem>,
-                                  const int&);
-    void combine_MEMs(const SplicingGraph&);
-    void link_start_end(const SplicingGraph&);
+    std::pair<bool, int> checkMEMs(const SplicingGraph&, const Mem&, const Mem&);
+    std::pair<bool, int> validStart(const SplicingGraph&, const Mem&);
+    std::pair<bool, int> validEnd(const SplicingGraph&, const Mem&);
 public:
-    MemsGraph(const SplicingGraph&,
-              const std::string&,
+    MemsGraph(const std::string&,
+              const int&,
               const int&,
               const int&,
               const bool&);
     void build(const SplicingGraph&,
                std::list<Mem>&);
-    std::pair<int, std::list<std::list<Mem> > > visit();
+    std::pair<int, std::list<Mem> > build_greedy(const SplicingGraph&,
+                                                 std::list<Mem>&);
+    std::pair<bool, std::pair<int, std::list<std::pair<bool, std::list<Mem> > > > > visit(const SplicingGraph&);
     void save(const std::string&);
 };
 
