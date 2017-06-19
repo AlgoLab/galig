@@ -377,7 +377,6 @@ void MemsGraph::build(const SplicingGraph& sg,
             while(p2<max_p && p2<m) {
                 for(Mem& m2 : MEMs[p2]) {
                     lemon::ListDigraph::Node node2;
-                    int id2 = sg.rank(m2.t-1);
                     if(verbose) {
                         std::cout << "Checking " << m1.toStr() << " -> " << m2.toStr();
                     }
