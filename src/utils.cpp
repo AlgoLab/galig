@@ -49,3 +49,10 @@ bool compareMEMs(const Mem& m1, const Mem& m2) {
     else
         return true;
 }
+
+bool compareMEMsLength(const Mem& m1, const Mem& m2) {
+    if(m1.l <= m2.l)
+        return false;
+    else
+        return true;
+}
