@@ -109,20 +109,21 @@ private:
     std::string T;
     std::string reference;
     int ref_length;
-    std::vector<std::string> Exons;
     std::list<std::pair<int, int> > Exons_Pos;
     std::vector<std::list<int> > parents;
     std::vector<std::list<int> > sons;
     int exsN;
+
     std::vector<std::vector<int> > edges;
     sdsl::rrr_vector<> bitVector;
     sdsl::rrr_vector<>::select_1_type select_BV;
     sdsl::rrr_vector<>::rank_1_type rank_BV;
+
     void setupBitVector();
     void save(const std::string);
-    void load(const std::string);
+    //void load(const std::string);
 public:
-    SplicingGraph(const std::string&);
+    //SplicingGraph(const std::string&);
     SplicingGraph(const std::string&, const std::string&);
     std::string getText() const;
     std::list<int> getParents(const int&) const;
@@ -131,6 +132,7 @@ public:
     int rank(const int&) const;
     int select(const int&) const;
     bool contain(const int&, const int&) const;
+    bool isNew(const int&, const int&) const;
     void print() const;
     int getExonsNumber() const;
 };
