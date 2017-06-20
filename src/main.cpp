@@ -271,9 +271,9 @@ int main(int argc, char* argv[]) {
             }
         }
         ++i;
-        if(i%1000 == 0) {
-            std::cout << "Processed " << i << " reads." << std::endl;
-        }
+        //if(i%1000 == 0) {
+        //    std::cout << "Processed " << i << " reads." << std::endl;
+        //}
     }
     outFile.close();
     return 0;

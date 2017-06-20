@@ -52,10 +52,16 @@ class SAMFormatter:
             mems_list = self.extractMEMs(mems)
             rna_seq = self.rna_seqs[p_id].seq
             if strand == "-":
-                f = 16
+                if last_id == p_id:
+                    f = 272
+                else:
+                    f = 16
                 rna_seq = self.reverse_and_complement(rna_seq)
             else:
-                f = 0
+                if last_id == p_id:
+                    f=256
+                else:
+                    f = 0
             start = self.getStart(mems_list[0])
             end = self.getEnd(mems_list[-1])
             cigar = self.getCIGAR(mems_list, len(rna_seq))
