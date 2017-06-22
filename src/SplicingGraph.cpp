@@ -68,6 +68,7 @@ SplicingGraph::SplicingGraph(const std::string& fa,
         //Forall gene
         for(std::list<std::string>::iterator it2=it1->second.begin(); it2!=it1->second.end(); ++it2) {
             //Forall transcript in gene
+            std::list<int> exons_id;
             int last_i = -1;
             for(std::list<std::string>::iterator it3=transcripts[*it2].begin(); it3!=transcripts[*it2].end(); ++it3) {
                 //Forall exon in transcript
@@ -76,12 +77,15 @@ SplicingGraph::SplicingGraph(const std::string& fa,
                 std::string pos_ID = getExonID(e.start, e.end);
                 try {
                     addedExons.at(pos_ID);
+                    exons_id.push_back(ids_to_index[pos_ID]);
                 } catch(const std::out_of_range& oor) {
                     addedExons.insert(std::make_pair(pos_ID, ""));
                     ids_to_index[pos_ID] = ex_id;
+                    exons_id.push_back(ex_id);
                     std::string curr_ex_string = genomic.substr(e.start-1, e.end-e.start+1);
                     T += curr_ex_string + "|";
                     Exons_Pos.push_back(std::make_pair(e.start, e.end));
+                    Exons_Name.push_back(e.id);
                     ++ex_id;
                 }
                 curr_i = ids_to_index[pos_ID];
@@ -94,24 +98,40 @@ SplicingGraph::SplicingGraph(const std::string& fa,
                 }
                 last_i = curr_i;
             }
+            int i = 0;
+            for(const int& id1 : exons_id) {
+                int j=0;
+                for(const int& id2 : exons_id) {
+                    if(i<j && id1 != id2) {
+                        if(edges[id1][id2] == 0) {
+                            edges[id1][id2] = 2;
+                            parents[id2].push_back(id1);
+                            sons[id1].push_back(id2);
+                        }
+                    }
+                    ++j;
+                }
+                ++i;
+            }
+            exons_id.clear();
         }
     }
 
-    int i = 1;
-    for(const std::pair<int,int>& p1 : Exons_Pos) {
-        int j = 1;
-        for(const std::pair<int,int>& p2 : Exons_Pos) {
-            if(p1.second <= p2.first) {
-                if(edges[i][j] == 0) {
-                    edges[i][j] = 2;
-                    parents[j].push_back(i);
-                    sons[i].push_back(j);
-                }
-            }
-            ++j;
-        }
-        ++i;
-    }
+    // int i = 1;
+    // for(const std::pair<int,int>& p1 : Exons_Pos) {
+    //     int j = 1;
+    //     for(const std::pair<int,int>& p2 : Exons_Pos) {
+    //         if(p1.second <= p2.first) {
+    //             if(edges[i][j] == 0) {
+    //                 edges[i][j] = 2;
+    //                 parents[j].push_back(i);
+    //                 sons[i].push_back(j);
+    //             }
+    //         }
+    //         ++j;
+    //     }
+    //     ++i;
+    // }
     gtfFile.close();
 
     setupBitVector();
@@ -222,6 +242,10 @@ void SplicingGraph::save(const std::string path) {
     ofile << "\n";
     for(const std::pair<int,int>& p : Exons_Pos) {
         ofile << p.first << "," << p.second << " ";
+    }
+    ofile << "\n";
+    for(const std::string& name : Exons_Name) {
+        ofile << name << " ";
     }
     ofile << "\n";
     ofile.close();

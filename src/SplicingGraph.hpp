@@ -113,6 +113,7 @@ private:
     std::vector<std::list<int> > parents;
     std::vector<std::list<int> > sons;
     int exsN;
+    std::list<std::string> Exons_Name;
 
     std::vector<std::vector<int> > edges;
     sdsl::rrr_vector<> bitVector;
