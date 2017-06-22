@@ -15,7 +15,7 @@ class Annotation:
                                      disable_infer_transcripts=True,
                                      merge_strategy='merge',
                                      sort_attribute_values=True)
-        T = "|"
+        self.T = "|"
         edges = []
         added_exons = {}
         ex_index = 1
@@ -49,7 +49,7 @@ class Annotation:
                     prev_start = end+1
                     if ex_posid not in added_exons:
                         ex_seq = sequence[ex.start-1:ex.end-1+1].seq
-                        T += ex_seq + "|"
+                        self.T += ex_seq + "|"
                         self.exons_length.append(len(ex_seq))
                         self.exons_name.append(ex.attributes['exon_id'][0])
                         added_exons.update({ex_posid:ex_index})
@@ -67,7 +67,7 @@ class Annotation:
                 l+=e-s
             self.transcripts_length.update({tr_id:l})
 
-        self.BV = BitVector(T)
+        self.BV = BitVector(self.T)
 
         self.adj_matrix = []
         for i in range(0, ex_index+1):

@@ -1,6 +1,6 @@
-import sys, os
+import sys, os, time
 
-from utils import Annotation
+from utils import BitVector, Annotation
 
 from graphviz import Digraph
 import numpy as np
@@ -11,16 +11,41 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 def main():
-    genomic_path = sys.argv[1]
-    annotation_path = sys.argv[2]
-    out_path = sys.argv[3]
-    OUT = os.path.dirname(out_path)
+    info_path = sys.argv[1]
+    out_path = sys.argv[2]
 
-    A = Annotation(genomic_path, annotation_path)
+    ES_COV = 1
+    
+    with open(info_path) as info:
+        i = 0
+        for line in info:
+            if i == 1:
+                text = line
+            if i == 3:
+                adj_matrix = []
+                for row in line[:-2].split(";"):
+                    int_row = []
+                    for elem in row.split(" "):
+                        if elem != "":
+                            int_row.append(int(elem))
+                    if int_row != []:
+                        adj_matrix.append(int_row)
+            if i == 5:
+                exs_name = line[:-2].split(" ")
+            i+=1
+    BV = BitVector(text)
+    
+    OUT = os.path.dirname(out_path) + "/sgal/"
+    try:
+        os.mkdir(OUT)
+    except FileExistsError:
+        pass
 
     nodes = {}
     edges = {}
-    comps = {}
+    out_edges = {}
+    comps_3 = {}
+    comps_5 = {}
     with open(out_path, 'r') as out:
         for line in out:
             align = line[:-2].split(" ")
@@ -35,13 +60,17 @@ def main():
             for mem in align[3:]:
                 m = mem[1:-1].split(',')
                 (t, p, l) = (int(m[0]), int(m[1]), int(m[2]))
-                curr_ex = A.rank(t-1)
+                curr_ex = BV.rank(t-1)
                 if curr_ex not in nodes:
                     nodes.update({curr_ex:0})
-                    comps_list = []
-                    for i in range(0,A.getExonLength(curr_ex)):
-                        comps_list.append(0)
-                    comps.update({curr_ex:comps_list})
+                    comps_list_5 = []
+                    comps_list_3 = []
+                    ex_len = BV.select(curr_ex+1) - BV.select(curr_ex) + 1 - 2
+                    for i in range(0,ex_len):
+                        comps_list_3.append(0)
+                        comps_list_5.append(0)
+                    comps_3.update({curr_ex:comps_list_3})
+                    comps_5.update({curr_ex:comps_list_5})
                 nodes[curr_ex] = nodes[curr_ex]+1
 
                 if last_ex != -1:
@@ -51,18 +80,64 @@ def main():
                             edges.update({edge:0})
                         edges[edge] = edges[edge]+1
 
+                        if last_ex not in out_edges:
+                            out_edges.update({last_ex:[]})
+                        if curr_ex not in out_edges[last_ex]: 
+                            out_edges[last_ex].append(curr_ex)
+
                         (last_t, last_p, last_l) = (last_mem[0], last_mem[1], last_mem[2])
-                        last_comp = last_t+last_l-1 - A.select(A.rank(last_t-1)) - 1
-                        curr_comp = (t-1) - A.select(A.rank(t-1))
-                        comps[last_ex][last_comp] += 1
-                        comps[curr_ex][curr_comp] += 1
+                        last_comp = last_t+last_l-1 - BV.select(BV.rank(last_t-1)) - 1
+                        curr_comp = (t-1) - BV.select(BV.rank(t-1))
+                        comps_5[last_ex][last_comp] += 1
+                        comps_3[curr_ex][curr_comp] += 1
                 last_ex = curr_ex
                 last_mem = (t,p,l)
 
+    #3' alternative
+    for ex_id,coverage in comps_3.items():
+        i = 1
+        for pos in coverage[1:-1]:
+            if pos != 0:
+                print("3'", exs_name[ex_id-1], i, pos, sep=",")
+            i+=1
+
+    #5' alternative
+    for ex_id,coverage in comps_5.items():
+        i = 1
+        for pos in coverage[1:-1]:
+            if pos != 0:
+                print("5'", exs_name[ex_id-1], i, pos, sep=",")
+            i+=1
+
+    #Exon Skipping
+    for ids,coverage in edges.items():
+        if adj_matrix[ids[0]][ids[1]] == 2:
+            if coverage > ES_COV:
+                print("ES", exs_name[ids[0]-1], exs_name[ids[1]-1], coverage, sep=",")
+
+    #Mutually Exclusive Exons
+    found_MEEs = []
+    for node in nodes:
+        if node in out_edges:
+            for out1 in out_edges[node]: 
+                for out2 in out_edges[node]:
+                    if out1 != out2:
+                        if out1 not in out_edges[out2] and out2 not in out_edges[out1] and ((out1, out2) not in found_MEEs and (out2, out1) not in found_MEEs):
+                            try:
+                                common_sons = set.intersection(set(out_edges[out1]), set(out_edges[out2]))
+                            except KeyError:
+                                continue
+                            if len(common_sons) > 0:
+                                w = 0
+                                for son in common_sons:
+                                    w += edges[(node, out1)]+edges[(node, out2)]+edges[(out1, son)]+edges[(out2, son)]
+                                print("MEE", exs_name[out1-1], exs_name[out2-1], w, sep=",")
+                                found_MEEs.append((out1, out2))
+        
     with open(os.path.join(OUT, "graph.log"), 'w') as out:
         nodes_line = ""
         for k,v in nodes.items():
-            nodes_line += "{}:{} ".format(k,v)
+            nodes_line += "{}:{}:{} ".format(k,exs_name[k-1],v)
         out.write(nodes_line[:-1])
         out.write("\n")
         edges_line = ""
@@ -71,9 +146,10 @@ def main():
         out.write(edges_line[:-1])
         out.write("\n")
 
+    '''
     with open(os.path.join(OUT, "comps.log"), 'w') as out:
         for k,v in comps.items():
-            name = A.getExonName(k)
+            name = exs_name[k-1]
             out.write("{} {} ".format(k, name))
             hist_line = ""
             for i in v:
@@ -93,13 +169,13 @@ def main():
             plt.xlim(0,len(comp))
             plt.ylim(0,max(comp))
             plt.savefig(os.path.join(OUT, "{}.png".format(name)))
-
+    '''
     g = Digraph('G', filename=os.path.join(OUT, "graph.gv"))
     g.attr('node', shape='circle')
     for node,count in nodes.items():
-        g.node(A.getExonName(node) + ',' + str(count))
+        g.node(exs_name[node-1] + ',' + str(count))
     for edge in edges:
-        g.edge(str(A.getExonName(edge[0])) + ',' + str(nodes[edge[0]]), str(A.getExonName(edge[1])) + ',' + str(nodes[edge[1]]), label=str(edges[edge]))
+        g.edge(str(exs_name[edge[0]-1]) + ',' + str(nodes[edge[0]]), str(exs_name[edge[1]-1]) + ',' + str(nodes[edge[1]]), label=str(edges[edge]))
     g.render()
 
 if __name__ == "__main__":
