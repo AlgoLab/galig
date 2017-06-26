@@ -3,6 +3,11 @@ import sys, os
 from BitVector import BitVector
 from SplicingGraph import SplicingGraph
 
+#Confidence values for each event
+ES_conf = 50
+C_conf = 2000
+MEE_conf = 50
+
 def main():
     info_path = sys.argv[1]
     out_path = sys.argv[2]
@@ -41,7 +46,7 @@ def main():
         r+=1
     G.save("1")
 
-    comps = {}
+    competings = {}
     with open(out_path, 'r') as out:
         for line in out:
             '''
@@ -61,8 +66,6 @@ def main():
                 if curr_exid not in used_exons:
                     G.incrementNode(curr_exid)
                     used_exons.append(curr_exid)
-                if curr_exid not in comps:
-                    comps.update({curr_exid:{}})
                 if last_exid != -1:
                     if last_exid != curr_exid:
                         G.incrementEdge(last_exid, curr_exid)
@@ -70,17 +73,61 @@ def main():
                         last_comp = BV.select(BV.rank(last_t-1)+1) - (last_t+last_l)
                         curr_comp = t-1 - BV.select(BV.rank(t-1))
                         if last_comp > 0:
-                            if (True, curr_exid, last_comp) not in comps[last_exid]:
-                                comps[last_exid].update({(True, curr_exid, last_comp):0})
-                            comps[last_exid][(True, curr_exid, last_comp)] += 1
+                            if last_exid not in competings:
+                                competings.update({last_exid:{}})
+                            if (True, curr_exid, last_comp) not in competings[last_exid]:
+                                competings[last_exid].update({(True, curr_exid, last_comp):0})
+                            competings[last_exid][(True, curr_exid, last_comp)] += 1
                         if curr_comp > 0:
-                            if (False, last_exid, curr_comp) not in comps[curr_exid]:
-                                comps[curr_exid].update({(False, last_exid, curr_comp):0})
-                            comps[curr_exid][(False, last_exid, curr_comp)] += 1
+                            if curr_exid not in competings:
+                                competings.update({curr_exid:{}})
+                            if (False, last_exid, curr_comp) not in competings[curr_exid]:
+                                competings[curr_exid].update({(False, last_exid, curr_comp):0})
+                            competings[curr_exid][(False, last_exid, curr_comp)] += 1
                 last_exid = curr_exid
                 last_mem = (t,p,l)
-    print(comps)
     G.save("2")
+    print(competings)
+    confirmed_competings = []
+    for exid1, comps in competings.items():
+        for (type,exid2,length),cov in comps.items():
+            if cov > C_conf:
+                if type:
+                    #5'
+                    G.decrementNode(exid1, w=cov)
+                    G.decrementNode(exid2, w=cov)
+                    G.decrementEdge(exid1, exid2, w=cov)
+                    label = "{}_{}_{}".format(G.getLabel(exid1), 0, length)
+                    G.addNode(label, w=cov, comp3=0, comp5=length)
+                    new_exid = G.getIndex(label)
+                    G.addEdge(exid1, new_exid, 'f')
+                    G.addEdge(new_exid, exid2, 'e', w=cov)
+                    confirmed_competings.append([type, exid1, length, cov])
+                else:
+                    #3'
+                    G.decrementNode(exid1, w=cov)
+                    G.decrementNode(exid2, w=cov)
+                    G.decrementEdge(exid2, exid1, w=cov)
+                    label = "{}_{}_{}".format(G.getLabel(exid1), length, 0)
+                    G.addNode(label, w=cov, comp3=length, comp5=0)
+                    new_exid = G.getIndex(label)
+                    G.addEdge(exid1, new_exid, 'f')
+                    G.addEdge(exid2, new_exid, 'e', w=cov)
+                    confirmed_competings.append([type, exid1, length, cov])
+    G.clean(0, 0)
+    G.save("3")
+
+    #Exons Skipping
+    for (n1,n2),w in G.new_edges.items():
+        if w > ES_conf:
+            print("ES", G.getLabel(n1), G.getLabel(n2), w, sep=",")
+
+    #Competing
+    for [type, exid1, length, cov] in confirmed_competings:
+        if type:
+            print("5'", G.getLabel(exid1), cov, length, sep=",")
+        else:
+            print("3'", G.getLabel(exid1), cov, length, sep=",")
     
 if __name__ == '__main__':
     main()
@@ -236,7 +283,7 @@ def main():
     #         out.write(hist_line[:-1])
     #         out.write("\n")
 
-    # for k,comp in comps.items():
+    # for k,comp in compsnn.items():
     #     if sum(comp) != 0:
     #         name = A.getExonName(k)
     #         x = range(len(comp))
