@@ -1,7 +1,7 @@
 import sys
 from Bio import SeqIO
 
-from BitVector import BV
+from BitVector import BitVector
 
 class SAMFormatter:
     def __init__(self, out_file, index_file, rna_seqs_file):
@@ -38,7 +38,7 @@ class SAMFormatter:
         self.rna_seqs = SeqIO.index(rna_seqs_file, "fasta")
 
         #Bit Vector Setup
-        self.bv = BV(self.text)
+        self.bv = BitVector(self.text)
 
     def format(self):
         out_mems = open(self.out_file + "_in_SAM", "w")

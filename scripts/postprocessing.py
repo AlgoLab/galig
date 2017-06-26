@@ -1,18 +1,100 @@
-import sys, os, time
+import sys, os
 
-from utils import BitVector, Annotation
+from BitVector import BitVector
+from SplicingGraph import SplicingGraph
 
-from graphviz import Digraph
+def main():
+    info_path = sys.argv[1]
+    out_path = sys.argv[2]
+
+    with open(info_path) as info:
+        i = 0
+        for line in info:
+            if i == 1:
+                text = line
+            if i == 3:
+                adj_matrix = []
+                for row in line[:-2].split(";"):
+                    int_row = []
+                    for elem in row.split(" "):
+                        if elem != "":
+                            int_row.append(int(elem))
+                    if int_row != []:
+                        adj_matrix.append(int_row)
+            if i == 5:
+                names = line[:-2].split(" ")
+            i+=1
+    BV = BitVector(text)
+
+    G = SplicingGraph()
+    for name in names:
+        G.addNode(name)
+    r = 0
+    for row in adj_matrix:
+        c = 0
+        for elem in row:
+            if elem == 1:
+                G.addEdge(r,c,'e')
+            if elem == 2:
+                G.addEdge(r,c,'n')
+            c+=1
+        r+=1
+    G.save("1")
+
+    comps = {}
+    with open(out_path, 'r') as out:
+        for line in out:
+            '''
+             0: strand
+             1: ID
+             2: errors
+             3+: mems
+            '''
+            align = line[:-2].split(" ")
+            used_exons = []
+            last_exid = -1
+            last_mem = (-1,-1,-1)
+            for mem in align[3:]:
+                m = mem[1:-1].split(',')
+                (t, p, l) = (int(m[0]), int(m[1]), int(m[2]))
+                curr_exid = BV.rank(t-1)
+                if curr_exid not in used_exons:
+                    G.incrementNode(curr_exid)
+                    used_exons.append(curr_exid)
+                if curr_exid not in comps:
+                    comps.update({curr_exid:{}})
+                if last_exid != -1:
+                    if last_exid != curr_exid:
+                        G.incrementEdge(last_exid, curr_exid)
+                        (last_t, last_p, last_l) = (last_mem[0], last_mem[1], last_mem[2])
+                        last_comp = BV.select(BV.rank(last_t-1)+1) - (last_t+last_l)
+                        curr_comp = t-1 - BV.select(BV.rank(t-1))
+                        if last_comp > 0:
+                            if (True, curr_exid, last_comp) not in comps[last_exid]:
+                                comps[last_exid].update({(True, curr_exid, last_comp):0})
+                            comps[last_exid][(True, curr_exid, last_comp)] += 1
+                        if curr_comp > 0:
+                            if (False, last_exid, curr_comp) not in comps[curr_exid]:
+                                comps[curr_exid].update({(False, last_exid, curr_comp):0})
+                            comps[curr_exid][(False, last_exid, curr_comp)] += 1
+                last_exid = curr_exid
+                last_mem = (t,p,l)
+    print(comps)
+    G.save("2")
+    
+if __name__ == '__main__':
+    main()
+
+'''
+
 import numpy as np
 
 import matplotlib
 matplotlib.use('Agg')
 
-import matplotlib.pyplot as plt
-
 def main():
     info_path = sys.argv[1]
-    out_path = sys.argv[2]
+    
 
     ES_COV = 1
     
@@ -49,12 +131,10 @@ def main():
     with open(out_path, 'r') as out:
         for line in out:
             align = line[:-2].split(" ")
-            '''
-             0: strand
-             1: ID
-             2: errors
-             3+: mems
-            '''
+             #0: strand
+             #1: ID
+             #2: errors
+             #3+: mems
             last_ex = -1
             last_mem = (-1,-1,-1)
             for mem in align[3:]:
@@ -146,30 +226,29 @@ def main():
         out.write(edges_line[:-1])
         out.write("\n")
 
-    '''
-    with open(os.path.join(OUT, "comps.log"), 'w') as out:
-        for k,v in comps.items():
-            name = exs_name[k-1]
-            out.write("{} {} ".format(k, name))
-            hist_line = ""
-            for i in v:
-                hist_line += str(i) + ","
-            out.write(hist_line[:-1])
-            out.write("\n")
+    # with open(os.path.join(OUT, "comps.log"), 'w') as out:
+    #     for k,v in comps.items():
+    #         name = exs_name[k-1]
+    #         out.write("{} {} ".format(k, name))
+    #         hist_line = ""
+    #         for i in v:
+    #             hist_line += str(i) + ","
+    #         out.write(hist_line[:-1])
+    #         out.write("\n")
 
-    for k,comp in comps.items():
-        if sum(comp) != 0:
-            name = A.getExonName(k)
-            x = range(len(comp))
-            plt.clf()
-            plt.bar(x, comp, 1, color="blue")
-            plt.title(name)
-            plt.xlabel("Position")
-            plt.ylabel("No Alignments")
-            plt.xlim(0,len(comp))
-            plt.ylim(0,max(comp))
-            plt.savefig(os.path.join(OUT, "{}.png".format(name)))
-    '''
+    # for k,comp in comps.items():
+    #     if sum(comp) != 0:
+    #         name = A.getExonName(k)
+    #         x = range(len(comp))
+    #         plt.clf()
+    #         plt.bar(x, comp, 1, color="blue")
+    #         plt.title(name)
+    #         plt.xlabel("Position")
+    #         plt.ylabel("No Alignments")
+    #         plt.xlim(0,len(comp))
+    #         plt.ylim(0,max(comp))
+    #         plt.savefig(os.path.join(OUT, "{}.png".format(name)))
+
     g = Digraph('G', filename=os.path.join(OUT, "graph.gv"))
     g.attr('node', shape='circle')
     for node,count in nodes.items():
@@ -180,3 +259,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+'''

@@ -1,9 +1,10 @@
 '''
-Il bit vector indicizza da 0. 
-Presenta un 1 dove nel testo di trova un "|"
+Not optimized BitVector implementation:
+    - 0-based
+    - BV[i] = 1 iif T[i] = |
 '''
 
-class BV:
+class BitVector:
     def __init__(self, text):
         self.text = text
         
