@@ -1,9 +1,0 @@
-digraph G {
-	node [shape=circle]
-	"ENSE00000814452 (0)"
-	"ENSE00003557980 (0)"
-	"ENSE00003617092 (0)"
-		"ENSE00000814452 (0)" -> "ENSE00003557980 (0)" [label=0 color=black]
-		"ENSE00003557980 (0)" -> "ENSE00003617092 (0)" [label=0 color=black]
-		"ENSE00000814452 (0)" -> "ENSE00003617092 (0)" [label=0 color=red]
-}
