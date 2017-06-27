@@ -20,6 +20,7 @@ class SplicingGraph:
     def __init__(self):
         self.labels = []
         self.nodes = {}
+        self.newNodes = []
         self.edges = {}
         self.new_edges = {}
         self.fake_edges = {}
@@ -28,6 +29,8 @@ class SplicingGraph:
         if label != "" and label not in self.labels:
             self.labels.append(label)
             self.nodes.update({len(self.labels):Node(label, w, comp3, comp5)})
+            if comp3 != 0 or comp5 != 0:
+                self.newNodes.append(len(self.labels))
 
     def addEdge(self, n1, n2, t, w=0):
         if t == 'e':
@@ -40,6 +43,17 @@ class SplicingGraph:
             if (n1,n2) not in self.fake_edges:
                 self.fake_edges.update({(n1,n2):w})
 
+    def buildOutLists(self):
+        self.outLists = {}
+        for (n1,n2),c in self.edges.items():
+            if n1 not in self.outLists:
+                self.outLists.update({n1:{}})
+            self.outLists[n1].update({n2: c})
+        for (n1,n2),c in self.new_edges.items():
+            if n1 not in self.outLists:
+                self.outLists.update({n1:{}})
+            self.outLists[n1].update({n2: c})
+            
     def incrementNode(self, n1, w=1):
         if n1 in self.nodes:
             self.nodes[n1].increment(w)
@@ -69,8 +83,55 @@ class SplicingGraph:
             if self.fake_edges[(n1,n2)] > 0:
                 self.fake_edges[(n1,n2)] -= w
 
+    def isSource(self, n):
+        for (n1,n2),c in self.edges.items():
+            if n2 == n:
+                return False
+        for (n1,n2),c in self.new_edges.items():
+            if n2 == n:
+                return False
+        for (n1,n2),c in self.fake_edges.items():
+            if n2 == n:
+                return False
+        return True
+
+    def isSink(self, n):
+        for (n1,n2),c in self.edges.items():
+            if n1 == n:
+                return False
+        for (n1,n2),c in self.new_edges.items():
+            if n1 == n:
+                return False
+        for (n1,n2),c in self.fake_edges.items():
+            if n1 == n:
+                return False
+        return True
+
+    def getFakeSons(self, n):
+        fake_sons = {}
+        for (n1,n2),c in self.fake_edges.items():
+            if n == n1:
+                fake_sons.update({n2:c})
+        return fake_sons
+
     def getLabel(self, i):
         return self.nodes[i].label
+
+    def getType(self, n1, n2):
+        if (n1,n2) in self.edges:
+            return 'e'
+        elif (n1,n2) in self.new_edges:
+            return 'n'
+        elif (n1,n2) in self.fake_edges:
+            return 'f'
+
+    def getEdgeWeight(self, n1, n2):
+        if (n1,n2) in self.edges:
+            return self.edges[(n1, n2)]
+        elif (n1,n2) in self.new_edges:
+            return self.new_edges[(n1, n2)]
+        else:
+            return 0
 
     def getIndex(self, label):
         #Not handled exception!!!
@@ -151,5 +212,5 @@ class SplicingGraph:
         for (n1,n2),cov in self.fake_edges.items():
             n1_label = "{} ({})".format(self.labels[n1-1], self.nodes[n1].weight)
             n2_label = "{} ({})".format(self.labels[n2-1], self.nodes[n2].weight)
-            g.edge(n1_label, n2_label, label=str(cov), color = "black", style="dashed")
+            g.edge(n1_label, n2_label, label=str(cov), color = "black", dirType="both", style="dashed")
         g.render()

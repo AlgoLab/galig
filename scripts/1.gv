@@ -1,0 +1,13 @@
+digraph G {
+	node [shape=circle]
+	"ENSE00003617092 (0)"
+	"ENSE00003694021 (0)"
+	"ENSE00000814448 (0)"
+	"ENSE00003592502 (0)"
+		"ENSE00003617092 (0)" -> "ENSE00003694021 (0)" [label=0 color=black]
+		"ENSE00000814448 (0)" -> "ENSE00003592502 (0)" [label=0 color=black]
+		"ENSE00003694021 (0)" -> "ENSE00000814448 (0)" [label=0 color=black]
+		"ENSE00003617092 (0)" -> "ENSE00000814448 (0)" [label=0 color=red]
+		"ENSE00003694021 (0)" -> "ENSE00003592502 (0)" [label=0 color=red]
+		"ENSE00003617092 (0)" -> "ENSE00003592502 (0)" [label=0 color=red]
+}
