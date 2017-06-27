@@ -153,7 +153,7 @@ def main():
                     if random.randint(0,100) < P:
                         not_mod_flag = False
                         flag = True
-                        ids = list(range(0,len(exons)-1))
+                        ids = list(range(1,len(exons)-2))
                         while flag and ids != []:
                             flag = False
                             ex_i1 = random.choice(ids)
@@ -168,7 +168,6 @@ def main():
                                     getExID(ex.start, ex.end)
                                     if getExID(ex1.start, ex1.end) in transcript and getExID(ex2.start, ex2.end) in transcript:
                                         flag = False
-                                        print(ex_i1, ex_i2)
                                         break
                         if not(flag):
                             tr1 = mod_transcript(tr, mod_number)
@@ -184,10 +183,10 @@ def main():
                                             if random.randint(0,100) < P:
                                                 ex1, where = compiting(ex, mod_number, False, True)
                                                 log.write('- Comp: Exon {} ({})\n'.format(exons[i].attributes['exon_id'][0], where))
-                                        if i == ex_i1+1:
-                                            if random.randint(0,100) < P:
-                                                ex1, where = compiting(ex, mod_number, True, False)
-                                                log.write('- Comp: Exon {} ({})\n'.format(exons[i].attributes['exon_id'][0], where))
+                                        # if i == ex_i1+1:
+                                        #     if random.randint(0,100) < P:
+                                        #         ex1, where = compiting(ex, mod_number, True, False)
+                                        #         log.write('- Comp: Exon {} ({})\n'.format(exons[i].attributes['exon_id'][0], where))
                                     out.write(str(ex1) + "\n")
                                 i+=1
                             mod_number += 1
@@ -198,20 +197,20 @@ def main():
                                 if i != ex_i2:
                                     ex1 = mod_exon(ex, mod_number)
                                     if 'C' in events:
-                                        if i == ex_i2-1:
-                                            if random.randint(0,100) < P:
-                                                ex1, where = compiting(ex, mod_number, False, True)
-                                                log.write('- Comp: Exon {} ({})\n'.format(exons[i].attributes['exon_id'][0], where))
+                                        # if i == ex_i2-1:
+                                        #     if random.randint(0,100) < P:
+                                        #         ex1, where = compiting(ex, mod_number, False, True)
+                                        #         log.write('- Comp: Exon {} ({})\n'.format(exons[i].attributes['exon_id'][0], where))
                                         if i == ex_i2+1:
                                             if random.randint(0,100) < P:
-                                                ex1 = compiting(ex, mod_number, True, False)
+                                                ex1, where = compiting(ex, mod_number, True, False)
                                                 log.write('- Comp: Exon {} ({})\n'.format(exons[i].attributes['exon_id'][0], where))
                                     out.write(str(ex1) + "\n")
                                 i+=1
                             mod_number += 1
                 # --------------------------------------------------------------------
                 # Compiting
-                if 'C' in events:
+                if 'C' in events and 'MEE' not in events:
                     if random.randint(0,100) < P:
                         not_mod_flag = False
                         tr1 = mod_transcript(tr, mod_number)
