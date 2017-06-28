@@ -32,6 +32,16 @@ class SplicingGraph:
             if comp3 != 0 or comp5 != 0:
                 self.newNodes.append(len(self.labels))
 
+    def splitNode(self, node_index, side, offset, coverage):
+        self.decrementNode(node_index, coverage)
+        off1 = 0 if side else offset
+        off2 = offset if side else 0
+        new_label = "{}_{}_{}".format(self.labels[node_index - 1], off1, off2)
+        self.addNode(new_label, coverage, 0, offset)
+        new_index = self.labels.index(new_label) + 1
+        self.addEdge(node_index, new_index, 'f')
+        return new_index
+
     def addEdge(self, n1, n2, t, w=0):
         if t == 'e':
             if (n1,n2) not in self.edges:
@@ -53,6 +63,24 @@ class SplicingGraph:
             if n1 not in self.outLists:
                 self.outLists.update({n1:{}})
             self.outLists[n1].update({n2: c})
+
+    def getAdjMatrix(self):
+        A = [[0 for x in range(0, len(self.nodes)-len(self.newNodes))] for y in range(0, len(self.nodes)-len(self.newNodes))]
+        for (n1,n2) in self.edges:
+            if n1 in self.newNodes:
+                n1 = self.labels.index(self.labels[n1-1].split("_")[0])+1
+            if n2 in self.newNodes:
+                n2 = self.labels.index(self.labels[n2-1].split("_")[0])+1
+            if n1 != n2:
+                A[n1-1][n2-1] = 1
+        for (n1,n2) in self.new_edges:
+            if n1 in self.newNodes:
+                n1 = self.labels.index(self.labels[n1-1].split("_")[0])+1
+            if n2 in self.newNodes:
+                n2 = self.labels.index(self.labels[n2-1].split("_")[0])+1
+            if n1 != n2:
+                A[n1-1][n2-1] = 1
+        return A
             
     def incrementNode(self, n1, w=1):
         if n1 in self.nodes:
@@ -82,6 +110,13 @@ class SplicingGraph:
         elif (n1,n2) in self.fake_edges:
             if self.fake_edges[(n1,n2)] > 0:
                 self.fake_edges[(n1,n2)] -= w
+
+    def isEdge(self, n1, n2):
+        if (n1,n2) in self.edges:
+            return True
+        elif (n1,n2) in self.new_edges:
+            return True
+        return False
 
     def isSource(self, n):
         for (n1,n2),c in self.edges.items():
@@ -113,6 +148,19 @@ class SplicingGraph:
             if n == n1:
                 fake_sons.update({n2:c})
         return fake_sons
+
+    def getParents(self, n):
+        parents = {}
+        for (n1,n2),c in self.edges.items():
+            if n2 == n:
+                parents.update({n1:c})
+        for (n1,n2),c in self.new_edges.items():
+            if n2 == n:
+                parents.update({n1:c})
+        return parents
+
+    def getNodeWeight(self, n):
+        return self.nodes[n].weight
 
     def getLabel(self, i):
         return self.nodes[i].label

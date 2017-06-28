@@ -2,36 +2,27 @@ import sys, os
 
 from BitVector import BitVector
 from SplicingGraph import SplicingGraph
+from utils import *
 
 #Confidence values for each event
 ES_conf = 30
 C_conf = 10
 MEE_conf = 50
 
-def main():
-    info_path = sys.argv[1]
-    out_path = sys.argv[2]
+def create_adj_matrix_from_line(line):
+    adj_matrix = [[int(elem) for elem in row.split()] for row in line[:-2].split(";")]
+    return adj_matrix
 
-    with open(info_path) as info:
-        i = 0
-        for line in info:
-            if i == 1:
-                text = line
-            if i == 3:
-                adj_matrix = []
-                for row in line[:-2].split(";"):
-                    int_row = []
-                    for elem in row.split(" "):
-                        if elem != "":
-                            int_row.append(int(elem))
-                    if int_row != []:
-                        adj_matrix.append(int_row)
-            if i == 5:
-                names = line[:-2].split(" ")
-            i+=1
+def readInfoPath(info_path):
+    infofile = open(info_path)
+    lines = infofile.readlines()
+    adj_matrix = create_adj_matrix_from_line(lines[3].strip("\n"))
+    names = lines[5].strip("\n").split()
+    text = lines[1]
     BV = BitVector(text)
+    return names, BV, adj_matrix
 
-    G = SplicingGraph()
+def initializeSG(names, adj_matrix):
     for name in names:
         G.addNode(name)
     r = 0
@@ -44,140 +35,130 @@ def main():
                 G.addEdge(r,c,'n')
             c+=1
         r+=1
-    G.save("1")
 
+def extractInfoFromOut(out_path):
     competings = {}
     with open(out_path, 'r') as out:
         for line in out:
-            '''
-             0: strand
-             1: ID
-             2: errors
-             3+: mems
-            '''
-            align = line[:-2].split(" ")
-            used_exons = []
-            last_exid = -1
-            last_mem = (-1,-1,-1)
-            for mem in align[3:]:
-                m = mem[1:-1].split(',')
-                (t, p, l) = (int(m[0]), int(m[1]), int(m[2]))
-                curr_exid = BV.rank(t-1)
-                if curr_exid not in used_exons:
-                    G.incrementNode(curr_exid)
-                    used_exons.append(curr_exid)
-                if last_exid != -1:
-                    if last_exid != curr_exid:
-                        G.incrementEdge(last_exid, curr_exid)
-                        (last_t, last_p, last_l) = (last_mem[0], last_mem[1], last_mem[2])
-                        last_comp = BV.select(BV.rank(last_t-1)+1) - (last_t+last_l)
-                        curr_comp = t-1 - BV.select(BV.rank(t-1))
-                        if last_comp > 0:
-                            if last_exid not in competings:
-                                competings.update({last_exid:{}})
-                            if (True, curr_exid, last_comp) not in competings[last_exid]:
-                                competings[last_exid].update({(True, curr_exid, last_comp):0})
-                            competings[last_exid][(True, curr_exid, last_comp)] += 1
-                        if curr_comp > 0:
-                            if curr_exid not in competings:
-                                competings.update({curr_exid:{}})
-                            if (False, last_exid, curr_comp) not in competings[curr_exid]:
-                                competings[curr_exid].update({(False, last_exid, curr_comp):0})
-                            competings[curr_exid][(False, last_exid, curr_comp)] += 1
-                last_exid = curr_exid
-                last_mem = (t,p,l)
-    G.save("2")
-    confirmed_competings = []
-    for exid1, comps in competings.items():
-        for (type,exid2,length),cov in comps.items():
-            if cov > C_conf:
-                if type:
-                    #5'
-                    G.decrementNode(exid1, w=cov)
-                    G.decrementNode(exid2, w=cov)
-                    G.decrementEdge(exid1, exid2, w=cov)
-                    label = "{}_{}_{}".format(G.getLabel(exid1), 0, length)
-                    G.addNode(label, w=cov, comp3=0, comp5=length)
-                    new_exid = G.getIndex(label)
-                    G.addEdge(exid1, new_exid, 'f')
-                    t = G.getType(exid1, exid2)
-                    G.addEdge(new_exid, exid2, t, w=cov)
-                    confirmed_competings.append([type, exid1, length, cov])
-                else:
-                    #3'
-                    G.decrementNode(exid1, w=cov)
-                    G.decrementNode(exid2, w=cov)
-                    G.decrementEdge(exid2, exid1, w=cov)
-                    label = "{}_{}_{}".format(G.getLabel(exid1), length, 0)
-                    G.addNode(label, w=cov, comp3=length, comp5=0)
-                    new_exid = G.getIndex(label)
-                    G.addEdge(exid1, new_exid, 'f')
-                    t = G.getType(exid2, exid1)
-                    G.addEdge(exid2, new_exid, t, w=cov)
-                    confirmed_competings.append([type, exid1, length, cov])
-    G.clean(0, 0)
-    G.save("3")
+            # 0: strand
+            # 1: ID
+            # 2: errors
+            # 3+: mems
+            align = line.strip("\n").split(" ")
+            used_exons = set([BV.rank(int(mem[1:-1].split(',')[0]) - 1) for mem in align[3:-1]])
+            for e in used_exons:
+                G.incrementNode(e)
+            if len(align[3:-1]) <= 1:
+                continue
+            for current_mem, next_mem in pairwise(align[3:-1]):
+                # Remove ( and ) from mem
+                current_mem = [int(elem) for elem in current_mem[1:-1].split(",")]
+                next_mem = [int(elem) for elem in next_mem[1:-1].split(",")]
+                current_index = BV.rank(current_mem[0] - 1)
+                next_index = BV.rank(next_mem[0] - 1)
+                if current_index is not next_index:
+                    # mems are aligned to different exons
+                    G.incrementEdge(current_index, next_index)
+                    # Check if there is some competing
+                    # First we check for 5' competings in exon "current_index"
+                    current_offset = BV.select(current_index + 1) - (current_mem[0] + current_mem[2])
+                    if current_offset > 0:
+                        if current_index not in competings:
+                            competings[current_index] = {}
+                        current_key = (True, next_index, current_offset)
+                        competings[current_index][current_key] = competings[current_index][current_key] + 1 if current_key in competings[current_index] else 1
+                    # Now we check for 3' competings in exon "next_index"
+                    next_offset = next_mem[0]-1 - BV.select(next_index)
+                    if next_offset > 0:
+                        if next_index not in competings:
+                            competings[next_index] = {}
+                        next_key = (False, current_index, next_offset)
+                        competings[next_index][next_key] = competings[next_index][next_key] + 1 if next_key in competings[next_index] else 1
+    return competings
 
-    #Exons Skipping
+def checkCompetings(competings):
+    confirmed_competings = []
+    competings_for_position = {}
+    for first_exon in competings:
+        for competing_prop in competings[first_exon]:
+            k = (first_exon, competing_prop[0], competing_prop[2])
+            competings_for_position[k] = competings_for_position[k] + competings[first_exon][competing_prop] if k in competings_for_position else competings[first_exon][competing_prop]
+
+    for first_exon in competings:
+        for competing_prop in competings[first_exon]:
+            side, second_exon, offset = competing_prop
+            if competings_for_position[(first_exon, side, offset)] > C_conf:
+                new_node_id = G.splitNode(first_exon, side, offset, competings[first_exon][competing_prop])
+                if side is True:
+                    source_exon_tmp, target_exon_tmp = first_exon, second_exon
+                    G.addEdge(new_node_id, target_exon_tmp, G.getType(source_exon_tmp, target_exon_tmp), competings[first_exon][competing_prop])
+                else:
+                    source_exon_tmp, target_exon_tmp = second_exon, first_exon
+                    G.addEdge(source_exon_tmp, new_node_id, G.getType(source_exon_tmp, target_exon_tmp), competings[first_exon][competing_prop])
+                G.decrementEdge(source_exon_tmp, target_exon_tmp, competings[first_exon][competing_prop])
+
+    # TODO: questo e' chiaramente un filtro            
+    for c in competings_for_position:
+        if competings_for_position[c] > C_conf:
+            confirmed_competings.append([c[1], c[0], c[2], competings_for_position[c]])
+    return confirmed_competings
+
+def checkESEvents():
     for (n1,n2),w in G.new_edges.items():
         if w > ES_conf:
             print("ES", G.getLabel(n1), G.getLabel(n2), w, sep=",")
 
-    #Competing
-    for [type, exid1, length, cov] in confirmed_competings:    
-        if type:
-            t = "5'"
-            if G.isSource(exid1):
-                t+='S'
-            if G.isSink(exid1):
-                t+='E'
-            print(t, G.getLabel(exid1), cov, length, sep=",")
-        else:
-            t = "3'"
-            if G.isSource(exid1):
-                t+='S'
-            if G.isSink(exid1):
-                t+='E'
-            print(t, G.getLabel(exid1), cov, length, sep=",")
+def checkCEvents(confirmed_competings):
+    for [side, exid1, offset, cov] in confirmed_competings:    
+        t = "5'" if side else "3'"
+        if G.isSource(exid1):
+            t+='S'
+        elif G.isSink(exid1):
+            t+='E'
+        print(t, G.getLabel(exid1), cov, offset, sep=",")
 
-    #Mutually Exclusive Exons
-    G.buildOutLists()
-    G.print()
+def checkMEEEvents():
+    A = G.getAdjMatrix()
     found_MEEs = []
-    for node in G.nodes:
-        if node in G.outLists and node not in G.newNodes:
-            fake_sons = G.getFakeSons(node)
-            sons_of_fake_sons = {}
-            for fake_son in fake_sons:
-                sons_of_fake_sons.update(G.outLists[fake_son])
-            all_sons = {}
-            all_sons.update(G.outLists[node])
-            all_sons.update(sons_of_fake_sons)
-            for out1,w1 in all_sons.items():
-                for out2,w2 in G.outLists[node].items():
-                    if out1 != out2:
-                        if out1 in G.outLists and out2 in G.outLists and out1 not in G.outLists[out2] and out2 not in G.outLists[out1] and ((out1, out2) not in found_MEEs and (out2, out1) not in found_MEEs):
-                            print(node, out1, out2)
-                            try:
-                                fake_sons_of_sons_1 = {}
-                                for son in G.outLists[out1]:
-                                    fake_sons_of_sons_1.update(G.getFakeSons(son))
-                                fake_sons_of_sons_2 = {}
-                                for son in G.outLists[out2]:
-                                    fake_sons_of_sons_2.update(G.getFakeSons(son))
-                                print(set(G.outLists[out1]), set(fake_sons_of_sons_1), set(G.outLists[out2]), set(fake_sons_of_sons_2))
-                                common_sons = set.intersection(set.union(set(G.outLists[out1]), set(fake_sons_of_sons_1)), set.union(set(G.outLists[out2]), set(fake_sons_of_sons_2)))
-                                #common_sons = set.intersection(set(G.outLists[out1]), set(G.outLists[out2]))
-                            except KeyError:
-                                continue
-                            print(common_sons)
-                            if len(common_sons) > 0:
-                                w = 0
-                                for son in common_sons:
-                                    print(node, out1, out2, son)
-                                    w += w1+w2+G.getEdgeWeight(out1, son)+G.getEdgeWeight(out2, son)
-                                print("MEE", G.getLabel(out1), G.getLabel(out2), w, sep=",")
-                                found_MEEs.append((out1, out2))
-    
+    checked = []
+    for node1 in [node for node in G.nodes if node not in G.newNodes]:
+        for node2 in [node for node in G.nodes if node not in G.newNodes and node != node1]:
+            if (node1, node2) in checked or (node2, node1) in checked:
+                continue
+            checked.append((node1, node2))
+            if not(G.isEdge(node1, node2)):
+                if (node1, node2) not in found_MEEs:
+                    if sum(getCommonAncestors(A, node1-1, node2-1))>0 and sum(getCommonDescendants(A, node1-1, node2-1))>0:
+                        w=sum([c for _,c in G.getParents(node1).items()])
+                        w+=sum([c for _,c in G.getParents(node2).items()])
+                        w+=sum([c for _,c in G.outLists[node1].items()])
+                        w+=sum([c for _,c in G.outLists[node2].items()])
+                        print("MEE", G.getLabel(node1), G.getLabel(node2), w, sep=",")
+                        found_MEEs.append((node1, node2))
+
+def main():
+    global G, BV
+
+    info_path = sys.argv[1]
+    out_path = sys.argv[2]
+
+    names, BV, adj_matrix = readInfoPath(info_path)
+
+    # G = SplicingGraph(info_path)
+    # G = SplicingGraph(names, adj_matrix)
+    G = SplicingGraph()
+    initializeSG(names, adj_matrix)
+
+    competings = extractInfoFromOut(out_path)
+    confirmed_competings = checkCompetings(competings)
+
+    G.clean(0,0) # G.filter() def filter(self, x = 0, y = 0 ):
+    G.buildOutLists()
+
+    checkESEvents()                     # G.checkESEvents()
+    checkCEvents(confirmed_competings)  # G.check...
+    checkMEEEvents()
+    G.save("graph")
+
 if __name__ == '__main__':
     main()
