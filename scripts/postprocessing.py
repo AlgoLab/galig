@@ -44,13 +44,13 @@ def extractInfoFromOut(out_path):
             # 1: ID
             # 2: errors
             # 3+: mems
-            align = line.strip("\n").split(" ")
-            used_exons = set([BV.rank(int(mem[1:-1].split(',')[0]) - 1) for mem in align[3:-1]])
+            align = line.strip("\n").strip(" ").split(" ")
+            used_exons = set([BV.rank(int(mem[1:-1].split(',')[0]) - 1) for mem in align[3:]])
             for e in used_exons:
                 G.incrementNode(e)
-            if len(align[3:-1]) <= 1:
+            if len(align[3:]) <= 1:
                 continue
-            for current_mem, next_mem in pairwise(align[3:-1]):
+            for current_mem, next_mem in pairwise(align[3:]):
                 # Remove ( and ) from mem
                 current_mem = [int(elem) for elem in current_mem[1:-1].split(",")]
                 next_mem = [int(elem) for elem in next_mem[1:-1].split(",")]
@@ -91,10 +91,19 @@ def checkCompetings(competings):
                 new_node_id = G.splitNode(first_exon, side, offset, competings[first_exon][competing_prop])
                 if side is True:
                     source_exon_tmp, target_exon_tmp = first_exon, second_exon
-                    G.addEdge(new_node_id, target_exon_tmp, G.getType(source_exon_tmp, target_exon_tmp), competings[first_exon][competing_prop])
+                    G.addEdge(new_node_id, target_exon_tmp, G.getEdgeType(source_exon_tmp, target_exon_tmp), competings[first_exon][competing_prop])
+                    ###
+                    for parent in G.getParents(first_exon):
+                        G.addEdge(parent, new_node_id, G.getEdgeType(parent, first_exon), G.getEdgeWeight(parent, first_exon))
+                    ###
                 else:
                     source_exon_tmp, target_exon_tmp = second_exon, first_exon
-                    G.addEdge(source_exon_tmp, new_node_id, G.getType(source_exon_tmp, target_exon_tmp), competings[first_exon][competing_prop])
+                    G.addEdge(source_exon_tmp, new_node_id, G.getEdgeType(source_exon_tmp, target_exon_tmp), competings[first_exon][competing_prop])
+                    ###
+                    if first_exon in G.outLists:
+                        for son in G.outLists[first_exon]:
+                            G.addEdge(new_node_id, son, G.getEdgeType(first_exon, son), G.getEdgeWeight(first_exon, son))
+                    ###
                 G.decrementEdge(source_exon_tmp, target_exon_tmp, competings[first_exon][competing_prop])
 
     # TODO: questo e' chiaramente un filtro            
@@ -121,44 +130,52 @@ def checkMEEEvents():
     A = G.getAdjMatrix()
     found_MEEs = []
     checked = []
+    '''
+    for node1 in G.nodes:
+        for node2 in [node for node in G.nodes if node != node1]:
+    '''
     for node1 in [node for node in G.nodes if node not in G.newNodes]:
         for node2 in [node for node in G.nodes if node not in G.newNodes and node != node1]:
             if (node1, node2) in checked or (node2, node1) in checked:
                 continue
             checked.append((node1, node2))
             if not(G.isEdge(node1, node2)):
-                if (node1, node2) not in found_MEEs:
-                    if sum(getCommonAncestors(A, node1-1, node2-1))>0 and sum(getCommonDescendants(A, node1-1, node2-1))>0:
-                        w=sum([c for _,c in G.getParents(node1).items()])
-                        w+=sum([c for _,c in G.getParents(node2).items()])
+                if (node1, node2) in found_MEEs:
+                    pass
+                elif sum(getCommonAncestors(A, node1-1, node2-1))>0 and sum(getCommonDescendants(A, node1-1, node2-1))>0:
+                    w=sum([c for _,c in G.getParents(node1).items()])
+                    w+=sum([c for _,c in G.getParents(node2).items()])
+                    if node1 in G.outLists:
                         w+=sum([c for _,c in G.outLists[node1].items()])
+                    if node2 in G.outLists:
                         w+=sum([c for _,c in G.outLists[node2].items()])
-                        print("MEE", G.getLabel(node1), G.getLabel(node2), w, sep=",")
-                        found_MEEs.append((node1, node2))
+                    print("MEE", G.getLabel(node1), G.getLabel(node2), w, sep=",")
+                    found_MEEs.append((node1, node2))
 
 def main():
-    global G, BV
+    global G, BV, text
 
     info_path = sys.argv[1]
     out_path = sys.argv[2]
 
-    names, BV, adj_matrix = readInfoPath(info_path)
+    names, text, BV, adj_matrix = readInfoPath(info_path)
 
     # G = SplicingGraph(info_path)
     # G = SplicingGraph(names, adj_matrix)
     G = SplicingGraph()
     initializeSG(names, adj_matrix)
 
+    G.buildOutLists()
     competings = extractInfoFromOut(out_path)
     confirmed_competings = checkCompetings(competings)
 
     G.clean(0,0) # G.filter() def filter(self, x = 0, y = 0 ):
     G.buildOutLists()
-
+    G.save("graph")
     checkESEvents()                     # G.checkESEvents()
     checkCEvents(confirmed_competings)  # G.check...
     checkMEEEvents()
-    G.save("graph")
+
 
 if __name__ == '__main__':
     main()

@@ -64,6 +64,7 @@ class SplicingGraph:
                 self.outLists.update({n1:{}})
             self.outLists[n1].update({n2: c})
 
+
     def getAdjMatrix(self):
         A = [[0 for x in range(0, len(self.nodes)-len(self.newNodes))] for y in range(0, len(self.nodes)-len(self.newNodes))]
         for (n1,n2) in self.edges:
@@ -81,6 +82,21 @@ class SplicingGraph:
             if n1 != n2:
                 A[n1-1][n2-1] = 1
         return A
+
+    '''
+    def getAdjMatrix(self):
+        A = [[0 for x in range(0, len(self.nodes))] for y in range(0, len(self.nodes))]
+        for (n1,n2) in self.edges:
+            if n1 != n2:
+                A[n1-1][n2-1] = 1
+        for (n1,n2) in self.new_edges:
+            if n1 != n2:
+                A[n1-1][n2-1] = 1
+        for (n1,n2) in self.fake_edges:
+            if n1 != n2:
+                A[n1-1][n2-1] = 1
+        return A
+    '''
             
     def incrementNode(self, n1, w=1):
         if n1 in self.nodes:
@@ -115,6 +131,8 @@ class SplicingGraph:
         if (n1,n2) in self.edges:
             return True
         elif (n1,n2) in self.new_edges:
+            return True
+        elif (n1,n2) in self.fake_edges:
             return True
         return False
 
@@ -165,7 +183,7 @@ class SplicingGraph:
     def getLabel(self, i):
         return self.nodes[i].label
 
-    def getType(self, n1, n2):
+    def getEdgeType(self, n1, n2):
         if (n1,n2) in self.edges:
             return 'e'
         elif (n1,n2) in self.new_edges:
@@ -260,5 +278,5 @@ class SplicingGraph:
         for (n1,n2),cov in self.fake_edges.items():
             n1_label = "{} ({})".format(self.labels[n1-1], self.nodes[n1].weight)
             n2_label = "{} ({})".format(self.labels[n2-1], self.nodes[n2].weight)
-            g.edge(n1_label, n2_label, label=str(cov), color = "black", dirType="both", style="dashed")
+            g.edge(n1_label, n2_label, label=str(cov), color = "black", style="dashed")
         g.render()
