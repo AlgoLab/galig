@@ -129,7 +129,7 @@ def main():
                         tr1 = mod_transcript(tr, mod_number)
                         log.write('Transcript {}_{}\n'.format(tr.id, mod_number))
                         out.write(str(tr1) + "\n")
-                        ex_to_skip_i = random.randint(0,len(exons)-1)
+                        ex_to_skip_i = random.randint(1,len(exons)-2)
                         log.write('- ES: Exon {} ({})\n'.format(exons[ex_to_skip_i].attributes['exon_id'][0], ex_to_skip_i+1))
                         i = 0
                         for ex in exons:
@@ -141,6 +141,33 @@ def main():
                                             ex1, where = compiting(ex, mod_number, False, True)
                                             log.write('- Comp: Exon {} ({})\n'.format(exons[i].attributes['exon_id'][0], where))
                                     if i == ex_to_skip_i+1:
+                                        if random.randint(0,100) < P:
+                                            ex1, where = compiting(ex, mod_number, True, False)
+                                            log.write('- Comp: Exon {} ({})\n'.format(exons[i].attributes['exon_id'][0], where))
+                                out.write(str(ex1) + "\n")
+                            i+=1
+                        mod_number += 1
+                # --------------------------------------------------------------------
+                # Mutliple Exons Skipping
+                if 'MES' in events:
+                    if random.randint(0,100) < P:
+                        not_mod_flag = False
+                        tr1 = mod_transcript(tr, mod_number)
+                        log.write('Transcript {}_{}\n'.format(tr.id, mod_number))
+                        out.write(str(tr1) + "\n")
+                        ex_to_skip_i = random.randint(1,len(exons)-3)
+                        ex_to_skip_j = random.randint(ex_to_skip_i+1,len(exons)-2)
+                        log.write('- MES: Exon {} ({})\n'.format(exons[ex_to_skip_i].attributes['exon_id'][0], ex_to_skip_i+1))
+                        i = 0
+                        for ex in exons:
+                            if i not in range(ex_to_skip_i, ex_to_skip_j+1):
+                                ex1 = mod_exon(ex, mod_number)
+                                if 'C' in events:
+                                    if i == ex_to_skip_i-1:
+                                        if random.randint(0,100) < P:
+                                            ex1, where = compiting(ex, mod_number, False, True)
+                                            log.write('- Comp: Exon {} ({})\n'.format(exons[i].attributes['exon_id'][0], where))
+                                    if i == ex_to_skip_j+1:
                                         if random.randint(0,100) < P:
                                             ex1, where = compiting(ex, mod_number, True, False)
                                             log.write('- Comp: Exon {} ({})\n'.format(exons[i].attributes['exon_id'][0], where))
@@ -241,8 +268,9 @@ if __name__ == '__main__':
     if len(sys.argv) < 4:
         print("Given a GTF (maybe also GFF), this script produces a new GTF",
               "containing new transcripts produced by some alternative",
-              "splicing events: exon skipping (ES), mutually exclusive exons (MEE),",
-              "competing (C). The events are added with probability P \\in [0,100].",
+              "splicing events: exon skipping (ES), multiple exons skipping (MES)",
+              "mutually exclusive exons (MEE), competing (C).",
+              "The events are added with probability P \\in [0,100].",
               "",
               "\tUsage: python3 modGTFs.py /path/to/GTF P event1,event2",
               "",
