@@ -32,7 +32,7 @@ void printHelp() {
     std::cout << "  -l, --L <int>: MEMs length" << std::endl;
     std::cout << "  -e, --eps <int>: " << std::endl;
     std::cout << "  -o, --output <path>: output path" << std::endl;
-    std::cout << "  -X, --eXhaustive: run exhaustive search instead of greedy one" << std::endl;
+    std::cout << "  -G, --greedy: run greedy search instead of exhaustive one" << std::endl;
     std::cout << "  -v, --verbose: explain what is being done and save .dot" << std::endl;
 }
 
@@ -271,9 +271,9 @@ int main(int argc, char* argv[]) {
             }
         }
         ++i;
-        if(i%1000 == 0) {
-            std::cout << "Processed " << i << " reads." << std::endl;
-        }
+        // if(i%1000 == 0) {
+        //     std::cout << "Processed " << i << " reads." << std::endl;
+        // }
     }
     outFile.close();
     return 0;
