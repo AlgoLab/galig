@@ -66,7 +66,7 @@ class SplicingGraph:
 
 
     def getAdjMatrix(self):
-        A = [[0 for x in range(0, len(self.nodes)-len(self.newNodes))] for y in range(0, len(self.nodes)-len(self.newNodes))]
+        A = [[0 for x in range(0, len(self.labels)-len(self.newNodes))] for y in range(0, len(self.labels)-len(self.newNodes))]
         for (n1,n2) in self.edges:
             if n1 in self.newNodes:
                 n1 = self.labels.index(self.labels[n1-1].split("_")[0])+1
@@ -180,7 +180,7 @@ class SplicingGraph:
     def getNodeWeight(self, n):
         return self.nodes[n].weight
 
-    def getLabel(self, i):
+    def getNodeLabel(self, i):
         return self.nodes[i].label
 
     def getEdgeType(self, n1, n2):
@@ -260,7 +260,7 @@ class SplicingGraph:
            print("{}->{}: {}".format(n1, n2, c))
 
     def save(self, name):
-        g = Digraph('G', filename="./{}.gv".format(name))#os.path.join(OUT, "graph.gv"))
+        g = Digraph('G', filename="{}.gv".format(name))#os.path.join(OUT, "graph.gv"))
         g.attr('node', shape='circle')
         for label in self.labels:
             if label != "":
