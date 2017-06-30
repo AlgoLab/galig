@@ -42,10 +42,16 @@ def getAncestors(A, x):
             r+=1
     return bitOr(ancestors)
 
+def getVector(x, n):
+    return [0 for i in range(0,x)] + [1] + [0 for i in range(x+1, n)]
+
 def getCommonAncestors(A, x, y):
     anc_x = getAncestors(A, x)
     anc_y = getAncestors(A, y)
-    return bitAnd(anc_x, anc_y)
+           
+    if sum(bitAnd(anc_x, getVector(y, len(A)))) == 0 and sum(bitAnd(anc_y, getVector(x, len(A)))) == 0:
+        return bitAnd(anc_x, anc_y)
+    return [0 for i in range(0,len(A))]
 
 #Descendants
 def getDescendants(A, x):
@@ -67,6 +73,9 @@ def getDescendants(A, x):
     return bitOr(descendants)
 
 def getCommonDescendants(A, x, y):
-    anc_x = getDescendants(A, x)
-    anc_y = getDescendants(A, y)
-    return bitAnd(anc_x, anc_y)
+    des_x = getDescendants(A, x)
+    des_y = getDescendants(A, y)
+
+    if sum(bitAnd(des_x, getVector(y, len(A)))) > 0 and sum(bitAnd(des_y, getVector(x, len(A)))) > 0:
+        return bitAnd(des_x, des_y)
+    return bitAnd(des_x, des_y)
