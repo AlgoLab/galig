@@ -5,9 +5,9 @@ from SplicingGraph import SplicingGraph
 from utils import *
 
 #Confidence values for each event
-ES_conf = 30
-C_conf = 10
-MEE_conf = 50
+ES_conf = 1
+C_conf = 5
+MEE_conf = 1
 
 def create_adj_matrix_from_line(line):
     adj_matrix = [[int(elem) for elem in row.split()] for row in line[:-2].split(";")]
@@ -20,7 +20,7 @@ def readInfoPath(info_path):
     names = lines[5].strip("\n").split()
     text = lines[1]
     BV = BitVector(text)
-    return names, BV, adj_matrix
+    return names, text, BV, adj_matrix
 
 def initializeSG(names, adj_matrix):
     for name in names:
@@ -112,21 +112,28 @@ def checkCompetings(competings):
             confirmed_competings.append([c[1], c[0], c[2], competings_for_position[c]])
     return confirmed_competings
 
-def checkESEvents():
+def checkESEvents(out):
+    ESs = []
     for (n1,n2),w in G.new_edges.items():
         if w > ES_conf:
-            print("ES", G.getLabel(n1), G.getLabel(n2), w, sep=",")
+            n1_label = G.getNodeLabel(n1).split("_")[0]
+            n2_label = G.getNodeLabel(n2).split("_")[0]
+            if (n1_label,n2_label,w) not in ESs:
+                ESs.append((n1_label, n2_label, w))
 
-def checkCEvents(confirmed_competings):
+    for (n1_label,n2_label,w) in ESs:
+        out.write("ES {} {} {}\n".format(n1_label, n2_label, w))
+
+def checkCEvents(confirmed_competings, out):
     for [side, exid1, offset, cov] in confirmed_competings:    
         t = "5'" if side else "3'"
         if G.isSource(exid1):
             t+='S'
         elif G.isSink(exid1):
             t+='E'
-        print(t, G.getLabel(exid1), cov, offset, sep=",")
+        out.write("{} {} {} {}\n".format(t, G.getNodeLabel(exid1), cov, offset))
 
-def checkMEEEvents():
+def checkMEEEvents(out):
     A = G.getAdjMatrix()
     found_MEEs = []
     checked = []
@@ -149,7 +156,7 @@ def checkMEEEvents():
                         w+=sum([c for _,c in G.outLists[node1].items()])
                     if node2 in G.outLists:
                         w+=sum([c for _,c in G.outLists[node2].items()])
-                    print("MEE", G.getLabel(node1), G.getLabel(node2), w, sep=",")
+                    out.write("MEE {} {} {}\n".format(G.getNodeLabel(node1), G.getNodeLabel(node2), w))
                     found_MEEs.append((node1, node2))
 
 def main():
@@ -157,6 +164,7 @@ def main():
 
     info_path = sys.argv[1]
     out_path = sys.argv[2]
+    out_file = sys.argv[3]
 
     names, text, BV, adj_matrix = readInfoPath(info_path)
 
@@ -171,11 +179,13 @@ def main():
 
     G.clean(0,0) # G.filter() def filter(self, x = 0, y = 0 ):
     G.buildOutLists()
-    G.save("graph")
-    checkESEvents()                     # G.checkESEvents()
-    checkCEvents(confirmed_competings)  # G.check...
-    checkMEEEvents()
-
+    G.save(out_file)
+    
+    out = open(out_file, 'w')
+    checkESEvents(out)                     # G.checkESEvents()
+    checkCEvents(confirmed_competings, out)  # G.check...
+    checkMEEEvents(out)
+    out.close()
 
 if __name__ == '__main__':
     main()
