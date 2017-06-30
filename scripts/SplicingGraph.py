@@ -216,6 +216,7 @@ class SplicingGraph:
                         has_fake = True
                 if has_fake:
                     continue
+                #print("Removing node {}".format(self.labels[index-1]))
                 self.labels[index-1] = ""
                 self.nodes.pop(index)
                 for (n1,n2),cov in self.edges.items():
@@ -233,11 +234,13 @@ class SplicingGraph:
                 edges_to_remove.append((n1,n2))
         for edge in edges_to_remove:
             try:
+                #print("Removing edge {}->{}".format(edge[0], edge[1]))
                 self.edges.pop(edge)
                 continue
             except KeyError:
                 pass
             try:
+                #print("Removing edge {}->{}".format(edge[0], edge[1]))
                 self.new_edges.pop(edge)
                 continue
             except KeyError:
