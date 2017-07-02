@@ -115,7 +115,7 @@ def main():
             for ex in gtf.children(tr, featuretype='exon', order_by='start'):
                 exons.append(ex)
 
-            if len(exons) < 3:
+            if len(exons) < 4:
                 out.write(str(tr) + "\n")
                 for ex in gtf.children(tr, featuretype='exon', order_by='start'):
                     out.write(str(ex) + "\n")
@@ -152,36 +152,35 @@ def main():
                             i+=1
                         mod_number += 1
                 # --------------------------------------------------------------------
-                # Mutliple Exons Skipping
-                if len(exons) >= 4:
-                    if 'MES' in events:
-                        if random.randint(0,100) < P:
-                            not_mod_flag = False
-                            tr1 = mod_transcript(tr, mod_number)
-                            log.write('Transcript {}_{}\n'.format(tr.id, mod_number))
-                            out.write(str(tr1) + "\n")
-                            ex_to_skip_i = random.randint(1,len(exons)-3)
-                            ex_to_skip_j = random.randint(ex_to_skip_i+1,len(exons)-2)
-                            log.write('- MES: Exon {} ({})\n'.format(exons[ex_to_skip_i].attributes['exon_id'][0], ex_to_skip_i+1))
-                            e_log.write('ES {} {}\n'.format(exons[ex_to_skip_i-1].attributes['exon_id'][0], exons[ex_to_skip_i+1].attributes['exon_id'][0]))
-                            i = 0
-                            for ex in exons:
-                                if i not in range(ex_to_skip_i, ex_to_skip_j+1):
-                                    ex1 = mod_exon(ex, mod_number)
-                                    if 'C' in events:
-                                        if i == ex_to_skip_i-1:
-                                            if random.randint(0,100) < 75:
-                                                ex1, where = compiting(ex, mod_number, False, True)
-                                                log.write('- Comp: Exon {} ({})\n'.format(exons[i].attributes['exon_id'][0], where))
-                                                e_log.write('5\' {}\n'.format(exons[i].attributes['exon_id'][0]))
-                                        if i == ex_to_skip_j+1:
-                                            if random.randint(0,100) < 75:
-                                                ex1, where = compiting(ex, mod_number, True, False)
-                                                log.write('- Comp: Exon {} ({})\n'.format(exons[i].attributes['exon_id'][0], where))
-                                                e_log.write('3\' {}\n'.format(exons[i].attributes['exon_id'][0]))
-                                    out.write(str(ex1) + "\n")
-                                i+=1
-                            mod_number += 1
+                # Multiple Exons Skipping
+                if 'MES' in events:
+                    if random.randint(0,100) < P:
+                        not_mod_flag = False
+                        tr1 = mod_transcript(tr, mod_number)
+                        log.write('Transcript {}_{}\n'.format(tr.id, mod_number))
+                        out.write(str(tr1) + "\n")
+                        ex_to_skip_i = random.randint(1,len(exons)-3)
+                        ex_to_skip_j = random.randint(ex_to_skip_i+1,len(exons)-2)
+                        log.write('- MES: Exon {} ({})\n'.format(exons[ex_to_skip_i].attributes['exon_id'][0], ex_to_skip_i+1))
+                        e_log.write('ES {} {}\n'.format(exons[ex_to_skip_i-1].attributes['exon_id'][0], exons[ex_to_skip_i+1].attributes['exon_id'][0]))
+                        i = 0
+                        for ex in exons:
+                            if i not in range(ex_to_skip_i, ex_to_skip_j+1):
+                                ex1 = mod_exon(ex, mod_number)
+                                if 'C' in events:
+                                    if i == ex_to_skip_i-1:
+                                        if random.randint(0,100) < 75:
+                                            ex1, where = compiting(ex, mod_number, False, True)
+                                            log.write('- Comp: Exon {} ({})\n'.format(exons[i].attributes['exon_id'][0], where))
+                                            e_log.write('5\' {}\n'.format(exons[i].attributes['exon_id'][0]))
+                                    if i == ex_to_skip_j+1:
+                                        if random.randint(0,100) < 75:
+                                            ex1, where = compiting(ex, mod_number, True, False)
+                                            log.write('- Comp: Exon {} ({})\n'.format(exons[i].attributes['exon_id'][0], where))
+                                            e_log.write('3\' {}\n'.format(exons[i].attributes['exon_id'][0]))
+                                out.write(str(ex1) + "\n")
+                            i+=1
+                        mod_number += 1
                 # --------------------------------------------------------------------
                 # Mutually Exclusive Exons
                 if 'MEE' in events:
