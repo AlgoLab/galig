@@ -44,7 +44,7 @@ int main(int argc, char* argv[]) {
     int eps;
     std::string out;
     bool verbose = false;
-    bool greedy = true;
+    bool greedy = false;
 
     int c;
     while (1) {
@@ -57,12 +57,12 @@ int main(int argc, char* argv[]) {
                 {"eps",    required_argument, 0, 'e'},
                 {"output", required_argument, 0, 'o'},
                 {"verbose", no_argument, 0, 'v'},
-                {"exhaustive", no_argument, 0, 'X'},
+                {"greedy", no_argument, 0, 'G'},
                 {0, 0, 0, 0}
             };
 
         int option_index = 0;
-        c = getopt_long(argc, argv, "g:a:r:l:e:o:vX", long_options, &option_index);
+        c = getopt_long(argc, argv, "g:a:r:l:e:o:vG", long_options, &option_index);
 
         if (c == -1) {
             break;
@@ -90,8 +90,8 @@ int main(int argc, char* argv[]) {
         case 'v':
             verbose = true;
             break;
-        case 'X':
-            greedy = false;
+        case 'G':
+            greedy = true;
             break;
         default:
             printHelp();
@@ -172,7 +172,7 @@ int main(int argc, char* argv[]) {
                     } else if(res.second.empty() && !res_RC.second.empty()) {
                         best = 2;
                     } else {
-                        
+                        //Qua manca un pezzo
                     }
                 }
             }
@@ -194,7 +194,6 @@ int main(int argc, char* argv[]) {
                 outFile << "\n";
                 break;
             }
-            
         } else {
             bool flag = false;
             bool flag_RC = false;
