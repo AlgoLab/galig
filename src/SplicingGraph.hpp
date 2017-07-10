@@ -84,7 +84,7 @@ struct Feature {
                 elem.erase(0, pos + delimiter.length());
             }
             if(flag && elem.substr(0,string_to_search.size()).compare(string_to_search) == 0) {
-                id = elem.substr(string_to_search.size(),elem.size()-string_to_search.size()-1);
+                id = elem.substr(string_to_search.size(),elem.size()-string_to_search.size()-2);
                 flag = false;
             }
             if(flag) {
