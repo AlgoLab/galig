@@ -26,7 +26,8 @@
 void printHelp() {
     std::cout << "Usage: SGAL [options] (required: -g -a -r -l -e)\n" << std::endl;
     std::cout << "Options:" << std::endl;
-    std::cout << "  -g, --genomic <path>:" << std::endl;
+    std::cout << "  -I, --index: index only" << std::endl;
+    std::cout << "  -g, --genomic <path>" << std::endl;
     std::cout << "  -a, --annotation <path>" << std::endl;
     std::cout << "  -r, --reads <path>" << std::endl;
     std::cout << "  -l, --L <int>: MEMs length" << std::endl;
@@ -43,6 +44,7 @@ int main(int argc, char* argv[]) {
     int L;
     int eps;
     std::string out;
+    bool index_only = false;
     bool verbose = false;
     bool greedy = false;
 
@@ -50,6 +52,7 @@ int main(int argc, char* argv[]) {
     while (1) {
         static struct option long_options[] =
             {
+                {"index", no_argument, 0, 'I'},
                 {"genomic", required_argument, 0, 'g'},
                 {"annotation", required_argument, 0, 'a'},
                 {"reads",  required_argument, 0, 'r'},
@@ -62,13 +65,16 @@ int main(int argc, char* argv[]) {
             };
 
         int option_index = 0;
-        c = getopt_long(argc, argv, "g:a:r:l:e:o:vG", long_options, &option_index);
+        c = getopt_long(argc, argv, "Ig:a:r:l:e:o:vG", long_options, &option_index);
 
         if (c == -1) {
             break;
         }
 
         switch(c) {
+        case 'I':
+            index_only = true;
+            break;
         case 'g':
             genomic = optarg;
             break;
@@ -100,6 +106,7 @@ int main(int argc, char* argv[]) {
     }
 
     SplicingGraph sg (genomic, annotation);
+    if(index_only) return 0;
     int exsN = sg.getExonsNumber();
     if(verbose) {
         sg.print();
@@ -246,6 +253,8 @@ int main(int argc, char* argv[]) {
                             outFile << m->toStr() << " ";
                         }
                         outFile << "\n";
+                        if(annotated)
+                            break;
                     }
                 }
                 break;
@@ -264,6 +273,8 @@ int main(int argc, char* argv[]) {
                             outFile << m->toStr() << " ";
                         }
                         outFile << "\n";
+                        if(annotated)
+                            break;
                     }
                 }
                 break;
