@@ -26,11 +26,6 @@ MemsGraph::MemsGraph(const std::string& read_,
     ending_nodes.resize(exsN);
 }
 
-/**************************************************************************************************
- **************************************************************************************************
- ***** GREEDY
- **************************************************************************************************
- **************************************************************************************************/
 std::pair<bool, int> MemsGraph::checkMEMs(const SplicingGraph& sg, const Mem& m1, const Mem& m2) {
     int id1 = sg.rank(m1.t-1);
     int id2 = sg.rank(m2.t-1);
@@ -61,7 +56,7 @@ std::pair<bool, int> MemsGraph::checkMEMs(const SplicingGraph& sg, const Mem& m1
                     err = e_distance(sub_P, sub_E);
                 }
             } else if(gap_P<=0 && gap_E<=0) {
-                err = abs(gap_P-gap_E);
+                err = 0; //abs(gap_P-gap_E);
             } else {
                 err = abs(gap_P) + abs(gap_E);
             }
@@ -72,24 +67,26 @@ std::pair<bool, int> MemsGraph::checkMEMs(const SplicingGraph& sg, const Mem& m1
     } else {
         //m1 and m2 in different exons
         if(sg.contain(id1, id2)) {
-            if(verbose) {
-                std::cout << "2" << std::endl;
-            }
-            std::string sub_E1 = exon1_text.substr(m1.t+m1.l-sg.select(id1)-1-1, sg.select(id1)+1-m1.t-m1.l);
-            std::string sub_E2 = exon2_text.substr(0,m2.t-sg.select(id2)-1-1);
-            std::string sub_E = sub_E1 + sub_E2;
-            int len_P = m2.p-m1.p-m1.l;
-            std::string sub_P;
-            if(len_P == 0) {
-                err = 0;
-            } else if(len_P<0) {
-                err = abs(len_P);
-            } else {
-                sub_P = read.substr(m1.p+m1.l-1,len_P);
-                err = e_distance(sub_P, sub_E);
-            }
-            if(err < K2) {
-                flag = true;
+            if(m2.p+m2.l>m1.p+m1.l) {
+                if(verbose) {
+                    std::cout << "2" << std::endl;
+                }
+                std::string sub_E1 = exon1_text.substr(m1.t+m1.l-sg.select(id1)-1-1, sg.select(id1)+1-m1.t-m1.l);
+                std::string sub_E2 = exon2_text.substr(0,m2.t-sg.select(id2)-1-1);
+                std::string sub_E = sub_E1 + sub_E2;
+                int len_P = m2.p-m1.p-m1.l;
+                std::string sub_P;
+                if(len_P == 0) {
+                    err = 0;
+                } else if(len_P<0) {
+                    err = 0; //abs(len_P);
+                } else {
+                    sub_P = read.substr(m1.p+m1.l-1,len_P);
+                    err = e_distance(sub_P, sub_E);
+                }
+                if(err < K2) {
+                    flag = true;
+                }
             }
         }
     }
@@ -211,6 +208,11 @@ std::pair<bool, int> MemsGraph::validEnd(const SplicingGraph& sg, const Mem& Mem
     return std::make_pair(false,K2+1);
 }
 
+/**************************************************************************************************
+ **************************************************************************************************
+ ***** GREEDY
+ **************************************************************************************************
+ **************************************************************************************************/
 std::pair<int, std::list<Mem> > MemsGraph::build_greedy(const SplicingGraph& sg,
                                                         std::list<Mem>& MEMs) {
     if(verbose) {
@@ -372,7 +374,7 @@ void MemsGraph::build(const SplicingGraph& sg,
             // #################################################
             // EXTENDING
             // #################################################
-            int p2 = p1+m1.l-1;
+            int p2 = p1+1; //m1.l-1;
             int max_p = p1+m1.l+K1;
             while(p2<max_p && p2<m) {
                 for(Mem& m2 : MEMs[p2]) {
