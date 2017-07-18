@@ -16,11 +16,17 @@ def create_adj_matrix_from_line(line):
 def readInfoPath(info_path):
     infofile = open(info_path)
     lines = infofile.readlines()
+    if lines[0].strip("\n").split(" ")[2] == '+':
+        strand = True
+    else:
+        strand = False
     adj_matrix = create_adj_matrix_from_line(lines[3].strip("\n"))
     names = lines[5].strip("\n").split()
     text = lines[1]
     BV = BitVector(text)
-    return names, text, BV, adj_matrix
+    pos = [(int(p[0]), int(p[1])) for p in [pos.split(",") for pos in lines[4].strip("\n").split()]]
+    EPos = dict(zip(names, pos))
+    return strand, names, text, BV, adj_matrix, EPos
 
 def initializeSG(names, adj_matrix):
     for name in names:
@@ -59,17 +65,26 @@ def extractInfoFromOut(out_path):
                 if current_index is not next_index:
                     # mems are aligned to different exons
                     G.incrementEdge(current_index, next_index)
+
                     # Check if there is some competing
+
+                    overlap = abs(next_mem[1]-current_mem[1]-current_mem[2])
+
+                    #!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#
+                    #!# ADD CANONICAL PATTERNS
+                    #!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#
                     # First we check for 5' competings in exon "current_index"
                     current_offset = BV.select(current_index + 1) - (current_mem[0] + current_mem[2])
                     if current_offset > 0:
+                        current_offset += overlap
                         if current_index not in competings:
                             competings[current_index] = {}
                         current_key = (True, next_index, current_offset)
                         competings[current_index][current_key] = competings[current_index][current_key] + 1 if current_key in competings[current_index] else 1
                     # Now we check for 3' competings in exon "next_index"
-                    next_offset = next_mem[0]-1 - BV.select(next_index)
+                    next_offset = next_mem[0] - BV.select(next_index)-1
                     if next_offset > 0:
+                        current_offset -= overlap
                         if next_index not in competings:
                             competings[next_index] = {}
                         next_key = (False, current_index, next_offset)
@@ -116,22 +131,31 @@ def checkESEvents(out):
     ESs = []
     for (n1,n2),w in G.new_edges.items():
         if w > ES_conf:
-            n1_label = G.getNodeLabel(n1).split("_")[0]
-            n2_label = G.getNodeLabel(n2).split("_")[0]
+            n1_label = G.getNodeLabel(n1).split("-")[0]
+            n2_label = G.getNodeLabel(n2).split("-")[0]
             if (n1_label,n2_label,w) not in ESs:
                 ESs.append((n1_label, n2_label, w))
 
     for (n1_label,n2_label,w) in ESs:
-        out.write("ES {} {} {}\n".format(n1_label, n2_label, w))
+        out.write("ES {} {} {} {} {}\n".format(n1_label, n2_label, EPos[n1_label][1], EPos[n2_label][0], w))
 
-def checkCEvents(confirmed_competings, out):
-    for [side, exid1, offset, cov] in confirmed_competings:    
-        t = "5'" if side else "3'"
+def checkCEvents(confirmed_competings, out, strand):
+    for [side, exid1, offset, cov] in confirmed_competings:
+        n_label = G.getNodeLabel(exid1)
+        if strand:
+            t = "5'" if side else "3'"
+            ann_pos = EPos[n_label][1] if side else EPos[n_label][0]
+            new_pos = ann_pos-offset if side else ann_pos+offset
+        else:
+            t = "3'" if side else "5'"
+            ann_pos = EPos[n_label][1] if side else EPos[n_label][0]
+            new_pos = ann_pos-offset if side else ann_pos+offset
         if G.isSource(exid1):
             t+='S'
         elif G.isSink(exid1):
             t+='E'
-        out.write("{} {} {} {}\n".format(t, G.getNodeLabel(exid1), cov, offset))
+
+        out.write("{} {} {} {} {}\n".format(t, n_label, ann_pos, new_pos, cov))
 
 def checkMEEEvents(out):
     A = G.getAdjMatrix()
@@ -156,17 +180,19 @@ def checkMEEEvents(out):
                         w+=sum([c for _,c in G.outLists[node1].items()])
                     if node2 in G.outLists:
                         w+=sum([c for _,c in G.outLists[node2].items()])
-                    out.write("MEE {} {} {}\n".format(G.getNodeLabel(node1), G.getNodeLabel(node2), w))
+                    n1_label = G.getNodeLabel(node1)
+                    n2_label = G.getNodeLabel(node2)
+                    out.write("MEE {} {} {} {} {} {}\n".format(n1_label, n2_label, EPos[n1_label][0], EPos[n1_label][1], EPos[n2_label][0], EPos[n2_label][1], w))
                     found_MEEs.append((node1, node2))
 
 def main():
-    global G, BV, text
+    global G, BV, text, EPos
 
     info_path = sys.argv[1]
     out_path = sys.argv[2]
     out_file = sys.argv[3]
 
-    names, text, BV, adj_matrix = readInfoPath(info_path)
+    strand, names, text, BV, adj_matrix, EPos = readInfoPath(info_path)
 
     # G = SplicingGraph(info_path)
     # G = SplicingGraph(names, adj_matrix)
@@ -183,7 +209,7 @@ def main():
     
     out = open(out_file, 'w')
     checkESEvents(out)                     # G.checkESEvents()
-    checkCEvents(confirmed_competings, out)  # G.check...
+    checkCEvents(confirmed_competings, out, strand)  # G.check...
     checkMEEEvents(out)
     out.close()
 

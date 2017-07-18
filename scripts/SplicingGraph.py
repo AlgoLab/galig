@@ -36,7 +36,7 @@ class SplicingGraph:
         self.decrementNode(node_index, coverage)
         off1 = 0 if side else offset
         off2 = offset if side else 0
-        new_label = "{}_{}_{}".format(self.labels[node_index - 1], off1, off2)
+        new_label = "{}-{}-{}".format(self.labels[node_index - 1], off1, off2)
         self.addNode(new_label, coverage, 0, offset)
         new_index = self.labels.index(new_label) + 1
         self.addEdge(node_index, new_index, 'f')
@@ -69,16 +69,16 @@ class SplicingGraph:
         A = [[0 for x in range(0, len(self.labels)-len(self.newNodes))] for y in range(0, len(self.labels)-len(self.newNodes))]
         for (n1,n2) in self.edges:
             if n1 in self.newNodes:
-                n1 = self.labels.index(self.labels[n1-1].split("_")[0])+1
+                n1 = self.labels.index(self.labels[n1-1].split("-")[0])+1
             if n2 in self.newNodes:
-                n2 = self.labels.index(self.labels[n2-1].split("_")[0])+1
+                n2 = self.labels.index(self.labels[n2-1].split("-")[0])+1
             if n1 != n2:
                 A[n1-1][n2-1] = 1
         for (n1,n2) in self.new_edges:
             if n1 in self.newNodes:
-                n1 = self.labels.index(self.labels[n1-1].split("_")[0])+1
+                n1 = self.labels.index(self.labels[n1-1].split("-")[0])+1
             if n2 in self.newNodes:
-                n2 = self.labels.index(self.labels[n2-1].split("_")[0])+1
+                n2 = self.labels.index(self.labels[n2-1].split("-")[0])+1
             if n1 != n2:
                 A[n1-1][n2-1] = 1
         return A
