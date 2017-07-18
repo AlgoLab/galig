@@ -208,12 +208,24 @@ int main(int argc, char* argv[]) {
             std::pair<bool, std::pair<int, std::list<std::pair<bool, std::list<Mem> > > > > paths_RC;
 
             if(!mems.empty()) {
+                if(verbose) {
+                    for(const Mem& m : mems) {
+                        std::cout << m.toStr() << " ";
+                    }
+                    std::cout << std::endl;
+                }
                 MemsGraph mg (read, L, eps, exsN, verbose);
                 mg.build(sg, mems);
                 paths = mg.visit(sg);
                 flag = true;
             }
             if(!mems_RC.empty()) {
+                if(verbose) {
+                    for(const Mem& m : mems_RC) {
+                        std::cout << m.toStr() << " ";
+                    }
+                    std::cout << std::endl;
+                }
                 MemsGraph mg_RC (read_RC, L, eps, exsN, verbose);
                 mg_RC.build(sg, mems_RC);
                 paths_RC = mg_RC.visit(sg);
