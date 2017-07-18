@@ -22,7 +22,7 @@ class SAMFormatter:
             i = 0
             while line:
                 if i==0:
-                    (self.reference, self.ref_length) = line[:-1].split(" ")
+                    (self.reference, self.ref_length, self.strand) = line[:-1].split(" ")
                 if i==1:
                     self.text = line[:-1]
                 if i==4:
