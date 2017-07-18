@@ -25,6 +25,7 @@ SplicingGraph::SplicingGraph(const std::string& fa,
             if(f.type.compare("gene") == 0) {
                 reference = f.seqid;
                 curr_gene = f.id;
+                strand = f.strand;
                 genes.insert(std::make_pair(curr_gene, std::list<std::string> ()));
                 addedExons.clear();
             }
@@ -230,7 +231,12 @@ void SplicingGraph::print() const {
 void SplicingGraph::save(const std::string path) {
     std::ofstream ofile;
     ofile.open(path + ".sg");
-    ofile << reference << " " << ref_length << "\n";
+    ofile << reference << " " << ref_length << " ";
+    if(strand)
+      ofile << "+";
+    else
+      ofile << "-";
+    ofile << "\n";
     ofile << T << "\n";
     ofile << exsN << "\n";
     for(const std::vector<int>& v : edges) {

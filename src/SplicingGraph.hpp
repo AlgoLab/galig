@@ -109,6 +109,7 @@ private:
     std::string T;
     std::string reference;
     int ref_length;
+    bool strand;
     std::list<std::pair<int, int> > Exons_Pos;
     std::vector<std::list<int> > parents;
     std::vector<std::list<int> > sons;
