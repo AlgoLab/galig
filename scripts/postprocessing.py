@@ -182,8 +182,9 @@ def checkMEEEvents(out):
                         w+=sum([c for _,c in G.outLists[node2].items()])
                     n1_label = G.getNodeLabel(node1)
                     n2_label = G.getNodeLabel(node2)
-                    out.write("MEE {} {} {} {} {} {}\n".format(n1_label, n2_label, EPos[n1_label][0], EPos[n1_label][1], EPos[n2_label][0], EPos[n2_label][1], w))
-                    found_MEEs.append((node1, node2))
+                    if w > MEE_conf:
+                        out.write("MEE {} {} {} {} {} {}\n".format(n1_label, n2_label, EPos[n1_label][0], EPos[n1_label][1], EPos[n2_label][0], EPos[n2_label][1], w))
+                        found_MEEs.append((node1, node2))
 
 def main():
     global G, BV, text, EPos
