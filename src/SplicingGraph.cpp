@@ -118,21 +118,21 @@ SplicingGraph::SplicingGraph(const std::string& fa,
         }
     }
 
-    // int i = 1;
-    // for(const std::pair<int,int>& p1 : Exons_Pos) {
-    //     int j = 1;
-    //     for(const std::pair<int,int>& p2 : Exons_Pos) {
-    //         if(p1.second <= p2.first) {
-    //             if(edges[i][j] == 0) {
-    //                 edges[i][j] = 2;
-    //                 parents[j].push_back(i);
-    //                 sons[i].push_back(j);
-    //             }
-    //         }
-    //         ++j;
-    //     }
-    //     ++i;
-    // }
+    int i = 1;
+    for(const std::pair<int,int>& p1 : Exons_Pos) {
+        int j = 1;
+        for(const std::pair<int,int>& p2 : Exons_Pos) {
+            if(p1.second <= p2.first) {
+                if(edges[i][j] == 0) {
+                    edges[i][j] = 3;
+                    parents[j].push_back(i);
+                    sons[i].push_back(j);
+                }
+            }
+            ++j;
+        }
+        ++i;
+    }
     gtfFile.close();
 
     setupBitVector();
