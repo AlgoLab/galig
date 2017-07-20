@@ -1,17 +1,17 @@
 X	ensembl	gene	1	120	.	+	.	gene_id "gene";
 X	ensembl	transcript	20	120	.	+	.	gene_id "gene"; transcript_id "T1";
-X	ensembl	exon	20	29	.	+	.	gene_id "gene"; transcript_id "T1"; exon_number "1"; exon_id "exon1"
-X	ensembl	exon	41	50	.	+	.	gene_id "gene"; transcript_id "T1"; exon_number "2"; exon_id "exon2"
-X	ensembl	exon	72	86	.	+	.	gene_id "gene"; transcript_id "T1"; exon_number "3"; exon_id "exon3"
-X	ensembl	exon	111	120	.	+	.	gene_id "gene"; transcript_id "T1"; exon_number "4"; exon_id "exon4"
+X	ensembl	exon	20	29	.	+	.	gene_id "gene"; transcript_id "T1"; exon_number "1"; exon_id "exon1";
+X	ensembl	exon	41	50	.	+	.	gene_id "gene"; transcript_id "T1"; exon_number "2"; exon_id "exon2";
+X	ensembl	exon	72	86	.	+	.	gene_id "gene"; transcript_id "T1"; exon_number "3"; exon_id "exon3";
+X	ensembl	exon	111	120	.	+	.	gene_id "gene"; transcript_id "T1"; exon_number "4"; exon_id "exon4";
 X	ensembl	transcript	20	120	.	+	.	gene_id "gene"; transcript_id "T2";
-X	ensembl	exon	20	29	.	+	.	gene_id "gene"; transcript_id "T2"; exon_number "1"; exon_id "exon1"
-X	ensembl	exon	41	50	.	+	.	gene_id "gene"; transcript_id "T2"; exon_number "2"; exon_id "exon2"
-X	ensembl	exon	57	68	.	+	.	gene_id "gene"; transcript_id "T2"; exon_number "6"; exon_id "exon6"
-X	ensembl	exon	92	107	.	+	.	gene_id "gene"; transcript_id "T2"; exon_number "7"; exon_id "exon7"
-X	ensembl	exon	111	120	.	+	.	gene_id "gene"; transcript_id "T2"; exon_number "4"; exon_id "exon4"
+X	ensembl	exon	20	29	.	+	.	gene_id "gene"; transcript_id "T2"; exon_number "1"; exon_id "exon1";
+X	ensembl	exon	41	50	.	+	.	gene_id "gene"; transcript_id "T2"; exon_number "2"; exon_id "exon2";
+X	ensembl	exon	57	68	.	+	.	gene_id "gene"; transcript_id "T2"; exon_number "6"; exon_id "exon6";
+X	ensembl	exon	92	107	.	+	.	gene_id "gene"; transcript_id "T2"; exon_number "7"; exon_id "exon7";
+X	ensembl	exon	111	120	.	+	.	gene_id "gene"; transcript_id "T2"; exon_number "4"; exon_id "exon4";
 X	ensembl	transcript	1	120	.	+	.	gene_id "gene"; transcript_id "T3";
-X	ensembl	exon	1	15	.	+	.	gene_id "gene"; transcript_id "T3"; exon_number "5"; exon_id "exon5"
-X	ensembl	exon	57	68	.	+	.	gene_id "gene"; transcript_id "T3"; exon_number "6"; exon_id "exon6"
-X	ensembl	exon	92	107	.	+	.	gene_id "gene"; transcript_id "T3"; exon_number "7"; exon_id "exon7"
-X	ensembl	exon	111	120	.	+	.	gene_id "gene"; transcript_id "T3"; exon_number "4"; exon_id "exon4"
+X	ensembl	exon	1	15	.	+	.	gene_id "gene"; transcript_id "T3"; exon_number "5"; exon_id "exon5";
+X	ensembl	exon	57	68	.	+	.	gene_id "gene"; transcript_id "T3"; exon_number "6"; exon_id "exon6";
+X	ensembl	exon	92	107	.	+	.	gene_id "gene"; transcript_id "T3"; exon_number "7"; exon_id "exon7";
+X	ensembl	exon	111	120	.	+	.	gene_id "gene"; transcript_id "T3"; exon_number "4"; exon_id "exon4";
