@@ -43,7 +43,7 @@ std::pair<bool, int> MemsGraph::checkMEMs(const SplicingGraph& sg, const Mem& m1
     bool flag = false;
     if(id1 == id2) {
         //m1 and m2 in the same exon
-        if(m1.t<m2.t && m2.t<m1.t+m1.l+K1 && m1.t+m1.l<m2.t+m2.l) {
+        if(m2.p+m2.l>m1.p+m1.l && m1.t<m2.t && m2.t<m1.t+m1.l+K1 && m1.t+m1.l<m2.t+m2.l) {
             int gap_P = m2.p-m1.p-m1.l;
             int gap_E = m2.t-m1.t-m1.l;
             if(gap_P>=0 && gap_E>=0) {
