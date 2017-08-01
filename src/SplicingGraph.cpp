@@ -18,6 +18,7 @@ SplicingGraph::SplicingGraph(const std::string& fa,
     std::string curr_gene = "";
     std::string curr_tr = "";
     exsN = 0;
+
     gtfFile.open(gtf);
     if(gtfFile.is_open()) {
         while(getline(gtfFile,line)) {
@@ -64,7 +65,7 @@ SplicingGraph::SplicingGraph(const std::string& fa,
     std::map<std::string, int> ids_to_index;
     std::list<std::pair<int, int> > exs_pos;
     int curr_i = 1;
-
+    //bool firstTrans = true;
     for(std::map<std::string, std::list<std::string> >::iterator it1=genes.begin(); it1!=genes.end(); ++it1) {
         //Forall gene
         for(std::list<std::string>::iterator it2=it1->second.begin(); it2!=it1->second.end(); ++it2) {
@@ -93,12 +94,23 @@ SplicingGraph::SplicingGraph(const std::string& fa,
                 if(last_i != -1) {
                     if(edges[last_i][curr_i] == 0 && last_i != curr_i) {
                         edges[last_i][curr_i] = 1;
+                        /**
+                        if(firstTrans) {
+                            edges[last_i][curr_i] = 1;
+                        } else {
+                            if(edges[last_i][curr_i] != 1) {
+                                edges[last_i][curr_i] = 2;
+                            }
+                        }
+                        **/
                         parents[curr_i].push_back(last_i);
                         sons[last_i].push_back(curr_i);
                     }
                 }
                 last_i = curr_i;
             }
+            //firstTrans = false
+            //Transitive closure on the transcript
             int i = 0;
             for(const int& id1 : exons_id) {
                 int j=0;
@@ -118,6 +130,7 @@ SplicingGraph::SplicingGraph(const std::string& fa,
         }
     }
 
+    //Transitive closure on the full graph
     int i = 1;
     for(const std::pair<int,int>& p1 : Exons_Pos) {
         int j = 1;
