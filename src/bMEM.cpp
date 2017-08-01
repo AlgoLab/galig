@@ -2,15 +2,15 @@
 
 BackwardMEM::BackwardMEM(const std::string& text, const std::string& path) {
     std::string index_path = path + ".idx";
-    sdsl::construct_im(cst, text, 1);
-    // if(!load_from_file(cst, index_path)) {
-    //     std::cout << "Creating index..." << std::endl;
-    //     sdsl::construct_im(cst, text, 1);
-    //     sdsl::store_to_file(cst, index_path);
-    //     std::cout << "Saving index..." << std::endl;
-    // } else {
-    //     std::cout << "Loading index from disk..." << std::endl;
-    // }
+    //sdsl::construct_im(cst, text, 1);
+    if(!load_from_file(cst, index_path)) {
+        //std::cout << "Creating index..." << std::endl;
+        sdsl::construct_im(cst, text, 1);
+        sdsl::store_to_file(cst, index_path);
+        //std::cout << "Saving index..." << std::endl;
+    } //else {
+        //std::cout << "Loading index from disk..." << std::endl;
+    //}
 }
 
 tCST::size_type BackwardMEM::backward_search(const tCST::csa_type& csa,
