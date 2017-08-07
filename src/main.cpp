@@ -33,7 +33,6 @@ void printHelp() {
     std::cout << "  -l, --L <int>: MEMs length" << std::endl;
     std::cout << "  -e, --eps <int>: " << std::endl;
     std::cout << "  -o, --output <path>: output path" << std::endl;
-    std::cout << "  -G, --greedy: run greedy search instead of exhaustive one" << std::endl;
     std::cout << "  -v, --verbose: explain what is being done and save .dot" << std::endl;
 }
 
@@ -43,11 +42,14 @@ int main(int argc, char* argv[]) {
     std::string rna_seqs;
     int L;
     int eps;
-    std::string out;
+    std::string out1;
+    std::string out2;
     bool index_only = false;
+    bool twoPass = false;
     bool verbose = false;
-    bool greedy = false;
 
+    // - Collecting command line parameters
+    // -------------------------------------
     int c;
     while (1) {
         static struct option long_options[] =
@@ -59,13 +61,13 @@ int main(int argc, char* argv[]) {
                 {"L",  required_argument, 0, 'l'},
                 {"eps",    required_argument, 0, 'e'},
                 {"output", required_argument, 0, 'o'},
+                {"2pass", required_argument, 0, 't'},
                 {"verbose", no_argument, 0, 'v'},
-                {"greedy", no_argument, 0, 'G'},
                 {0, 0, 0, 0}
             };
 
         int option_index = 0;
-        c = getopt_long(argc, argv, "Ig:a:r:l:e:o:vG", long_options, &option_index);
+        c = getopt_long(argc, argv, "Ig:a:r:l:e:o:tv", long_options, &option_index);
 
         if (c == -1) {
             break;
@@ -91,205 +93,128 @@ int main(int argc, char* argv[]) {
             eps = std::stoi(optarg);
             break;
         case 'o':
-            out = optarg;
+            out1 = std::string(optarg) + ".mem";
+            out2 = std::string(optarg) + ".ins";
+            break;
+        case 't':
+            twoPass = true;
             break;
         case 'v':
             verbose = true;
-            break;
-        case 'G':
-            greedy = true;
             break;
         default:
             printHelp();
             exit(EXIT_FAILURE);
         }
     }
+    if(out1.compare("") == 0) {
+        out1 = "out.mem";
+        out2 = "out.ins";
+    }
 
+    // - Building splicing graph
+    // --------------------------
     SplicingGraph sg (genomic, annotation);
+    if(verbose) sg.print();
     if(index_only) return 0;
     int exsN = sg.getExonsNumber();
-    if(verbose) {
-        sg.print();
-    }
+
+    // - Setting up MEMs Index, Reads reader and out file
+    // ---------------------------------------------------
     BackwardMEM bm (sg.getText(), genomic);
     FastaReader fastas (rna_seqs);
+    std::ofstream outFile1;
+    outFile1.open(out1);
+    std::ofstream outFile2;
+    outFile2.open(out2);
 
+    // - Main loop: one iteration, one read
+    // ---------------------------------------
     int i = 0;
-    if(out.compare("") == 0) {
-        out = "out.mem";
-    }
-    std::ofstream outFile;
-    outFile.open(out);
-    while(i<fastas.getSize()) {
-        std::pair<std::string, std::string> seq = fastas.getEntry(i);
+    int numReads = fastas.getSize();
+    while(i<numReads) {
+        // Read: (header, read)
+        // Paths: <<atLeastOneAnnotated, weight>, [<annotated, [mems]>]>
+        std::pair<std::string, std::string> seq = fastas.pop();
+
+        // Original read
         std::string read = seq.second;
-        std::string read_RC = reverse_and_complement(read);
         std::list<Mem> mems = bm.getMEMs(read,L);
+        std::pair<std::pair<bool, int>, std::list<std::pair<bool, std::list<Mem> > > > paths;
+        if(!mems.empty()) {
+            MemsGraph mg (read, L, eps, exsN, verbose);
+            mg.build(sg, mems, false);
+            paths = mg.visit(sg);
+        }
+
+        // Reversed-and-complemented read
+        std::string read_RC = reverse_and_complement(read);
         std::list<Mem> mems_RC = bm.getMEMs(read_RC,L);
+        std::pair<std::pair<bool, int>, std::list<std::pair<bool, std::list<Mem> > > > paths_RC;
+        if(!mems_RC.empty()) {
+            MemsGraph mg_RC (read_RC, L, eps, exsN, verbose);
+            mg_RC.build(sg, mems_RC, false);
+            paths_RC = mg_RC.visit(sg);
+        }
 
-        if(greedy) {
-            bool flag = false;
-            bool flag_RC = false;
-            std::pair<int, std::list<Mem> > res;
-            std::pair<int, std::list<Mem> > res_RC;
-
-            if(!mems.empty()) {
-                if(verbose) {
-                    for(const Mem& m : mems) {
-                        std::cout << m.toStr() << " " << std::endl;
-                    }
-                    std::cout << std::endl;
-                }
+        bool empty = paths.second.empty();
+        bool empty_RC = paths_RC.second.empty();
+        char strand;
+        if(empty && empty_RC) {
+            if(twoPass) {
                 MemsGraph mg (read, L, eps, exsN, verbose);
-                res = mg.build_greedy(sg, mems);
-                flag = true;
-            }
-            if(!mems_RC.empty()) {
-                if(verbose) {
-                    for(const Mem& m : mems) {
-                        std::cout << m.toStr() << " " << std::endl;
-                    }
-                    std::cout << std::endl;
-                }
+                mg.build(sg, mems, true);
+                paths = mg.visit(sg);
                 MemsGraph mg_RC (read_RC, L, eps, exsN, verbose);
-                res_RC = mg_RC.build_greedy(sg, mems_RC);
-                flag_RC = true;
-            }
-            int best = 0;
-            if(flag && !flag_RC) {
-                if(!res.second.empty()) {
-                    best = 1;
-                }
-            } else if(!flag && flag_RC) {
-                if(!res_RC.second.empty()) {
-                    best = 2;
-                }
-            } else {
-                if(res.first < res_RC.first) {
-                    if(!res.second.empty()) {
-                        best = 1;
+                mg_RC.build(sg, mems_RC, true);
+                paths_RC = mg_RC.visit(sg);
+                for(std::list<std::pair<bool, std::list<Mem> > >::iterator p=paths.second.begin(); p!=paths.second.end(); ++p) {
+                    outFile2 << "+ " << seq.first << " 0 ";
+                    for(std::list<Mem>::iterator m=p->second.begin(); m!=p->second.end(); ++m) {
+                        outFile2 << m->toStr() << " ";
                     }
-                } else if(res.first > res_RC.first) {
-                    if(!res_RC.second.empty()) {
-                        best = 2;
+                    outFile2 << "\n";
+                }
+                for(std::list<std::pair<bool, std::list<Mem> > >::iterator p=paths_RC.second.begin(); p!=paths_RC.second.end(); ++p) {
+                    outFile2 << "- " << seq.first << " 0 ";
+                    for(std::list<Mem>::iterator m=p->second.begin(); m!=p->second.end(); ++m) {
+                        outFile2 << m->toStr() << " ";
                     }
-                } else {
-                    if(!res.second.empty() && res_RC.second.empty()) {
-                        best = 1;
-                    } else if(res.second.empty() && !res_RC.second.empty()) {
-                        best = 2;
-                    } else {
-                        //Qua manca un pezzo
-                    }
+                    outFile2 << "\n";
                 }
-            }
-            switch(best) {
-            case 0:
-                break;
-            case 1:
-                outFile << "+ " << seq.first << " " << res.first << " ";
-                for(std::list<Mem>::iterator m=res.second.begin(); m!=res.second.end(); ++m) {
-                    outFile << m->toStr() << " ";
-                }
-                outFile << "\n";
-                break;
-            case 2:
-                outFile << "- " << seq.first << " " << res_RC.first << " ";
-                for(std::list<Mem>::iterator m=res_RC.second.begin(); m!=res_RC.second.end(); ++m) {
-                    outFile << m->toStr() << " ";
-                }
-                outFile << "\n";
-                break;
             }
         } else {
-            bool flag = false;
-            bool flag_RC = false;
-            std::pair<bool, std::pair<int, std::list<std::pair<bool, std::list<Mem> > > > > paths;
-            std::pair<bool, std::pair<int, std::list<std::pair<bool, std::list<Mem> > > > > paths_RC;
-
-            if(!mems.empty()) {
-                if(verbose) {
-                    for(const Mem& m : mems) {
-                        std::cout << m.toStr() << " ";
-                    }
-                    std::cout << std::endl;
-                }
-                MemsGraph mg (read, L, eps, exsN, verbose);
-                mg.build(sg, mems);
-                paths = mg.visit(sg);
-                flag = true;
-            }
-            if(!mems_RC.empty()) {
-                if(verbose) {
-                    for(const Mem& m : mems_RC) {
-                        std::cout << m.toStr() << " ";
-                    }
-                    std::cout << std::endl;
-                }
-                MemsGraph mg_RC (read_RC, L, eps, exsN, verbose);
-                mg_RC.build(sg, mems_RC);
-                paths_RC = mg_RC.visit(sg);
-                flag_RC = true;
-            }
-
-            int best = 0;
-            if(flag && !flag_RC) {
-                best = 1;
-            } else if(!flag && flag_RC) {
-                best = 2;
+            if(!empty && empty_RC) {
+                strand = '+';
+            } else if(empty && !empty_RC) {
+                paths = paths_RC;
+                strand = '-';
             } else {
-                if(paths.second.first <= paths_RC.second.first) {
-                    best = 1;
+                if(paths.first.second <= paths_RC.first.second) {
+                    strand = '+';
                 } else {
-                    best = 2;
+                    paths = paths_RC;
+                    strand = '-';
                 }
             }
 
-            bool atLeastOneAnnotaded;
-            int err;
-            switch(best) {
-            case 0:
-                break;
-            case 1:
-                atLeastOneAnnotaded = paths.first;
-                err = paths.second.first;
-                for(std::list<std::pair<bool, std::list<Mem> > >::iterator p=paths.second.second.begin(); p!=paths.second.second.end(); ++p) {
-                    bool annotated = p->first;
-                    bool f = true;
-                    if(atLeastOneAnnotaded and !annotated) {
-                        f = false;
-                    }
-                    if(f) {
-                        outFile << "+ " << seq.first << " " << err << " ";
-                        for(std::list<Mem>::iterator m=p->second.begin(); m!=p->second.end(); ++m) {
-                            outFile << m->toStr() << " ";
-                        }
-                        outFile << "\n";
-                        if(annotated)
-                            break;
-                    }
+            bool atLeastOneAnnotaded = paths.first.first;
+            int err = paths.first.second;
+            for(std::list<std::pair<bool, std::list<Mem> > >::iterator p=paths.second.begin(); p!=paths.second.end(); ++p) {
+                bool annotated = p->first;
+                bool f = true;
+                if(atLeastOneAnnotaded and !annotated) {
+                    f = false;
                 }
-                break;
-            case 2:
-                atLeastOneAnnotaded = paths_RC.first;
-                err = paths_RC.second.first;
-                for(std::list<std::pair<bool, std::list<Mem> > >::iterator p=paths_RC.second.second.begin(); p!=paths_RC.second.second.end(); ++p) {
-                    bool annotated = p->first;
-                    bool f = true;
-                    if(atLeastOneAnnotaded and !annotated) {
-                        f = false;
+                if(f) {
+                    outFile1 << strand << " " << seq.first << " " << err << " ";
+                    for(std::list<Mem>::iterator m=p->second.begin(); m!=p->second.end(); ++m) {
+                        outFile1 << m->toStr() << " ";
                     }
-                    if(f && p->second.size()>0) {
-                        outFile << "- " << seq.first << " " << err << " ";
-                        for(std::list<Mem>::iterator m=p->second.begin(); m!=p->second.end(); ++m) {
-                            outFile << m->toStr() << " ";
-                        }
-                        outFile << "\n";
-                        if(annotated)
-                            break;
-                    }
+                    outFile1 << "\n";
+                    if(annotated)
+                        break;
                 }
-                break;
             }
         }
         ++i;
@@ -297,6 +222,6 @@ int main(int argc, char* argv[]) {
         //     std::cout << "Processed " << i << " reads." << std::endl;
         // }
     }
-    outFile.close();
-    return 0;
+    outFile1.close();
+    outFile2.close();
 }

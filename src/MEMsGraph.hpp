@@ -46,9 +46,7 @@ private:
     lemon::ListDigraph::ArcMap<int> edges_map;
     lemon::ListDigraph::Node start;
     lemon::ListDigraph::Node end;
-    std::vector<lemon::ListDigraph::Node> starting_nodes;
-    std::vector<lemon::ListDigraph::Node> ending_nodes;
-    std::pair<bool, int> checkMEMs(const SplicingGraph&, const Mem&, const Mem&);
+    std::pair<bool, int> checkMEMs(const SplicingGraph&, const Mem&, const Mem&, const bool&);
     std::pair<bool, int> validStart(const SplicingGraph&, const Mem&);
     std::pair<bool, int> validEnd(const SplicingGraph&, const Mem&);
 public:
@@ -58,10 +56,9 @@ public:
               const int&,
               const bool&);
     void build(const SplicingGraph&,
-               std::list<Mem>&);
-    std::pair<int, std::list<Mem> > build_greedy(const SplicingGraph&,
-                                                 std::list<Mem>&);
-    std::pair<bool, std::pair<int, std::list<std::pair<bool, std::list<Mem> > > > > visit(const SplicingGraph&);
+               std::list<Mem>&,
+               const bool&);
+    std::pair<std::pair<bool, int>, std::list<std::pair<bool, std::list<Mem> > > > visit(const SplicingGraph&);
     void save(const std::string&);
 };
 
