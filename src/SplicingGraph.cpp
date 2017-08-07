@@ -6,7 +6,7 @@ std::string getExonID(int s, int e) {
 
 SplicingGraph::SplicingGraph(const std::string& fa,
                              const std::string& gtf) {
-    std::string genomic = FastaReader(fa).getEntry(0).second;
+    std::string genomic = FastaReader(fa).pop().second;
     ref_length = genomic.size();
 
     std::ifstream gtfFile;

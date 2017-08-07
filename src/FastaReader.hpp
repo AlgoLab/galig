@@ -3,17 +3,18 @@
 
 #include <iostream>
 #include <fstream>
-#include <vector>
+#include <list>
 #include <string>
 #include <utility>
+#include <iterator>
 
 class FastaReader {
 private:
-    std::vector<std::string> descriptions;
-    std::vector<std::string> sequences;
+    std::list<std::string> descriptions;
+    std::list<std::string> sequences;
 public:
     FastaReader(const std::string&);
     int getSize();
-    std::pair<std::string, std::string> getEntry(const int&);
+    std::pair<std::string, std::string> pop();
 };
 #endif
