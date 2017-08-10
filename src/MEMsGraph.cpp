@@ -6,7 +6,7 @@ MemsGraph::MemsGraph(const std::string& read_,
                      const int& L_,
                      const int& eps_,
                      const int& exsN_,
-                     const bool& verbose_) : nodes_map(graph), edges_map(graph)  {
+                     const bool& verbose_) : nodesMap(graph), edgesMap(graph)  {
     read = read_;
     m = read.size();
     L = L_;
@@ -19,8 +19,8 @@ MemsGraph::MemsGraph(const std::string& read_,
 
     start = graph.addNode();
     end = graph.addNode();
-    nodes_map[start] = Mem(0,0,0);
-    nodes_map[end] = Mem(-1,-1,-1);
+    nodesMap[start] = Mem(0,0,0);
+    nodesMap[end] = Mem(-1,-1,-1);
 }
 
 std::pair<bool, int> MemsGraph::checkMEMs(const SplicingGraph& sg,
@@ -56,9 +56,6 @@ std::pair<bool, int> MemsGraph::checkMEMs(const SplicingGraph& sg,
         }
     } else { //m1 and m2 in different exons
         if(sg.contain(id1, id2)) {
-            /*
-             * Si possono scrivere meglio i due casi, mettere dentro l'if del two pass
-             */
             if(!twoPass) {
                 if(m2.p+m2.l>m1.p+m1.l) {
                     std::string sub_E1 = exon1_text.substr(m1.t+m1.l-sg.select(id1)-1-1, sg.select(id1+1)+1-m1.t-m1.l);
@@ -79,7 +76,7 @@ std::pair<bool, int> MemsGraph::checkMEMs(const SplicingGraph& sg,
                     }
                 }
             } else {
-                if(m2.p+m2.l>m1.p+m1.l && m1.t + m1.l - 1 == sg.select(id1+1) && m2.t - 1 - 1 == sg.select(id2)) {
+                if(m2.p>m1.p+m1.l && m2.p+m2.l>m1.p+m1.l && m1.t+m1.l-1==sg.select(id1+1) && m2.t-1-1==sg.select(id2)) {
                     err = 0;
                     flag = true;
                 }
@@ -190,7 +187,7 @@ void MemsGraph::build(const SplicingGraph& sg,
     for(std::vector<std::forward_list<Mem> >::iterator it=MEMs.begin(); it!=MEMs.end(); ++it) {
         for(Mem& m1 : *it) {
             int p1 = m1.p;
-            lemon::ListDigraph::Node node1;
+            Node node1;
             int id1 = sg.rank(m1.t-1);
             std::string exon1_text = sg.getExon(id1);
 
@@ -206,12 +203,12 @@ void MemsGraph::build(const SplicingGraph& sg,
                     if(m1.isNew) {
                         node1 = graph.addNode();
                         m1.setNode(node1);
-                        nodes_map[node1] = m1;
+                        nodesMap[node1] = m1;
                     } else {
                         node1 = m1.node;
                     }
-                    lemon::ListDigraph::Arc arc = graph.addArc(start,node1);
-                    edges_map[arc] = err;
+                    Arc arc = graph.addArc(start,node1);
+                    edgesMap[arc] = err;
                 } else {
                     continue;
                 }
@@ -229,7 +226,7 @@ void MemsGraph::build(const SplicingGraph& sg,
             int max_p = p1+m1.l+K1;
             while((!twoPass && p2<max_p && p2<m) || (twoPass && p2<m)) {
                 for(Mem& m2 : MEMs[p2]) {
-                    lemon::ListDigraph::Node node2;
+                    Node node2;
                     std::pair<bool, int> linkage_info = checkMEMs(sg, m1, m2, twoPass);
                     bool flag = linkage_info.first;
                     int err = linkage_info.second;
@@ -237,12 +234,12 @@ void MemsGraph::build(const SplicingGraph& sg,
                         if(m2.isNew) {
                             node2 = graph.addNode();
                             m2.setNode(node2);
-                            nodes_map[node2] = m2;
+                            nodesMap[node2] = m2;
                         } else {
                             node2 = m2.node;
                         }
-                        lemon::ListDigraph::Arc arc = graph.addArc(node1,node2);
-                        edges_map[arc] = err;
+                        Arc arc = graph.addArc(node1,node2);
+                        edgesMap[arc] = err;
                     }
                 }
                 ++p2;
@@ -254,24 +251,24 @@ void MemsGraph::build(const SplicingGraph& sg,
             bool end_flag = end_info.first;
             err = end_info.second;
             if(end_flag && err <= K2) {
-                lemon::ListDigraph::Arc arc = graph.addArc(node1,end);
-                edges_map[arc] = err;
+                Arc arc = graph.addArc(node1,end);
+                edgesMap[arc] = err;
             }
         }
     }
     /**********************************
      * Transitive closure on end node *
      **********************************/
-    std::list<lemon::ListDigraph::InArcIt> arcs_D;
-    for(lemon::ListDigraph::InArcIt XZ (graph, end); XZ!=lemon::INVALID; ++XZ) {
-        lemon::ListDigraph::Node X = graph.source(XZ);
-        for(lemon::ListDigraph::OutArcIt XY (graph, X); XY!=lemon::INVALID; ++XY) {
-            lemon::ListDigraph::Node Y = graph.target(XY);
+    std::list<InArc> arcs_D;
+    for(InArc XZ (graph, end); XZ!=lemon::INVALID; ++XZ) {
+        Node X = graph.source(XZ);
+        for(OutArc XY (graph, X); XY!=lemon::INVALID; ++XY) {
+            Node Y = graph.target(XY);
             if(graph.id(Y)!=graph.id(end)) {
-                for(lemon::ListDigraph::OutArcIt YZ (graph, Y); YZ!=lemon::INVALID; ++YZ) {
-                    lemon::ListDigraph::Node Z = graph.target(YZ);
+                for(OutArc YZ (graph, Y); YZ!=lemon::INVALID; ++YZ) {
+                    Node Z = graph.target(YZ);
                     if(graph.id(Z)==graph.id(end)) {
-                        if(edges_map[XY]+edges_map[YZ]<=edges_map[XZ]) {
+                        if(edgesMap[XY]+edgesMap[YZ]<=edgesMap[XZ]) {
                             arcs_D.push_back(XZ);
                         }
                     }
@@ -279,7 +276,7 @@ void MemsGraph::build(const SplicingGraph& sg,
             }
         }
     }
-    for(const lemon::ListDigraph::InArcIt& a : arcs_D) {
+    for(const InArc& a : arcs_D) {
         if(graph.valid(a)) {
             graph.erase(a);
         }
@@ -294,27 +291,33 @@ std::pair<std::pair<bool, int>, std::list<std::pair<bool, std::list<Mem> > > > M
     std::list<std::pair<bool, std::list<Mem> > > paths;
     int min_w = K2+1;
     int curr_w;
-    for(lemon::ListDigraph::OutArcIt arc (graph, start); arc!=lemon::INVALID; ++arc) {
-        lemon::ListDigraph::Node node = graph.target(arc);
-        int w0 = edges_map[arc];
+    for(OutArc arc (graph, start); arc!=lemon::INVALID; ++arc) {
+        Node node = graph.target(arc);
+        int w0 = edgesMap[arc];
         do {
-            lemon::Dijkstra<lemon::ListDigraph> dijkstra(graph, edges_map);
+            lemon::Dijkstra<Graph, lemon::ListDigraph::ArcMap<int> >
+                ::SetStandardHeap<FibH>
+                ::SetHeap<FibH,FibM>
+                ::Create dijkstra (graph, edgesMap);
+            FibM heap_cross_ref (graph);
+            FibH heap (heap_cross_ref);
+            dijkstra.heap(heap, heap_cross_ref);
             dijkstra.run(node,end);
             if(dijkstra.reached(end)) {
                 curr_w = w0+dijkstra.dist(end);
                 if(curr_w <= min_w) {
                     min_w = curr_w;
-                    lemon::Path<lemon::ListDigraph> p = dijkstra.path(end);
+                    Path p = dijkstra.path(end);
                     bool annotated = true;
                     int i = 0;
                     std::list<Mem> path;
-                    for (lemon::Path<lemon::ListDigraph>::ArcIt it(p); it != lemon::INVALID; ++it) {
-                        lemon::ListDigraph::Arc e = it;
-                        lemon::ListDigraph::Node source = graph.source(e);
-                        lemon::ListDigraph::Node target = graph.target(e);
-                        Mem m1 = nodes_map[source];
+                    for(Path::ArcIt it(p); it != lemon::INVALID; ++it) {
+                        Arc e = it;
+                        Node source = graph.source(e);
+                        Node target = graph.target(e);
+                        Mem m1 = nodesMap[source];
                         if(graph.id(target) != graph.id(end)) {
-                            Mem m2 = nodes_map[target];
+                            Mem m2 = nodesMap[target];
                             int id1 = sg.rank(m1.t-1);
                             int id2 = sg.rank(m2.t-1);
                             if(id1 != id2 && sg.isNew(id1, id2)) {
@@ -348,11 +351,11 @@ void MemsGraph::save(const std::string& s) {
     myfile.open(s);
 
     std::string dot = "digraph G {\n graph [splines=true overlap=false]\n node  [shape=ellipse, width=0.3, height=0.3]\n";
-    for (lemon::ListDigraph::NodeIt n (graph); n != lemon::INVALID; ++n) {
-        dot += " " + std::to_string(graph.id(n)) + " [label=\"" + nodes_map[n].toStr() + "\"];\n";
+    for (NodeIt n (graph); n != lemon::INVALID; ++n) {
+        dot += " " + std::to_string(graph.id(n)) + " [label=\"" + nodesMap[n].toStr() + "\"];\n";
     }
-    for (lemon::ListDigraph::ArcIt a (graph); a != lemon::INVALID; ++a) {
-        dot += " " + std::to_string(graph.id(graph.source(a))) + " -> " + std::to_string(graph.id(graph.target(a))) + "[label=\"" + std::to_string(edges_map[a]) + "\"];\n";
+    for(ArcIt a (graph); a != lemon::INVALID; ++a) {
+        dot += " " + std::to_string(graph.id(graph.source(a))) + " -> " + std::to_string(graph.id(graph.target(a))) + "[label=\"" + std::to_string(edgesMap[a]) + "\"];\n";
     }
     dot += "}";
 

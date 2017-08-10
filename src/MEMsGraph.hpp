@@ -9,9 +9,23 @@
 #include "utils.hpp"
 #include "SplicingGraph.hpp"
 
+#include <lemon/concepts/maps.h>
 #include <lemon/list_graph.h>
-#include <lemon/bfs.h>
 #include <lemon/dijkstra.h>
+#include <lemon/fib_heap.h>
+
+typedef lemon::ListDigraph Graph;
+typedef Graph::Node Node;
+typedef Graph::NodeIt NodeIt;
+typedef Graph::Arc Arc;
+typedef Graph::ArcIt ArcIt;
+typedef Graph::InArcIt InArc;
+typedef Graph::OutArcIt OutArc;
+typedef lemon::Path<Graph> Path;
+typedef Graph::NodeMap<Mem> Node2MEM;
+typedef Graph::ArcMap<int> Arc2Int;
+typedef Graph::NodeMap<int> FibM;
+typedef lemon::FibHeap<int, FibM> FibH;
 
 class MemsGraph {
 private:
@@ -26,7 +40,7 @@ private:
      * exsN: exons number
      * graph: MEMsGraph
      * nodes_map: node -> mem
-     * edges_map: edge -> weigth
+     * edges_map: edge -> weigth (int)
      * start: global starting node
      * end: global ending node
      * starting_nodes: local starting nodes list (exon)
@@ -41,11 +55,11 @@ private:
     int K1;
     int K2;
     int exsN;
-    lemon::ListDigraph graph;
-    lemon::ListDigraph::NodeMap<Mem> nodes_map;
-    lemon::ListDigraph::ArcMap<int> edges_map;
-    lemon::ListDigraph::Node start;
-    lemon::ListDigraph::Node end;
+    Graph graph;
+    Node2MEM nodesMap;
+    Arc2Int edgesMap;
+    Node start;
+    Node end;
     std::pair<bool, int> checkMEMs(const SplicingGraph&, const Mem&, const Mem&, const bool&);
     std::pair<bool, int> validStart(const SplicingGraph&, const Mem&);
     std::pair<bool, int> validEnd(const SplicingGraph&, const Mem&);

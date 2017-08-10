@@ -23,6 +23,7 @@
    printf("%.6f,", t);
 **/
 
+
 void printHelp() {
     std::cout << "Usage: SGAL [options] (required: -g -a -r -l -e)\n" << std::endl;
     std::cout << "Options:" << std::endl;
