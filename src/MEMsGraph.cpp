@@ -46,9 +46,9 @@ std::pair<bool, int> MemsGraph::checkMEMs(const SplicingGraph& sg,
                     err = e_distance(sub_P, sub_E);
                 }
             } else if(gap_P<=0 && gap_E<=0) {
-                err = 0;
+                err = abs(gap_P-gap_E);
             } else {
-                err = std::max(gap_P, gap_E);
+                err = abs(gap_P) + abs(gap_E);
             }
             if(err < K2) {
                 flag = true;
@@ -63,10 +63,8 @@ std::pair<bool, int> MemsGraph::checkMEMs(const SplicingGraph& sg,
                     std::string sub_E = sub_E1 + sub_E2;
                     int len_P = m2.p-m1.p-m1.l;
                     std::string sub_P;
-                    if(len_P == 0) {
-                        err = 0;
-                    } else if(len_P<0) {
-                        err = 0;
+                    if(len_P <= 0) {
+                        err = abs(len_P);
                     } else {
                         sub_P = read.substr(m1.p+m1.l-1,len_P);
                         err = e_distance(sub_P, sub_E);
