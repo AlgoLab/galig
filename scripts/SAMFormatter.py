@@ -119,54 +119,47 @@ class SAMFormatter:
                     #------------------------------------------------
                     if errors_P == 0:
                         if errors_T < 0:
-                            #Case 1
-                            #print("1")
+                            #0 on P, - on T
                             CIGAR += "{}I".format(abs(errors_T))
                             CIGAR += "{}M".format(mems[i][2]-abs(errors_T))
                         elif errors_T > 0:
-                            #Case 2
-                            #print("2")
+                            #0 on P, + on T
                             CIGAR += "{}D".format(abs(errors_T))
                             CIGAR += "{}M".format(mems[i][2])
                     #------------------------------------------------
                     elif errors_P < 0:
                         if errors_T == 0:
-                            #Case 3
-                            #print("3")
+                            #- on P, 0 on T
                             CIGAR += "{}D".format(abs(errors_P))
                             CIGAR += "{}M".format(mems[i][2]-abs(errors_P))
                         elif errors_T < 0:
-                            #Case 4
+                            #- on P, - on T
                             errs = abs(errors_P) - abs(errors_T)
                             if errs > 0:
-                                #Case 4a
-                                #print("4a")
+                                #More on P
                                 CIGAR += "{}D".format(errs)
                             elif errs < 0:
-                                #Case 4b
-                                #print("4b")
+                                #More on T
                                 CIGAR += "{}I".format(abs(errs))
                             CIGAR += "{}M".format(mems[i][2]-max(abs(errors_P), abs(errors_T)))
                         elif errors_T > 0:
-                            #Case 5
-                            #print("5")
+                            #- on P, + on T
                             CIGAR += "{}D".format(abs(errors_P) + errors_T)
                             CIGAR += "{}M".format(mems[i][2]-abs(errors_P))
                     #------------------------------------------------
                     elif errors_P > 0:
                         if errors_T == 0:
-                            #Case 6
-                            #print("6")
+                            #+ on P, 0 on T
                             CIGAR += "{}I".format(errors_P)
                             CIGAR += "{}M".format(mems[i][2])
                         elif errors_T < 0:
-                            #Case 7
-                            #print("7")
+                            #+ on P, - on T
                             CIGAR += "{}I".format(abs(errors_P + abs(errors_T)))
                             CIGAR += "{}M".format(mems[i][2]-abs(errors_T))
                         elif errors_T > 0:
-                            #Case 8
+                            #+ on P, + on T
                             if errors_P == errors_T:
+                                #Same: all SUBs
                                 prev_matches = 0
                                 f1 = True
                                 j1 = 0
@@ -177,9 +170,11 @@ class SAMFormatter:
                                         prev_matches += int(CIGAR[:-1][j1+1:])
                                 CIGAR = CIGAR[:j1] + "{}M".format(prev_matches + errors_P + mems[i][2])
                             elif errors_P > errors_T:
+                                #More on P: some INSs, some SUBs
                                 CIGAR += "{}I".format(errors_P - errors_T)
                                 CIGAR += "{}M".format(errors_T + mems[i][2])
                             else:
+                                #More on T: some DELs, some SUBs
                                 CIGAR += "{}D".format(errors_T - errors_P)
                                 CIGAR += "{}M".format(errors_P + mems[i][2])
                 ##################################################################
@@ -192,214 +187,16 @@ class SAMFormatter:
                     if errors_P == 0:
                         CIGAR += "{}N".format(intron + errors_T1 + errors_T2)
                         CIGAR += "{}M".format(mems[i][2])
-                        '''
-                        if errors_T1 == 0 and errors_T2 == 0:
-                            #print("9")
-                            if intron != 0:
-                                CIGAR += "{}N".format(intron)
-                                CIGAR += "{}M".format(mems[i][2])
-                            else:
-                                prev_matches = 0
-                                f1 = True
-                                j1 = 0
-                                while f1:
-                                    j1-=1
-                                    if j1<=-len(CIGAR) or CIGAR[:-1][j1] in ["I", "D", "N", "S"]:
-                                        f1 = False
-                                        prev_matches += int(CIGAR[:-1][j1+1:])
-                                CIGAR = CIGAR[:j1] + "{}M".format(prev_matches + mems[i][2])
-                        elif errors_T1 > 0 and errors_T2 == 0:
-                            #print("10")
-                            CIGAR += "{}D".format(errors_T1)
-                            if intron != 0:
-                                CIGAR += "{}N".format(intron)
-                            CIGAR += "{}M".format(mems[i][2])
-                        elif errors_T1 == 0 and errors_T2 > 0:
-                            #print("11")
-                            if intron != 0:
-                                CIGAR += "{}N".format(intron)
-                            CIGAR += "{}D".format(errors_T2)
-                            CIGAR += "{}M".format(mems[i][2])
-                        else:
-                            #print("12")
-                            if intron != 0:
-                                CIGAR += "{}D".format(errors_T1)
-                                CIGAR += "{}N".format(intron)
-                                CIGAR += "{}D".format(errors_T2)
-                            else:
-                                CIGAR += "{}D".format(errors_T1 + errors_T2)
-                            CIGAR += "{}M".format(mems[i][2])
-                        '''
                     #------------------------------------------------
                     elif errors_P < 0:
-                        CIGAR += "{}D".format(abs(errors_P))
-                        CIGAR += "{}N".format(intron + errors_T1 + errors_T2 - 1)
+                        print(errors_T1, errors_T2, errors_P)
+                        CIGAR += "{}N".format(intron + errors_T1 + errors_T2 + abs(errors_P))
                         CIGAR += "{}M".format(mems[i][2]-abs(errors_P))
-                        '''
-                        if errors_T1 == 0 and errors_T2 == 0:
-                            #print("13")
-                            if intron != 0:
-                                CIGAR += "{}N".format(intron)
-                            CIGAR += "{}D".format(abs(errors_P))
-                            CIGAR += "{}M".format(mems[i][2]-abs(errors_P))
-                        elif errors_T1 > 0 and errors_T2 == 0:
-                            #print("14")
-                            if intron != 0:
-                                CIGAR += "{}D".format(errors_T1)
-                                CIGAR += "{}N".format(intron)
-                                CIGAR += "{}D".format(abs(errors_P))
-                            else:
-                                CIGAR += "{}D".format(errors_T1 + abs(errors_P))
-                            CIGAR += "{}M".format(mems[i][2]-abs(errors_P))
-                        elif errors_T1 == 0 and errors_T2 > 0:
-                            #print("15")
-                            if intron != 0:
-                                CIGAR += "{}N".format(intron)
-                            CIGAR += "{}D".format(abs(errors_P) + errors_T2)
-                            CIGAR += "{}M".format(mems[i][2]-abs(errors_P))
-                        else:
-                            #print("16")
-                            if intron != 0:
-                                CIGAR += "{}D".format(errors_T1)
-                                CIGAR += "{}N".format(intron)
-                                CIGAR += "{}D".format(abs(errors_P) + errors_T2)
-                            else:
-                                CIGAR += "{}D".format(errors_T1 + abs(errors_P) + errors_T2)
-                            CIGAR += "{}M".format(mems[i][2]-abs(errors_P))
-                        '''
                     #------------------------------------------------
                     else:
-                        #CIGAR += "{}I".format(abs(errors_P))
-                        #CIGAR += "{}N".format(intron + errors_T1 + errors_T2 - 1)
-                        #CIGAR += "{}M".format(mems[i][2]-abs(errors_P))
-                        '''
-                        if errors_T1 + errors_T2 == errors_P:
-                            prev_matches = 0
-                            f1 = True
-                            j1 = 0
-                            while f1:
-                                j1-=1
-                                if j1<=-len(CIGAR) or CIGAR[:-1][j1] in ["I", "D", "N", "S"]:
-                                    f1 = False
-                                    prev_matches += int(CIGAR[:-1][j1+1:])
-                            CIGAR = CIGAR[:j1] + "{}M".format(prev_matches + errors_T1)
-                            CIGAR += "{}N".format(intron)
-                            CIGAR += "{}M".format(errors_T2 + mems[i][2])
-                        elif errors_T1 + errors_T2 < errors_P:
-                        '''
-                        if errors_T1 == 0 and errors_T2 == 0:
-                            CIGAR += "{}I".format(errors_P)
-                            if intron != 0:
-                                CIGAR += "{}N".format(intron)
-                            CIGAR += "{}M".format(mems[i][2])
-                        elif errors_T1 > 0 and errors_T2 == 0:
-                            if errors_P == errors_T1:
-                                prev_matches = 0
-                                f1 = True
-                                j1 = 0
-                                while f1:
-                                    j1-=1
-                                    if j1<=-len(CIGAR) or CIGAR[:-1][j1] in ["I", "D", "N", "S"]:
-                                        f1 = False
-                                        prev_matches += int(CIGAR[:-1][j1+1:])
-                                if intron != 0:
-                                    CIGAR = CIGAR[:j1] + "{}M".format(prev_matches + errors_P)
-                                    CIGAR += "{}N".format(intron)
-                                    CIGAR += "{}M".format(mems[i][2])
-                                else:
-                                    CIGAR = CIGAR[:j1] + "{}M".format(prev_matches + errors_P + mems[i][2])
-                            elif errors_P > errors_T1:
-                                CIGAR += "{}I".format(errors_P - errors_T1)
-                                if intron != 0:
-                                    CIGAR += "{}M".format(errors_T1)
-                                    CIGAR += "{}N".format(intron)
-                                    CIGAR += "{}M".format(mems[i][2])
-                                else:
-                                    CIGAR += "{}M".format(errors_T1 + mems[i][2])
-                            else:
-                                prev_matches = 0
-                                f1 = True
-                                j1 = 0
-                                while f1:
-                                    j1-=1
-                                    if j1<=-len(CIGAR) or CIGAR[:-1][j1] in ["I", "D", "N", "S"]:
-                                        f1 = False
-                                        prev_matches += int(CIGAR[:-1][j1+1:])
-                                CIGAR =  CIGAR[:j1] + "{}M".format(prev_matches + errors_P)
-                                CIGAR += "{}D".format(errors_T1 - errors_P)
-                                if intron != 0:
-                                    CIGAR += "{}N".format(intron)
-                                CIGAR += "{}M".format(mems[i][2])
-                        elif errors_T1 == 0 and errors_T2 > 0:
-                            if errors_P == errors_T2:
-                                if intron != 0:
-                                    CIGAR += "{}N".format(intron)
-                                    CIGAR += "{}M".format(errors_P + mems[i][2])
-                                else:
-                                    prev_matches = 0
-                                    f1 = True
-                                    j1 = 0
-                                    while f1:
-                                        j1-=1
-                                        if j1<=-len(CIGAR) or CIGAR[:-1][j1] in ["I", "D", "N", "S"]:
-                                            f1 = False
-                                            prev_matches += int(CIGAR[:-1][j1+1:])
-                                    CIGAR = CIGAR[:j1] + "{}M".format(prev_matches + errors_P + mems[i][2])
-                            elif errors_P > errors_T2:
-                                if intron != 0:
-                                    CIGAR += "{}N".format(intron)
-                                CIGAR += "{}I".format(errors_P - errors_T2)
-                                CIGAR += "{}M".format(errors_T2 + mems[i][2])
-                            else:
-                                if intron != 0:
-                                    CIGAR += "{}N".format(intron)
-                                CIGAR += "{}D".format(errors_T2 - errors_P)
-                                CIGAR += "{}M".format(errors_P + mems[i][2])
-                        else:
-                            if errors_P == errors_T1 + errors_T2:
-                                prev_matches = 0
-                                f1 = True
-                                j1 = 0
-                                while f1:
-                                    j1-=1
-                                    if j1<=-len(CIGAR) or CIGAR[:-1][j1] in ["I", "D", "N", "S"]:
-                                        f1 = False
-                                        prev_matches += int(CIGAR[:-1][j1+1:])
-                                if intron != 0:
-                                    CIGAR = CIGAR[:j1] + "{}M".format(prev_matches + errors_T1)
-                                    CIGAR += "{}N".format(intron)
-                                    CIGAR += "{}M".format(errors_T2 + mems[i][2])
-                                else:
-                                    CIGAR = CIGAR[:j1] + "{}M".format(prev_matches + errors_P + mems[i][2])
-                            elif errors_P > errors_T1 + errors_T2:
-                                CIGAR += "{}I".format(errors_P - errors_T1 - errors_T2)
-                                if intron != 0:
-                                    CIGAR += "{}M".format(errors_T1)
-                                    CIGAR += "{}N".format(intron)
-                                    CIGAR += "{}M".format(errors_T2 + mems[i][2])
-                                else:
-                                    CIGAR = CIGAR[:j1] + "{}M".format(errors_T1 + errors_T2 + mems[i][2])
-                            else:
-                                tot_ins = errors_T1 + errors_T2 - errors_P
-                                if tot_ins <= errors_T1:
-                                    CIGAR += "{}D".format(tot_ins)
-                                    if intron != 0:
-                                        if errors_T1 - tot_ins > 0:
-                                            CIGAR += "{}M".format(errors_T1 - tot_ins)
-                                        CIGAR += "{}N".format(intron)
-                                        CIGAR += "{}M".format(errors_T2 + mems[i][2])
-                                    else:
-                                        CIGAR += "{}M".format(errors_T1 - tot_ins + errors_T2 + mems[i][2])
-                                else:
-                                    if intron != 0:
-                                        CIGAR += "{}D".format(errors_T1)
-                                        tot_ins -= errors_T1
-                                        CIGAR += "{}N".format(intron)
-                                        CIGAR += "{}D".format(tot_ins)
-                                        CIGAR += "{}M".format(errors_T2 - tot_ins + mems[i][2])
-                                    else:
-                                        CIGAR += "{}D".format(tot_ins)
-                                        CIGAR += "{}M".format(errors_T2 - tot_ins + mems[i][2])
+                        CIGAR += "{}I".format(abs(errors_P))
+                        CIGAR += "{}N".format(intron + errors_T1 + errors_T2)
+                        CIGAR += "{}M".format(mems[i][2])
             i+=1
         final_dels = m - mems[-1][1] - mems[-1][2] + 1
         if  final_dels != 0:
