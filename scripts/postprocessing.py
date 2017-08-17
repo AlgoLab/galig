@@ -1,7 +1,8 @@
 import sys, os
 
+from graphviz import Digraph
+
 from BitVector import BitVector
-from SplicingGraph import SplicingGraph
 from utils import *
 
 #Confidence values for each event
@@ -9,210 +10,294 @@ ES_conf = 1
 C_conf = 5
 MEE_conf = 1
 
-def create_adj_matrix_from_line(line):
-    adj_matrix = [[int(elem) for elem in row.split()] for row in line[:-2].split(";")]
-    return adj_matrix
-
-def readInfoPath(info_path):
-    infofile = open(info_path)
-    lines = infofile.readlines()
-    if lines[0].strip("\n").split(" ")[2] == '+':
-        strand = True
-    else:
-        strand = False
-    adj_matrix = create_adj_matrix_from_line(lines[3].strip("\n"))
-    names = lines[5].strip("\n").split()
-    text = lines[1]
-    BV = BitVector(text)
-    pos = [(int(p[0]), int(p[1])) for p in [pos.split(",") for pos in lines[4].strip("\n").split()]]
-    EPos = dict(zip(names, pos))
-    return strand, names, text, BV, adj_matrix, EPos
-
-def initializeSG(names, adj_matrix):
-    for name in names:
-        G.addNode(name)
-    r = 0
-    for row in adj_matrix:
-        c = 0
-        for elem in row:
-            if elem == 1:
-                G.addEdge(r,c,'e')
-            if elem == 2:
-                G.addEdge(r,c,'n')
-            c+=1
-        r+=1
-
-def extractInfoFromOut(out_path):
-    competings = {}
-    with open(out_path, 'r') as out:
-        for line in out:
-            # 0: strand
-            # 1: ID
-            # 2: errors
-            # 3+: mems
-            align = line.strip("\n").strip(" ").split(" ")
-            used_exons = set([BV.rank(int(mem[1:-1].split(',')[0]) - 1) for mem in align[3:]])
-            for e in used_exons:
-                G.incrementNode(e)
-            if len(align[3:]) <= 1:
-                continue
-            for current_mem, next_mem in pairwise(align[3:]):
-                # Remove ( and ) from mem
-                current_mem = [int(elem) for elem in current_mem[1:-1].split(",")]
-                next_mem = [int(elem) for elem in next_mem[1:-1].split(",")]
-                current_index = BV.rank(current_mem[0] - 1)
-                next_index = BV.rank(next_mem[0] - 1)
-                if current_index is not next_index:
-                    # mems are aligned to different exons
-                    G.incrementEdge(current_index, next_index)
-
-                    # Check if there is some competing
-
-                    overlap = abs(next_mem[1]-current_mem[1]-current_mem[2])
-
-                    #!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#
-                    #!# ADD CANONICAL PATTERNS
-                    #!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#
-                    # First we check for 5' competings in exon "current_index"
-                    current_offset = BV.select(current_index + 1) - (current_mem[0] + current_mem[2])
-                    if current_offset > 0:
-                        current_offset += overlap
-                        if current_index not in competings:
-                            competings[current_index] = {}
-                        current_key = (True, next_index, current_offset)
-                        competings[current_index][current_key] = competings[current_index][current_key] + 1 if current_key in competings[current_index] else 1
-                    # Now we check for 3' competings in exon "next_index"
-                    next_offset = next_mem[0] - BV.select(next_index)-1
-                    if next_offset > 0:
-                        current_offset -= overlap
-                        if next_index not in competings:
-                            competings[next_index] = {}
-                        next_key = (False, current_index, next_offset)
-                        competings[next_index][next_key] = competings[next_index][next_key] + 1 if next_key in competings[next_index] else 1
-    return competings
-
-def checkCompetings(competings):
-    confirmed_competings = []
-    competings_for_position = {}
-    for first_exon in competings:
-        for competing_prop in competings[first_exon]:
-            k = (first_exon, competing_prop[0], competing_prop[2])
-            competings_for_position[k] = competings_for_position[k] + competings[first_exon][competing_prop] if k in competings_for_position else competings[first_exon][competing_prop]
-
-    for first_exon in competings:
-        for competing_prop in competings[first_exon]:
-            side, second_exon, offset = competing_prop
-            if competings_for_position[(first_exon, side, offset)] > C_conf:
-                new_node_id = G.splitNode(first_exon, side, offset, competings[first_exon][competing_prop])
-                if side is True:
-                    source_exon_tmp, target_exon_tmp = first_exon, second_exon
-                    G.addEdge(new_node_id, target_exon_tmp, G.getEdgeType(source_exon_tmp, target_exon_tmp), competings[first_exon][competing_prop])
-                    ###
-                    for parent in G.getParents(first_exon):
-                        G.addEdge(parent, new_node_id, G.getEdgeType(parent, first_exon), G.getEdgeWeight(parent, first_exon))
-                    ###
-                else:
-                    source_exon_tmp, target_exon_tmp = second_exon, first_exon
-                    G.addEdge(source_exon_tmp, new_node_id, G.getEdgeType(source_exon_tmp, target_exon_tmp), competings[first_exon][competing_prop])
-                    ###
-                    if first_exon in G.outLists:
-                        for son in G.outLists[first_exon]:
-                            G.addEdge(new_node_id, son, G.getEdgeType(first_exon, son), G.getEdgeWeight(first_exon, son))
-                    ###
-                G.decrementEdge(source_exon_tmp, target_exon_tmp, competings[first_exon][competing_prop])
-
-    # TODO: questo e' chiaramente un filtro            
-    for c in competings_for_position:
-        if competings_for_position[c] > C_conf:
-            confirmed_competings.append([c[1], c[0], c[2], competings_for_position[c]])
-    return confirmed_competings
-
-def checkESEvents(out):
-    ESs = []
-    for (n1,n2),w in G.new_edges.items():
-        if w > ES_conf:
-            n1_label = G.getNodeLabel(n1).split("-")[0]
-            n2_label = G.getNodeLabel(n2).split("-")[0]
-            if (n1_label,n2_label,w) not in ESs:
-                ESs.append((n1_label, n2_label, w))
-
-    for (n1_label,n2_label,w) in ESs:
-        out.write("ES {} {} {} {} {}\n".format(n1_label, n2_label, EPos[n1_label][1], EPos[n2_label][0], w))
-
-def checkCEvents(confirmed_competings, out, strand):
-    for [side, exid1, offset, cov] in confirmed_competings:
-        n_label = G.getNodeLabel(exid1)
-        if strand:
-            t = "5'" if side else "3'"
-            ann_pos = EPos[n_label][1] if side else EPos[n_label][0]
-            new_pos = ann_pos-offset if side else ann_pos+offset
+class SplicingGraph:
+    def __init__(self, infoPath):
+        infofile = open(infoPath)
+        lines = infofile.readlines()
+        if lines[0].strip("\n").split(" ")[2] == '+':
+            self.GeneStrand = True
         else:
-            t = "3'" if side else "5'"
-            ann_pos = EPos[n_label][1] if side else EPos[n_label][0]
-            new_pos = ann_pos-offset if side else ann_pos+offset
-        if G.isSource(exid1):
-            t+='S'
-        elif G.isSink(exid1):
-            t+='E'
+            self.GeneStrand = False
+        self.ExonNames = lines[5].strip("\n").split()
+        self.Text = lines[1]
+        self.BV = BitVector(self.Text)
+        pos = [(int(p[0]), int(p[1])) for p in [pos.split(",") for pos in lines[4].strip("\n").split()]]
+        self.ExonPos = dict(zip(self.ExonNames, pos))
 
-        out.write("{} {} {} {} {}\n".format(t, n_label, ann_pos, new_pos, cov))
+        self.labels = []
+        self.nodes = {}
+        self.edges = {}
+        self.newEdges = {}
+        adjMatrix = [[int(elem) for elem in row.split()] for row in lines[3].strip("\n")[:-2].split(";")]
+        for name in self.ExonNames:
+            self.addNode(name)
+        r = 0
+        for row in adjMatrix:
+            c = 0
+            for elem in row:
+                if elem == 1:
+                    self.addEdge(r,c,'e')
+                if elem == 2:
+                    self.addEdge(r,c,'n')
+                c+=1
+            r+=1
 
-def checkMEEEvents(out):
-    A = G.getAdjMatrix()
-    found_MEEs = []
-    checked = []
-    '''
-    for node1 in G.nodes:
-        for node2 in [node for node in G.nodes if node != node1]:
-    '''
-    for node1 in [node for node in G.nodes if node not in G.newNodes]:
-        for node2 in [node for node in G.nodes if node not in G.newNodes and node != node1]:
-            if (node1, node2) in checked or (node2, node1) in checked:
+    #Augmenting
+    def augments(self, memsPath):
+        '''
+        - comps: {exID: {offset : weight}}
+        - ins:   {(exID1,exID2): {size : weight}}
+        - SNVs:  {exID: {(posT, posP) : weight}}
+        '''
+        self.comp3 = {}
+        self.comp5 = {}
+        self.insertions = {}
+        self.SNVs = {}
+        with open(memsPath, 'r') as out:
+            for line in out:
+                # 0: strand
+                # 1: ID
+                # 2: errors
+                # 3+: mems
+                align = line.strip("\n").strip(" ").split(" ")
+                usedExons = set([self.BV.rank(int(mem[1:-1].split(',')[0]) - 1) for mem in align[3:]])
+                for e in usedExons:
+                    self.incrementNode(e)
+                if len(align[3:]) <= 1:
+                    continue
+                for currMEM, nextMEM in pairwise(align[3:]):
+                    # Remove ( and ) from mem and cast to int
+                    currMEM = [int(elem) for elem in currMEM[1:-1].split(",")]
+                    nextMEM = [int(elem) for elem in nextMEM[1:-1].split(",")]
+                    currIndex = self.BV.rank(currMEM[0] - 1)
+                    nextIndex = self.BV.rank(nextMEM[0] - 1)
+                    if currIndex != nextIndex: #mems are aligned to different exons
+                        #edge is incremented
+                        self.incrementEdge(currIndex, nextIndex)
+
+                        overlap = nextMEM[1]-currMEM[1]-currMEM[2]
+                        currOffset = self.BV.select(currIndex + 1) - (currMEM[0] + currMEM[2])
+                        nextOffset = nextMEM[0] - self.BV.select(nextIndex)-1
+
+                        #Competings
+                        if overlap <= 0:
+                            #  --- TODO -----------
+                            # - Canonical Patterns -
+                            #  --------------------
+                            overlap = abs(overlap)
+                            # First we check for 5' competings in exon "current_index"
+                            if currOffset > 0:
+                                currOffset += overlap
+                                if currIndex not in self.comp5:
+                                    self.comp5[currIndex] = {}
+                                self.comp5[currIndex][currOffset] = self.comp5[currIndex][currOffset]+1 if currOffset in self.comp5[currIndex] else 1
+                            # Now we check for 3' competings in exon "next_index"
+                            if nextOffset > 0:
+                                nextOffset += overlap
+                                if nextIndex not in self.comp3:
+                                    self.comp3[nextIndex] = {}
+                                self.comp3[nextIndex][nextOffset] = self.comp3[nextIndex][nextOffset]+1 if nextOffset in self.comp3[nextIndex] else 1
+                        #Insertions and SNVs
+                        else:
+                            if currOffset == 0 and nextOffset == 0:
+                                #Insertions
+                                key = (currIndex, nextIndex)
+                                if key not in self.insertions:
+                                    self.insertions[key] = {}
+                                self.insertions[key][overlap] = self.insertions[key][overlap]+1 if overlap in self.insertions[key] else 1
+                            else:
+                                #SNV
+                                if overlap == currOffset + nextOffset:
+                                    if currIndex not in self.SNVs:
+                                        self.SNVs[currIndex] = {}
+                                    key = (currMEM[0]+currMEM[2], currMEM[1]+currMEM[2])
+                                    self.SNVs[currIndex][key] = self.SNVs[currIndex][key]+1 if key in self.SNVs[currIndex] else 1
+                                    if nextIndex not in self.SNVs:
+                                        self.SNVs[nextIndex] = {}
+                                    key = (nextMEM[0]-1, nextMEM[1]-1)
+                                    self.SNVs[nextIndex][key] = self.SNVs[nextIndex][key]+1 if key in self.SNVs[nextIndex] else 1
+                    else:
+                        #SNV
+                        Poverlap = nextMEM[1]-currMEM[1]-currMEM[2]
+                        Toverlap = nextMEM[0]-currMEM[0]-currMEM[2]
+                        if Poverlap == Toverlap:
+                            if currIndex not in self.SNVs:
+                                self.SNVs[currIndex] = {}
+                            key1 = (currMEM[0]+currMEM[2], currMEM[1]+currMEM[2])
+                            key2 = (nextMEM[0]-1, nextMEM[1]-1)
+                            self.SNVs[currIndex][key1] = self.SNVs[currIndex][key1]+1 if key1 in self.SNVs[currIndex] else 1
+                            if key1 != key2:
+                                self.SNVs[currIndex][key2] = self.SNVs[currIndex][key2]+1 if key2 in self.SNVs[currIndex] else 1
+
+    ## EVENTS
+    ##########
+    def extractEvents(self):
+        self.extractES()
+        self.extractC(self.comp5, True)
+        self.extractC(self.comp3, False)
+        self.extractMEE()
+
+    def extractES(self):
+        for (n1,n2),w in self.newEdges.items():
+            if w > ES_conf:
+                label1 = self.getNodeLabel(n1)
+                label2 = self.getNodeLabel(n2)
+                print("ES {} {} {} {} {}".format(label1, label2, self.ExonPos[label1][1], self.ExonPos[label2][0], w))
+
+    def extractC(self,CompDict,t_flag):
+        for exid,comp in CompDict.items():
+            label = self.getNodeLabel(exid)
+            for offset,w in comp.items():
+                if w > C_conf:
+                    if self.GeneStrand:
+                        t = "5'" if t_flag else "3'"
+                        ann_pos = self.ExonPos[label][1] if t_flag else self.ExonPos[label][0]
+                        new_pos = ann_pos-offset if t_flag else ann_pos+offset
+                    else:
+                        t = "3'" if t_flag else "5'"
+                        ann_pos = self.ExonPos[label][1] if t_flag else self.ExonPos[label][0]
+                        new_pos = ann_pos-offset if t_flag else ann_pos+offset
+                    print("{} {} {} {} {}".format(t, label, ann_pos, new_pos, w))
+
+    def extractMEE(self):
+        self.clean(MEE_conf,MEE_conf)
+        A = self.getAdjMatrix()
+        alreadyChecked = []
+        for node1 in [node for node in self.nodes]:
+            for node2 in [node for node in self.nodes if node != node1]:
+                if (node1,node2) in alreadyChecked or (node2,node1) in alreadyChecked:
+                    continue
+                alreadyChecked.append((node1,node2))
+                if not(self.isEdge(node1,node2)):
+                    if sum(getCommonAncestors(A, node1-1, node2-1))>0 and sum(getCommonDescendants(A, node1-1, node2-1))>0:
+                        w = 2
+                        label1 = self.getNodeLabel(node1)
+                        label2 = self.getNodeLabel(node2)
+                        if w > MEE_conf:
+                            print("MEE {} {} {} {} {} {} {}".format(label1, label2, self.ExonPos[label1][0], self.ExonPos[label1][1], self.ExonPos[label2][0], self.ExonPos[label2][1], w))
+    
+    #Nodes Methods
+    def addNode(self, label, w=0):
+        if label != "" and label not in self.labels:
+            self.labels.append(label)
+            self.nodes.update({len(self.labels):[label, w]})
+
+    def incrementNode(self, n1, w=1):
+        if n1 in self.nodes:
+            self.nodes[n1][1] += w
+
+    def getNodeLabel(self, n):
+        return self.nodes[n][0]
+
+    def getNodeW(self, n):
+        return self.nodes[n][1]
+
+    #Edges Methods
+    def addEdge(self, n1, n2, t, w=0):
+        if t == 'e':
+            if (n1,n2) not in self.edges:
+                self.edges.update({(n1,n2):w})
+        elif t == 'n':
+            if (n1,n2) not in self.newEdges:
+                self.newEdges.update({(n1,n2):w})
+
+    def incrementEdge(self, n1, n2, w=1):
+        if (n1,n2) in self.edges:
+            self.edges[(n1,n2)] += w
+        elif (n1,n2) in self.newEdges:
+            self.newEdges[(n1,n2)] += w
+
+    def isEdge(self, n1, n2):
+        if (n1,n2) in self.edges:
+            return True
+        elif (n1,n2) in self.newEdges:
+            return True
+        else:
+            return False
+
+    ## Utils
+    #########
+    def clean(self, nTresh = 0, eTresh = 0):
+        edgesToRemove = []
+        for label in self.labels:
+            if label == "":
                 continue
-            checked.append((node1, node2))
-            if not(G.isEdge(node1, node2)):
-                if (node1, node2) in found_MEEs:
-                    pass
-                elif sum(getCommonAncestors(A, node1-1, node2-1))>0 and sum(getCommonDescendants(A, node1-1, node2-1))>0:
-                    w=sum([c for _,c in G.getParents(node1).items()])
-                    w+=sum([c for _,c in G.getParents(node2).items()])
-                    if node1 in G.outLists:
-                        w+=sum([c for _,c in G.outLists[node1].items()])
-                    if node2 in G.outLists:
-                        w+=sum([c for _,c in G.outLists[node2].items()])
-                    n1_label = G.getNodeLabel(node1)
-                    n2_label = G.getNodeLabel(node2)
-                    if w > MEE_conf:
-                        out.write("MEE {} {} {} {} {} {}\n".format(n1_label, n2_label, EPos[n1_label][0], EPos[n1_label][1], EPos[n2_label][0], EPos[n2_label][1], w))
-                        found_MEEs.append((node1, node2))
+            index = self.labels.index(label)+1
+            if self.getNodeW(index) <= nTresh:
+                self.labels[index-1] = ""
+                self.nodes.pop(index)
+                for (n1,n2),cov in self.edges.items():
+                    if index == n1 or index == n2:
+                        edgesToRemove.append((n1,n2))
+                for (n1,n2),cov in self.newEdges.items():
+                    if index == n1 or index == n2:
+                        edgesToRemove.append((n1,n2))
+
+        for (n1,n2),w in self.edges.items():
+            if w <= eTresh:
+                edgesToRemove.append((n1,n2))
+        for (n1,n2),w in self.newEdges.items():
+            if w <= eTresh:
+                edgesToRemove.append((n1,n2))
+        for edge in edgesToRemove:
+            try:
+                self.edges.pop(edge)
+                continue
+            except KeyError:
+                pass
+            try:
+                self.newEdges.pop(edge)
+                continue
+            except KeyError:
+                pass
+
+    def getAdjMatrix(self):
+        A = [[0 for x in range(0, len(self.labels))] for y in range(0, len(self.labels))]
+        for (n1,n2) in self.edges:
+            if n1 != n2:
+                A[n1-1][n2-1] = 1
+        for (n1,n2) in self.newEdges:
+            A[n1-1][n2-1] = 1
+        return A
+
+    def print(self):
+        print("### NODES ###")
+        for label in self.labels:
+            if label != "":
+                index = self.labels.index(label)+1
+                print("{} {}: {}".format(index, label, self.getNodeW(index)))
+        print("### EDGES ###")
+        for (n1,n2),c in self.edges.items():
+            print("{}->{}: {}".format(n1, n2, c))
+        print("### NEW EDGES ###")
+        for (n1,n2),c in self.newEdges.items():
+           print("{}->{}: {}".format(n1, n2, c))
+
+    def save(self, name):
+        print("Saving...")
+        g = Digraph('G', filename="{}.gv".format(name))#os.path.join(OUT, "graph.gv"))
+        g.attr('node', shape='circle')
+        for label in self.labels:
+            if label != "":
+                index = self.labels.index(label)
+                n_label = "{} ({})".format(label, self.getNodeW(index+1))
+                g.node(n_label)
+        for (n1,n2),cov in self.edges.items():
+            n1_label = "{} ({})".format(self.labels[n1-1], self.getNodeW(n1))
+            n2_label = "{} ({})".format(self.labels[n2-1], self.getNodeW(n2))
+            g.edge(n1_label, n2_label, label=str(cov), color = "black")
+        for (n1,n2),cov in self.newEdges.items():
+            n1_label = "{} ({})".format(self.labels[n1-1], self.getNodeW(n1))
+            n2_label = "{} ({})".format(self.labels[n2-1], self.getNodeW(n2))
+            g.edge(n1_label, n2_label, label=str(cov), color = "red")
+        g.render()
 
 def main():
-    global G, BV, text, EPos
-
-    info_path = sys.argv[1]
-    out_path = sys.argv[2]
-    out_file = sys.argv[3]
-
-    strand, names, text, BV, adj_matrix, EPos = readInfoPath(info_path)
-
-    # G = SplicingGraph(info_path)
-    # G = SplicingGraph(names, adj_matrix)
-    G = SplicingGraph()
-    initializeSG(names, adj_matrix)
-
-    G.buildOutLists()
-    competings = extractInfoFromOut(out_path)
-    confirmed_competings = checkCompetings(competings)
-
-    G.clean(0,0) # G.filter() def filter(self, x = 0, y = 0 ):
-    G.buildOutLists()
-    G.save(out_file)
-    
-    out = open(out_file, 'w')
-    checkESEvents(out)                     # G.checkESEvents()
-    checkCEvents(confirmed_competings, out, strand)  # G.check...
-    checkMEEEvents(out)
-    out.close()
+    infoPath = sys.argv[1] #index
+    memsPath = sys.argv[2] #MEMs
+    G = SplicingGraph(infoPath)
+    G.augments(memsPath)
+    G.extractEvents()
 
 if __name__ == '__main__':
     main()
