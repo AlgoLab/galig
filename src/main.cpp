@@ -94,7 +94,7 @@ int main(int argc, char* argv[]) {
             eps = std::stoi(optarg);
             break;
         case 'o':
-            out1 = std::string(optarg) + ".mem";
+            out1 = std::string(optarg);
             out2 = std::string(optarg) + ".ins";
             break;
         case 't':

@@ -33,14 +33,14 @@ std::pair<bool, int> MemsGraph::checkMEMs(const SplicingGraph& sg,
     std::string exon1_text = sg.getExon(id1);
     std::string exon2_text = sg.getExon(id2);
 
-    int err = K2;
+    int err = K2+1;
     bool flag = false;
     if(id1 == id2) { //m1 and m2 in the same exon
         if(m2.p+m2.l>m1.p+m1.l && m1.t<m2.t && m2.t<m1.t+m1.l+K1 && m1.t+m1.l<m2.t+m2.l) {
             int gap_P = m2.p-m1.p-m1.l;
             int gap_E = m2.t-m1.t-m1.l;
             if(gap_P>=0 && gap_E>=0) {
-                if(abs(gap_P-gap_E)<=K2) {
+                if(abs(gap_P-gap_E) <= K2) {
                     std::string sub_P = read.substr(m1.p+m1.l-1, m2.p-m1.p-m1.l);
                     std::string sub_E = exon1_text.substr(m1.t+m1.l-sg.select(id1)-1-1, m2.t-m1.t-m1.l);
                     err = e_distance(sub_P, sub_E);
@@ -50,7 +50,7 @@ std::pair<bool, int> MemsGraph::checkMEMs(const SplicingGraph& sg,
             } else {
                 err = abs(gap_P) + abs(gap_E);
             }
-            if(err < K2) {
+            if(err <= K2) {
                 flag = true;
             }
         }
@@ -69,7 +69,7 @@ std::pair<bool, int> MemsGraph::checkMEMs(const SplicingGraph& sg,
                         sub_P = read.substr(m1.p+m1.l-1,len_P);
                         err = e_distance(sub_P, sub_E);
                     }
-                    if(err < K2) {
+                    if(err <= K2) {
                         flag = true;
                     }
                 }
@@ -86,7 +86,7 @@ std::pair<bool, int> MemsGraph::checkMEMs(const SplicingGraph& sg,
 
 std::pair<bool, int> MemsGraph::validStart(const SplicingGraph& sg, const Mem& Mem) {
     if(Mem.p <= K0) {
-        int err = K2;
+        int err = K2+1;
         if(Mem.p == 1) {
             err = 0;
         } else {
@@ -124,7 +124,7 @@ std::pair<bool, int> MemsGraph::validStart(const SplicingGraph& sg, const Mem& M
                 err = e_distance(sub_P, sub_E);
             }
         }
-        if(err<K2) {
+        if(err <= K2) {
             return std::make_pair(true, err);
         }
     }
@@ -133,7 +133,7 @@ std::pair<bool, int> MemsGraph::validStart(const SplicingGraph& sg, const Mem& M
 
 std::pair<bool, int> MemsGraph::validEnd(const SplicingGraph& sg, const Mem& Mem) {
     if(Mem.p+Mem.l>=m-K0) {
-        int err = K2;
+        int err = K2+1;
         if(Mem.p+Mem.l == m+1) {
             err = 0;
         } else {
@@ -167,7 +167,7 @@ std::pair<bool, int> MemsGraph::validEnd(const SplicingGraph& sg, const Mem& Mem
                 err = e_distance(sub_P, sub_E);
             }
         }
-        if(err<K2) {
+        if(err <= K2) {
             return std::make_pair(true, err);
         }
     }
