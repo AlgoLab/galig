@@ -36,3 +36,7 @@ std::pair<std::string, std::string> FastaReader::pop() {
     sequences.pop_front();
     return std::make_pair(desc, seq);
 }
+
+bool FastaReader::hasReads() {
+    return !descriptions.empty();
+}

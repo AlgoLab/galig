@@ -16,5 +16,6 @@ public:
     FastaReader(const std::string&);
     int getSize();
     std::pair<std::string, std::string> pop();
+    bool hasReads();
 };
 #endif
