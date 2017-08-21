@@ -15,7 +15,8 @@ struct Mem {
     int l;
     int k;
     bool isNew;
-    lemon::ListDigraph::Node node;
+    lemon::ListDigraph::Node AnnNode;
+    lemon::ListDigraph::Node NovNode;
 
     Mem() {
         t = 0;
@@ -33,8 +34,13 @@ struct Mem {
         isNew = true;
     }
 
-    void setNode(lemon::ListDigraph::Node node_) {
-        node = node_;
+    void setAnnNode(lemon::ListDigraph::Node node_) {
+        AnnNode = node_;
+        isNew = false;
+    }
+
+    void setNovNode(lemon::ListDigraph::Node node_) {
+        NovNode = node_;
         isNew = false;
     }
 
@@ -45,8 +51,8 @@ struct Mem {
     }
 };
 
-int e_distance(const std::string&, const std::string&);
-std::string reverse_and_complement(const std::string&);
+int editDistance(const std::string&, const std::string&);
+std::string reverseAndComplement(const std::string&);
 bool compareMEMs(const Mem&, const Mem&);
 bool compareMEMsLength(const Mem&, const Mem&);
 #endif

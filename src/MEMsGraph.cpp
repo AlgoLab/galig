@@ -6,7 +6,10 @@ MemsGraph::MemsGraph(const std::string& read_,
                      const int& L_,
                      const int& eps_,
                      const int& exsN_,
-                     const bool& verbose_) : nodesMap(graph), edgesMap(graph)  {
+                     const bool& verbose_) : AnnNodesMap(AnnGraph),
+                                             AnnEdgesMap(AnnGraph),
+                                             NovNodesMap(NovGraph),
+                                             NovEdgesMap(NovGraph) {
     read = read_;
     m = read.size();
     L = L_;
@@ -17,71 +20,92 @@ MemsGraph::MemsGraph(const std::string& read_,
     exsN = exsN_;
     verbose = verbose_;
 
-    start = graph.addNode();
-    end = graph.addNode();
-    nodesMap[start] = Mem(0,0,0);
-    nodesMap[end] = Mem(-1,-1,-1);
+    AnnStart = AnnGraph.addNode();
+    AnnEnd = AnnGraph.addNode();
+    NovStart = NovGraph.addNode();
+    NovEnd = NovGraph.addNode();
+
+    AnnNodesMap[AnnStart] = Mem(0,0,0);
+    AnnNodesMap[AnnEnd] = Mem(-1,-1,-1);
+    NovNodesMap[NovStart] = Mem(0,0,0);
+    NovNodesMap[NovEnd] = Mem(-1,-1,-1);
 }
 
 std::pair<bool, int> MemsGraph::checkMEMs(const SplicingGraph& sg,
                                           const Mem& m1,
-                                          const Mem& m2,
-                                          const bool& twoPass) {
+                                          const Mem& m2) {
     int id1 = sg.rank(m1.t-1);
     int id2 = sg.rank(m2.t-1);
 
     std::string exon1_text = sg.getExon(id1);
     std::string exon2_text = sg.getExon(id2);
 
-    int err = K2+1;
-    bool flag = false;
+    int err = -1;
+    bool type = true;
     if(id1 == id2) { //m1 and m2 in the same exon
         if(m2.p+m2.l>m1.p+m1.l && m1.t<m2.t && m2.t<m1.t+m1.l+K1 && m1.t+m1.l<m2.t+m2.l) {
-            int gap_P = m2.p-m1.p-m1.l;
+            int gapP = m2.p-m1.p-m1.l;
             int gap_E = m2.t-m1.t-m1.l;
-            if(gap_P>=0 && gap_E>=0) {
-                if(abs(gap_P-gap_E) <= K2) {
+            if(gapP>=0 && gap_E>=0) {
+                if(gapP == 0) {
+                    //Possible intron
+                    err = 0;
+                    type = false;
+                } else if(abs(gapP-gap_E) <= K2) {
+                    //Possible SNV
                     std::string sub_P = read.substr(m1.p+m1.l-1, m2.p-m1.p-m1.l);
                     std::string sub_E = exon1_text.substr(m1.t+m1.l-sg.select(id1)-1-1, m2.t-m1.t-m1.l);
-                    err = e_distance(sub_P, sub_E);
+                    err = editDistance(sub_P, sub_E);
+                    type = true;
                 }
-            } else if(gap_P<=0 && gap_E<=0) {
-                err = abs(gap_P-gap_E);
+            } else if(gapP<=0 && gap_E<=0) {
+                err = abs(gapP-gap_E);
+                type = true;
             } else {
-                err = abs(gap_P) + abs(gap_E);
-            }
-            if(err <= K2) {
-                flag = true;
+                err = abs(gapP) + abs(gap_E);
+                type = true;
             }
         }
     } else { //m1 and m2 in different exons
         if(sg.contain(id1, id2)) {
-            if(!twoPass) {
-                if(m2.p+m2.l>m1.p+m1.l) {
-                    std::string sub_E1 = exon1_text.substr(m1.t+m1.l-sg.select(id1)-1-1, sg.select(id1+1)+1-m1.t-m1.l);
-                    std::string sub_E2 = exon2_text.substr(0,m2.t-sg.select(id2)-1-1);
-                    std::string sub_E = sub_E1 + sub_E2;
-                    int len_P = m2.p-m1.p-m1.l;
-                    std::string sub_P;
-                    if(len_P <= 0) {
-                        err = abs(len_P);
+            if(m2.p+m2.l>m1.p+m1.l) {
+                int gapP = m2.p-m1.p-m1.l;
+                int gapE1 = sg.select(id1+1)+1-m1.t-m1.l;
+                int gapE2 = m2.t-sg.select(id2)-1-1;
+                if(gapP <= 0) {
+                    err = abs(gapP);
+                    if(!sg.isNew(id1, id2) && gapE1 == 0 && gapE2 == 0) {
+                        type = true;
+                    }
+                    else if(err <= K2)
+                        //Possible Competing
+                        type = false;
+                    else
+                        err = -1;
+                } else {
+                    if(gapE1 == 0 && gapE2 == 0) {
+                        //Possible insertion
+                        err = 0;
+                        type = false;
                     } else {
-                        sub_P = read.substr(m1.p+m1.l-1,len_P);
-                        err = e_distance(sub_P, sub_E);
+                        if(abs(gapP-(gapE1+gapE2)) <= K2) {
+                            //Possible SNV
+                            std::string subP = read.substr(m1.p+m1.l-1, gapP);
+                            std::string subE1 = exon1_text.substr(m1.t+m1.l-sg.select(id1)-1-1, gapE1);
+                            std::string subE2 = exon2_text.substr(0, gapE2);
+                            std::string subE = subE1 + subE2;
+                            err = editDistance(subP, subE);
+                            type = true;
+                        }
                     }
-                    if(err <= K2) {
-                        flag = true;
-                    }
-                }
-            } else {
-                if(m2.p>m1.p+m1.l && m2.p+m2.l>m1.p+m1.l && m1.t+m1.l-1==sg.select(id1+1) && m2.t-1-1==sg.select(id2)) {
-                    err = 0;
-                    flag = true;
                 }
             }
         }
     }
-    return std::make_pair(flag, err);
+    if(err > K2) {
+        err = -1;
+    }
+    return std::make_pair(type, err);
 }
 
 std::pair<bool, int> MemsGraph::validStart(const SplicingGraph& sg, const Mem& Mem) {
@@ -114,14 +138,14 @@ std::pair<bool, int> MemsGraph::validStart(const SplicingGraph& sg, const Mem& M
                     } else {
                         sub_E = par_text + exon_pref;
                     }
-                    int curr_err = e_distance(sub_P, sub_E);
+                    int curr_err = editDistance(sub_P, sub_E);
                     if(curr_err < err) {
                         err = curr_err;
                     }
                 }
             } else {
                 sub_E = exon_text.substr(Mem.t-l-sg.select(id)-1-1, l);
-                err = e_distance(sub_P, sub_E);
+                err = editDistance(sub_P, sub_E);
             }
         }
         if(err <= K2) {
@@ -157,14 +181,14 @@ std::pair<bool, int> MemsGraph::validEnd(const SplicingGraph& sg, const Mem& Mem
                     int son = *it;
                     std::string son_text = sg.getExon(son);
                     sub_E = exon_suff + son_text.substr(0, shared_suff_len);
-                    int curr_err = e_distance(sub_P, sub_E);
+                    int curr_err = editDistance(sub_P, sub_E);
                     if(curr_err < err) {
                         err = curr_err;
                     }
                 }
             } else {
                 sub_E = exon_text.substr(Mem.t+Mem.l-sg.select(id)-1-1, l);
-                err = e_distance(sub_P, sub_E);
+                err = editDistance(sub_P, sub_E);
             }
         }
         if(err <= K2) {
@@ -175,8 +199,7 @@ std::pair<bool, int> MemsGraph::validEnd(const SplicingGraph& sg, const Mem& Mem
 }
 
 void MemsGraph::build(const SplicingGraph& sg,
-                      std::list<Mem>& MEMs_,
-                      const bool& twoPass) {
+                      std::list<Mem>& MEMs_) {
     std::vector<std::forward_list<Mem> > MEMs (m+1);
     for(const Mem& m : MEMs_) {
         int p = m.p;
@@ -185,98 +208,123 @@ void MemsGraph::build(const SplicingGraph& sg,
     for(std::vector<std::forward_list<Mem> >::iterator it=MEMs.begin(); it!=MEMs.end(); ++it) {
         for(Mem& m1 : *it) {
             int p1 = m1.p;
-            Node node1;
+            Node AnnNode1;
+            Node NovNode1;
             int id1 = sg.rank(m1.t-1);
             std::string exon1_text = sg.getExon(id1);
 
             /*********
              * Start *
              *********/
-            std::pair<bool, int> start_info = validStart(sg, m1);
-            bool start_flag = start_info.first;
-            int err = start_info.second;
-            if(start_flag) {
-                if(err <= K2) {
-                    //Possible transitive closures
-                    if(m1.isNew) {
-                        node1 = graph.addNode();
-                        m1.setNode(node1);
-                        nodesMap[node1] = m1;
-                    } else {
-                        node1 = m1.node;
-                    }
-                    Arc arc = graph.addArc(start,node1);
-                    edgesMap[arc] = err;
+            std::pair<bool, int> startInfo = validStart(sg, m1);
+            bool startFlag = startInfo.first;
+            int err = startInfo.second;
+            if(startFlag) {
+                if(m1.isNew) {
+                    AnnNode1 = AnnGraph.addNode();
+                    NovNode1 = NovGraph.addNode();
+                    m1.setAnnNode(AnnNode1);
+                    m1.setNovNode(NovNode1);
+                    AnnNodesMap[AnnNode1] = m1;
+                    NovNodesMap[NovNode1] = m1;
                 } else {
-                    continue;
+                    AnnNode1 = m1.AnnNode;
+                    NovNode1 = m1.NovNode;
                 }
+                Arc arc = AnnGraph.addArc(AnnStart,AnnNode1);
+                AnnEdgesMap[arc] = err;
+                arc = NovGraph.addArc(NovStart,NovNode1);
+                NovEdgesMap[arc] = err;
             } else {
                 if(m1.isNew) {
                     continue;
                 } else {
-                    node1 = m1.node;
+                    AnnNode1 = m1.AnnNode;
+                    NovNode1 = m1.NovNode;
                 }
             }
             /*************
              * Extending *
              *************/
+            bool AnnExt = false;
+            bool NovExt = false;
             int p2 = p1+1;
-            int max_p = p1+m1.l+K1;
-            while((!twoPass && p2<max_p && p2<m) || (twoPass && p2<m)) {
+            //int max_p = p1+m1.l+K1;
+            while(p2 <= m-L+1) {
+            //while((!twoPass && p2<max_p && p2<m) || (twoPass && p2<m)) {
                 for(Mem& m2 : MEMs[p2]) {
-                    Node node2;
-                    std::pair<bool, int> linkage_info = checkMEMs(sg, m1, m2, twoPass);
-                    bool flag = linkage_info.first;
-                    int err = linkage_info.second;
+                    Node AnnNode2;
+                    Node NovNode2;
+                    std::pair<bool, int> linkageInfo = checkMEMs(sg, m1, m2);
+                    bool flag = linkageInfo.first;
+                    int err = linkageInfo.second;
+                    if(err>=0) {
+                        if(m2.isNew) {
+                            AnnNode2 = AnnGraph.addNode();
+                            NovNode2 = NovGraph.addNode();
+                            m2.setAnnNode(AnnNode2);
+                            m2.setNovNode(NovNode2);
+                            AnnNodesMap[AnnNode2] = m2;
+                            NovNodesMap[NovNode2] = m2;
+                        } else {
+                            AnnNode2 = m2.AnnNode;
+                            NovNode2 = m2.NovNode;
+                        }
+                        if(flag) {
+                            Arc arc = AnnGraph.addArc(AnnNode1,AnnNode2);
+                            AnnEdgesMap[arc] = err;
+                            arc = NovGraph.addArc(NovNode1,NovNode2);
+                            NovEdgesMap[arc] = err;
+                            AnnExt = true;
+                            NovExt =true;
+                        } else {
+                            Arc arc = NovGraph.addArc(NovNode1,NovNode2);
+                            NovEdgesMap[arc] = err;
+                            NovExt =true;
+                        }
+                    }
+                    /**
                     if(flag) {
                         if(m2.isNew) {
-                            node2 = graph.addNode();
+                            AnnNode2 = AnnGraph.addNode();
+                            NovNode2 = NovGraph.addNode();
                             m2.setNode(node2);
                             nodesMap[node2] = m2;
                         } else {
                             node2 = m2.node;
                         }
-                        Arc arc = graph.addArc(node1,node2);
+                        Arc arc = NovGraph.addArc(node1,node2);
                         edgesMap[arc] = err;
+                        extended = true;
                     }
+                    **/
                 }
                 ++p2;
             }
             /*******
              * End *
              *******/
-            std::pair<bool, int> end_info = validEnd(sg, m1);
-            bool end_flag = end_info.first;
-            err = end_info.second;
-            if(end_flag && err <= K2) {
-                Arc arc = graph.addArc(node1,end);
-                edgesMap[arc] = err;
-            }
-        }
-    }
-    /**********************************
-     * Transitive closure on end node *
-     **********************************/
-    std::list<InArc> arcs_D;
-    for(InArc XZ (graph, end); XZ!=lemon::INVALID; ++XZ) {
-        Node X = graph.source(XZ);
-        for(OutArc XY (graph, X); XY!=lemon::INVALID; ++XY) {
-            Node Y = graph.target(XY);
-            if(graph.id(Y)!=graph.id(end)) {
-                for(OutArc YZ (graph, Y); YZ!=lemon::INVALID; ++YZ) {
-                    Node Z = graph.target(YZ);
-                    if(graph.id(Z)==graph.id(end)) {
-                        if(edgesMap[XY]+edgesMap[YZ]<=edgesMap[XZ]) {
-                            arcs_D.push_back(XZ);
-                        }
+            if(!AnnExt && !NovExt) {
+                std::pair<bool, int> endInfo = validEnd(sg, m1);
+                bool endFlag = endInfo.first;
+                err = endInfo.second;
+                if(endFlag) {
+                    Arc arc = AnnGraph.addArc(AnnNode1,AnnEnd);
+                    AnnEdgesMap[arc] = err;
+                    arc = NovGraph.addArc(NovNode1,NovEnd);
+                    NovEdgesMap[arc] = err;
+                    /**
+                    if(!AnnExt) {
+                        Arc arc = AnnGraph.addArc(AnnNode1,AnnEnd);
+                        AnnEdgesMap[arc] = err;
                     }
+                    if(!NovExt) {
+                        Arc arc = NovGraph.addArc(NovNode1,NovEnd);
+                        NovEdgesMap[arc] = err;
+                    }
+                    **/
                 }
             }
-        }
-    }
-    for(const InArc& a : arcs_D) {
-        if(graph.valid(a)) {
-            graph.erase(a);
         }
     }
     if(verbose) {
@@ -284,64 +332,64 @@ void MemsGraph::build(const SplicingGraph& sg,
     }
 }
 
-std::pair<std::pair<bool, int>, std::list<std::pair<bool, std::list<Mem> > > > MemsGraph::visit(const SplicingGraph& sg) {
-    bool atLeastOneAnnotaded = false;
-    std::list<std::pair<bool, std::list<Mem> > > paths;
-    int min_w = K2+1;
-    int curr_w;
-    for(OutArc arc (graph, start); arc!=lemon::INVALID; ++arc) {
-        Node node = graph.target(arc);
-        int w0 = edgesMap[arc];
-        do {
-            lemon::Dijkstra<Graph, lemon::ListDigraph::ArcMap<int> >
-                ::SetStandardHeap<FibH>
-                ::SetHeap<FibH,FibM>
-                ::Create dijkstra (graph, edgesMap);
-            FibM heap_cross_ref (graph);
-            FibH heap (heap_cross_ref);
-            dijkstra.heap(heap, heap_cross_ref);
-            dijkstra.run(node,end);
-            if(dijkstra.reached(end)) {
-                curr_w = w0+dijkstra.dist(end);
-                if(curr_w <= min_w) {
-                    min_w = curr_w;
-                    Path p = dijkstra.path(end);
-                    bool annotated = true;
-                    int i = 0;
-                    std::list<Mem> path;
-                    for(Path::ArcIt it(p); it != lemon::INVALID; ++it) {
-                        Arc e = it;
-                        Node source = graph.source(e);
-                        Node target = graph.target(e);
-                        Mem m1 = nodesMap[source];
-                        if(graph.id(target) != graph.id(end)) {
-                            Mem m2 = nodesMap[target];
-                            int id1 = sg.rank(m1.t-1);
-                            int id2 = sg.rank(m2.t-1);
-                            if(id1 != id2 && sg.isNew(id1, id2)) {
-                                annotated = false;
-                            }
-                        }
-                        path.push_back(m1);
-                        if(i==0) {
-                            if(graph.valid(it)) {
-                                graph.erase(it);
-                            }
-                        }
-                        ++i;
-                    }
-                    if(annotated && !atLeastOneAnnotaded) {
-                        atLeastOneAnnotaded = true;
-                    }
-                    paths.push_back(std::make_pair(annotated, path));
+std::pair<int, std::list<Mem> > MemsGraph::visit(const SplicingGraph& sg) {
+    std::list<Mem> path;
+    int w = 0;
+    bool annotated = false;
+
+    //Visiting Annotated Graph
+    lemon::Dijkstra<Graph, lemon::ListDigraph::ArcMap<int> >
+        ::SetStandardHeap<FibH>
+        ::SetHeap<FibH,FibM>
+        ::Create AnnDijkstra (AnnGraph, AnnEdgesMap);
+    FibM AnnHCR (AnnGraph);
+    FibH AnnHeap (AnnHCR);
+    AnnDijkstra.heap(AnnHeap, AnnHCR);
+    AnnDijkstra.run(AnnStart,AnnEnd);
+    if(AnnDijkstra.reached(AnnEnd)) {
+        w = AnnDijkstra.dist(AnnEnd);
+        if(w <= K2) {
+            annotated = true;
+            Path p = AnnDijkstra.path(AnnEnd);
+            for(Path::ArcIt it(p); it != lemon::INVALID; ++it) {
+                Arc e = it;
+                Node target = AnnGraph.target(e);
+                Mem m = AnnNodesMap[target];
+                if(NovGraph.id(target) != NovGraph.id(AnnEnd)) {
+                    path.push_back(m);
                 }
-            } else {
-                curr_w = min_w+1;
             }
-        } while(curr_w <= min_w);
-        graph.erase(arc);
+        }
     }
-    return std::make_pair(std::make_pair(atLeastOneAnnotaded, min_w), paths);
+
+    //Visiting Novel Graph
+    lemon::Dijkstra<Graph, lemon::ListDigraph::ArcMap<int> >
+        ::SetStandardHeap<FibH>
+        ::SetHeap<FibH,FibM>
+        ::Create NovDijkstra (NovGraph, NovEdgesMap);
+    FibM NovHCR (NovGraph);
+    FibH NovHeap (NovHCR);
+    NovDijkstra.heap(NovHeap, NovHCR);
+    NovDijkstra.run(NovStart,NovEnd);
+    if(NovDijkstra.reached(NovEnd)) {
+        int novW = NovDijkstra.dist(NovEnd);
+        if(!annotated || novW < w) {
+            w = novW;
+            path.clear();
+            if(novW <= K2) {
+                Path p = NovDijkstra.path(NovEnd);
+                for(Path::ArcIt it(p); it != lemon::INVALID; ++it) {
+                    Arc e = it;
+                    Node target = NovGraph.target(e);
+                    Mem m = NovNodesMap[target];
+                    if(NovGraph.id(target) != NovGraph.id(NovEnd)) {
+                        path.push_back(m);
+                    }
+                }
+            }
+        }
+    }
+    return std::make_pair(w, path);
 }
 
 void MemsGraph::save(const std::string& s) {
@@ -349,11 +397,11 @@ void MemsGraph::save(const std::string& s) {
     myfile.open(s);
 
     std::string dot = "digraph G {\n graph [splines=true overlap=false]\n node  [shape=ellipse, width=0.3, height=0.3]\n";
-    for (NodeIt n (graph); n != lemon::INVALID; ++n) {
-        dot += " " + std::to_string(graph.id(n)) + " [label=\"" + nodesMap[n].toStr() + "\"];\n";
+    for (NodeIt n (NovGraph); n != lemon::INVALID; ++n) {
+        dot += " " + std::to_string(NovGraph.id(n)) + " [label=\"" + NovNodesMap[n].toStr() + "\"];\n";
     }
-    for(ArcIt a (graph); a != lemon::INVALID; ++a) {
-        dot += " " + std::to_string(graph.id(graph.source(a))) + " -> " + std::to_string(graph.id(graph.target(a))) + "[label=\"" + std::to_string(edgesMap[a]) + "\"];\n";
+    for(ArcIt a (NovGraph); a != lemon::INVALID; ++a) {
+        dot += " " + std::to_string(NovGraph.id(NovGraph.source(a))) + " -> " + std::to_string(NovGraph.id(NovGraph.target(a))) + "[label=\"" + std::to_string(NovEdgesMap[a]) + "\"];\n";
     }
     dot += "}";
 

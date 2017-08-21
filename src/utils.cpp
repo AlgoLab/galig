@@ -1,6 +1,6 @@
 #include "utils.hpp"
 
-int e_distance(const std::string& s1, const std::string& s2) {
+int editDistance(const std::string& s1, const std::string& s2) {
     const std::size_t len1 = s1.size(), len2 = s2.size();
     std::vector<int> col(len2+1), prevCol(len2+1);
     for(unsigned int i = 0; i < prevCol.size(); i++)
@@ -16,7 +16,7 @@ int e_distance(const std::string& s1, const std::string& s2) {
     return prevCol[len2];
 }
 
-std::string reverse_and_complement(const std::string& s) {
+std::string reverseAndComplement(const std::string& s) {
     std::string rs = "";
     for(char c : s) {
         switch(c) {

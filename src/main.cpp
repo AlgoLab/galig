@@ -46,7 +46,6 @@ int main(int argc, char* argv[]) {
     std::string out1;
     std::string out2;
     bool index_only = false;
-    bool twoPass = false;
     bool verbose = false;
 
     // - Collecting command line parameters
@@ -62,13 +61,12 @@ int main(int argc, char* argv[]) {
                 {"L",  required_argument, 0, 'l'},
                 {"eps",    required_argument, 0, 'e'},
                 {"output", required_argument, 0, 'o'},
-                {"2pass", required_argument, 0, 't'},
                 {"verbose", no_argument, 0, 'v'},
                 {0, 0, 0, 0}
             };
 
         int option_index = 0;
-        c = getopt_long(argc, argv, "Ig:a:r:l:e:o:tv", long_options, &option_index);
+        c = getopt_long(argc, argv, "Ig:a:r:l:e:o:v", long_options, &option_index);
 
         if (c == -1) {
             break;
@@ -96,9 +94,6 @@ int main(int argc, char* argv[]) {
         case 'o':
             out1 = std::string(optarg);
             out2 = std::string(optarg) + ".ins";
-            break;
-        case 't':
-            twoPass = true;
             break;
         case 'v':
             verbose = true;
@@ -131,97 +126,58 @@ int main(int argc, char* argv[]) {
 
     // - Main loop: one iteration, one read
     // ---------------------------------------
-    int i = 0;
-    int numReads = fastas.getSize();
-    while(i<numReads) {
+    while(fastas.hasReads()) {
         // Read: (header, read)
-        // Paths: <<atLeastOneAnnotated, weight>, [<annotated, [mems]>]>
+        // Path: (weight, [mems])
         std::pair<std::string, std::string> seq = fastas.pop();
 
         // Original read
         std::string read = seq.second;
         std::list<Mem> mems = bm.getMEMs(read,L);
-        std::pair<std::pair<bool, int>, std::list<std::pair<bool, std::list<Mem> > > > paths;
+        std::pair<int, std::list<Mem> > path;
         if(!mems.empty()) {
             MemsGraph mg (read, L, eps, exsN, verbose);
-            mg.build(sg, mems, false);
-            paths = mg.visit(sg);
+            mg.build(sg, mems);
+            path = mg.visit(sg);
         }
 
         // Reversed-and-complemented read
-        std::string read_RC = reverse_and_complement(read);
-        std::list<Mem> mems_RC = bm.getMEMs(read_RC,L);
-        std::pair<std::pair<bool, int>, std::list<std::pair<bool, std::list<Mem> > > > paths_RC;
-        if(!mems_RC.empty()) {
-            MemsGraph mg_RC (read_RC, L, eps, exsN, verbose);
-            mg_RC.build(sg, mems_RC, false);
-            paths_RC = mg_RC.visit(sg);
+        std::string readRC = reverseAndComplement(read);
+        std::list<Mem> memsRC = bm.getMEMs(readRC,L);
+        std::pair<int, std::list<Mem> > pathRC;
+        if(!memsRC.empty()) {
+            MemsGraph mgRC (readRC, L, eps, exsN, verbose);
+            mgRC.build(sg, memsRC);
+            pathRC = mgRC.visit(sg);
         }
 
-        bool empty = paths.second.empty();
-        bool empty_RC = paths_RC.second.empty();
+        int err = path.first;
+        int errRC = pathRC.first;
+        bool empty = path.second.empty();
+        bool emptyRC = pathRC.second.empty();
         char strand;
-        if(empty && empty_RC) {
-            if(twoPass) {
-                MemsGraph mg (read, L, eps, exsN, verbose);
-                mg.build(sg, mems, true);
-                paths = mg.visit(sg);
-                MemsGraph mg_RC (read_RC, L, eps, exsN, verbose);
-                mg_RC.build(sg, mems_RC, true);
-                paths_RC = mg_RC.visit(sg);
-                for(std::list<std::pair<bool, std::list<Mem> > >::iterator p=paths.second.begin(); p!=paths.second.end(); ++p) {
-                    outFile2 << "+ " << seq.first << " 0 ";
-                    for(std::list<Mem>::iterator m=p->second.begin(); m!=p->second.end(); ++m) {
-                        outFile2 << m->toStr() << " ";
-                    }
-                    outFile2 << "\n";
-                }
-                for(std::list<std::pair<bool, std::list<Mem> > >::iterator p=paths_RC.second.begin(); p!=paths_RC.second.end(); ++p) {
-                    outFile2 << "- " << seq.first << " 0 ";
-                    for(std::list<Mem>::iterator m=p->second.begin(); m!=p->second.end(); ++m) {
-                        outFile2 << m->toStr() << " ";
-                    }
-                    outFile2 << "\n";
-                }
-            }
-        } else {
-            if(!empty && empty_RC) {
+        if(!empty || !emptyRC) {
+            if(!empty && emptyRC) {
                 strand = '+';
-            } else if(empty && !empty_RC) {
-                paths = paths_RC;
+            } else if(empty && !emptyRC) {
+                path = pathRC;
+                err = errRC;
                 strand = '-';
             } else {
-                if(paths.first.second <= paths_RC.first.second) {
+                if(path.first <= pathRC.first) {
                     strand = '+';
                 } else {
-                    paths = paths_RC;
+                    path = pathRC;
+                    err = errRC;
                     strand = '-';
                 }
             }
-
-            bool atLeastOneAnnotaded = paths.first.first;
-            int err = paths.first.second;
-            for(std::list<std::pair<bool, std::list<Mem> > >::iterator p=paths.second.begin(); p!=paths.second.end(); ++p) {
-                bool annotated = p->first;
-                bool f = true;
-                if(atLeastOneAnnotaded and !annotated) {
-                    f = false;
-                }
-                if(f) {
-                    outFile1 << strand << " " << seq.first << " " << err << " ";
-                    for(std::list<Mem>::iterator m=p->second.begin(); m!=p->second.end(); ++m) {
-                        outFile1 << m->toStr() << " ";
-                    }
-                    outFile1 << "\n";
-                    if(annotated)
-                        break;
-                }
+            outFile1 << strand << " " << seq.first << " " << err << " ";
+            for(std::list<Mem>::iterator m=path.second.begin(); m!=path.second.end(); ++m) {
+                outFile1 << m->toStr() << " ";
             }
+            outFile1 << "\n";
         }
-        ++i;
-        // if(i%1000 == 0) {
-        //     std::cout << "Processed " << i << " reads." << std::endl;
-        // }
     }
     outFile1.close();
     outFile2.close();

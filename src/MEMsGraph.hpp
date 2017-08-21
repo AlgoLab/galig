@@ -55,12 +55,17 @@ private:
     int K1;
     int K2;
     int exsN;
-    Graph graph;
-    Node2MEM nodesMap;
-    Arc2Int edgesMap;
-    Node start;
-    Node end;
-    std::pair<bool, int> checkMEMs(const SplicingGraph&, const Mem&, const Mem&, const bool&);
+    Graph AnnGraph;
+    Graph NovGraph;
+    Node2MEM AnnNodesMap;
+    Arc2Int AnnEdgesMap;
+    Node2MEM NovNodesMap;
+    Arc2Int NovEdgesMap;
+    Node AnnStart;
+    Node AnnEnd;
+    Node NovStart;
+    Node NovEnd;
+    std::pair<bool, int> checkMEMs(const SplicingGraph&, const Mem&, const Mem&);
     std::pair<bool, int> validStart(const SplicingGraph&, const Mem&);
     std::pair<bool, int> validEnd(const SplicingGraph&, const Mem&);
 public:
@@ -70,9 +75,8 @@ public:
               const int&,
               const bool&);
     void build(const SplicingGraph&,
-               std::list<Mem>&,
-               const bool&);
-    std::pair<std::pair<bool, int>, std::list<std::pair<bool, std::list<Mem> > > > visit(const SplicingGraph&);
+               std::list<Mem>&);
+    std::pair<int, std::list<Mem> > visit(const SplicingGraph&);
     void save(const std::string&);
 };
 
