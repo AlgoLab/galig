@@ -100,6 +100,7 @@ class SplicingGraph:
                         #Insertions and SNVs
                         else:
                             if currOffset == 0 and nextOffset == 0:
+                                #print("ins")
                                 #Insertions
                                 key = (currIndex, nextIndex)
                                 if key not in self.insertions:

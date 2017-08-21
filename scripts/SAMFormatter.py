@@ -189,7 +189,6 @@ class SAMFormatter:
                         CIGAR += "{}M".format(mems[i][2])
                     #------------------------------------------------
                     elif errors_P < 0:
-                        print(errors_T1, errors_T2, errors_P)
                         CIGAR += "{}N".format(intron + errors_T1 + errors_T2 + abs(errors_P))
                         CIGAR += "{}M".format(mems[i][2]-abs(errors_P))
                     #------------------------------------------------
