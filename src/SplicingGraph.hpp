@@ -9,7 +9,6 @@
 #include <map>
 
 #include "sdsl/bit_vectors.hpp"
-#include "FastaReader.hpp"
 #include "utils.hpp"
 
 struct Feature {
@@ -108,18 +107,18 @@ class SplicingGraph {
 private:
     std::string T;
     std::string reference;
-    int ref_length;
+    int refLen;
     bool strand;
-    std::list<std::pair<int, int> > Exons_Pos;
+    std::list<std::pair<int, int> > ExonsPos;
     std::vector<std::list<int> > parents;
     std::vector<std::list<int> > sons;
     int exsN;
-    std::list<std::string> Exons_Name;
+    std::list<std::string> ExonsName;
 
     std::vector<std::vector<int> > edges;
     sdsl::rrr_vector<> bitVector;
-    sdsl::rrr_vector<>::select_1_type select_BV;
-    sdsl::rrr_vector<>::rank_1_type rank_BV;
+    sdsl::rrr_vector<>::select_1_type selectBV;
+    sdsl::rrr_vector<>::rank_1_type rankBV;
 
     void setupBitVector();
     void save(const std::string);

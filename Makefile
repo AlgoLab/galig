@@ -51,7 +51,6 @@ PROGRAMS:=main
 # analyzegraph SNAP library
 OBJS_main = \
 	utils.o \
-	FastaReader.o \
 	bMEM.o \
 	SplicingGraph.o \
 	MEMsGraph.o \

@@ -6,17 +6,32 @@ std::string getExonID(int s, int e) {
 
 SplicingGraph::SplicingGraph(const std::string& fa,
                              const std::string& gtf) {
-    std::string genomic = FastaReader(fa).pop().second;
-    ref_length = genomic.size();
+    std::ifstream fastaFile (fa);
+    std::string line;
+    std::string head;
+    std::string genomic;
+    if(fastaFile.is_open()) {
+        while(getline(fastaFile,line)) {
+            if(line.compare("") != 0) {
+                if(line[0] == '>') {
+                    head = line.substr(1,line.size()-1);
+                } else {
+                    genomic += line;
+                }
+            }
+        }
+    } else {
+        std::cerr << "Genomic file not found!" << std::endl;
+    }
+    refLen = genomic.size();
 
     std::ifstream gtfFile;
     std::map<std::string, std::list<std::string> > genes;
     std::map<std::string, std::list<std::string> > transcripts;
     std::map<std::string, Feature> exons;
     std::map<std::string, std::string> addedExons;
-    std::string line;
-    std::string curr_gene = "";
-    std::string curr_tr = "";
+    std::string currGene;
+    std::string currTr;
     exsN = 0;
 
     gtfFile.open(gtf);
@@ -25,19 +40,19 @@ SplicingGraph::SplicingGraph(const std::string& fa,
             Feature f (line);
             if(f.type.compare("gene") == 0) {
                 reference = f.seqid;
-                curr_gene = f.id;
+                currGene = f.id;
                 strand = f.strand;
-                genes.insert(std::make_pair(curr_gene, std::list<std::string> ()));
+                genes.insert(std::make_pair(currGene, std::list<std::string> ()));
                 addedExons.clear();
             }
             else if(f.type.compare("transcript") == 0 || f.type.compare("mRNA") == 0) {
-                curr_tr = f.id;
-                genes.at(curr_gene).push_back(curr_tr);
-                transcripts.insert(std::pair<std::string, std::list<std::string> >(curr_tr, std::list<std::string> ()));
+                currTr = f.id;
+                genes.at(currGene).push_back(currTr);
+                transcripts.insert(std::pair<std::string, std::list<std::string> >(currTr, std::list<std::string> ()));
             }
             else if(f.type.compare("exon") == 0) {
                 std::string ex = f.id;
-                transcripts.at(curr_tr).push_back(ex);
+                transcripts.at(currTr).push_back(ex);
                 try {
                     addedExons.at(ex);
                 } catch(const std::out_of_range& oor) {
@@ -61,48 +76,37 @@ SplicingGraph::SplicingGraph(const std::string& fa,
     }
     T = "|";
 
-    int ex_id = 1;
-    std::map<std::string, int> ids_to_index;
-    std::list<std::pair<int, int> > exs_pos;
+    int exID = 1;
+    std::map<std::string, int> id2index;
     int curr_i = 1;
-    //bool firstTrans = true;
     for(std::map<std::string, std::list<std::string> >::iterator it1=genes.begin(); it1!=genes.end(); ++it1) {
         //Forall gene
         for(std::list<std::string>::iterator it2=it1->second.begin(); it2!=it1->second.end(); ++it2) {
             //Forall transcript in gene
-            std::list<int> exons_id;
+            std::list<int> exonsID;
             int last_i = -1;
             for(std::list<std::string>::iterator it3=transcripts[*it2].begin(); it3!=transcripts[*it2].end(); ++it3) {
                 //Forall exon in transcript
-                std::string exon_ID = *it3;
-                Feature e = exons[exon_ID];
-                std::string pos_ID = getExonID(e.start, e.end);
+                std::string exonID = *it3;
+                Feature e = exons[exonID];
+                std::string posID = getExonID(e.start, e.end);
                 try {
-                    addedExons.at(pos_ID);
-                    exons_id.push_back(ids_to_index[pos_ID]);
+                    addedExons.at(posID);
+                    exonsID.push_back(id2index[posID]);
                 } catch(const std::out_of_range& oor) {
-                    addedExons.insert(std::make_pair(pos_ID, ""));
-                    ids_to_index[pos_ID] = ex_id;
-                    exons_id.push_back(ex_id);
-                    std::string curr_ex_string = genomic.substr(e.start-1, e.end-e.start+1);
-                    T += curr_ex_string + "|";
-                    Exons_Pos.push_back(std::make_pair(e.start, e.end));
-                    Exons_Name.push_back(e.id);
-                    ++ex_id;
+                    addedExons.insert(std::make_pair(posID, ""));
+                    id2index[posID] = exID;
+                    exonsID.push_back(exID);
+                    std::string currExString = genomic.substr(e.start-1, e.end-e.start+1);
+                    T += currExString + "|";
+                    ExonsPos.push_back(std::make_pair(e.start, e.end));
+                    ExonsName.push_back(e.id);
+                    ++exID;
                 }
-                curr_i = ids_to_index[pos_ID];
+                curr_i = id2index[posID];
                 if(last_i != -1) {
                     if(edges[last_i][curr_i] == 0 && last_i != curr_i) {
                         edges[last_i][curr_i] = 1;
-                        /**
-                        if(firstTrans) {
-                            edges[last_i][curr_i] = 1;
-                        } else {
-                            if(edges[last_i][curr_i] != 1) {
-                                edges[last_i][curr_i] = 2;
-                            }
-                        }
-                        **/
                         parents[curr_i].push_back(last_i);
                         sons[last_i].push_back(curr_i);
                     }
@@ -112,9 +116,9 @@ SplicingGraph::SplicingGraph(const std::string& fa,
             //firstTrans = false
             //Transitive closure on the transcript
             int i = 0;
-            for(const int& id1 : exons_id) {
+            for(const int& id1 : exonsID) {
                 int j=0;
-                for(const int& id2 : exons_id) {
+                for(const int& id2 : exonsID) {
                     if(i<j && id1 != id2) {
                         if(edges[id1][id2] == 0) {
                             edges[id1][id2] = 2;
@@ -126,15 +130,15 @@ SplicingGraph::SplicingGraph(const std::string& fa,
                 }
                 ++i;
             }
-            exons_id.clear();
+            exonsID.clear();
         }
     }
 
     //Transitive closure on the full graph
     int i = 1;
-    for(const std::pair<int,int>& p1 : Exons_Pos) {
+    for(const std::pair<int,int>& p1 : ExonsPos) {
         int j = 1;
-        for(const std::pair<int,int>& p2 : Exons_Pos) {
+        for(const std::pair<int,int>& p2 : ExonsPos) {
             if(p1.second <= p2.first) {
                 if(edges[i][j] == 0) {
                     edges[i][j] = 3;
@@ -162,8 +166,8 @@ void SplicingGraph::setupBitVector() {
         i++;
     }
     bitVector = sdsl::rrr_vector<>(BV);
-    select_BV = sdsl::rrr_vector<>::select_1_type(&bitVector);
-    rank_BV = sdsl::rrr_vector<>::rank_1_type(&bitVector);
+    selectBV = sdsl::rrr_vector<>::select_1_type(&bitVector);
+    rankBV = sdsl::rrr_vector<>::rank_1_type(&bitVector);
 }
 
 std::string SplicingGraph::getText() const {
@@ -179,18 +183,18 @@ std::list<int> SplicingGraph::getSons(const int& i) const {
 }
 
 std::string SplicingGraph::getExon(const int& i) const {
-    int s = select_BV(i)+1;
-    int e = select_BV(i+1);
-    std::string exon_text = T.substr(s, e-s);
-    return exon_text;
+    int s = selectBV(i)+1;
+    int e = selectBV(i+1);
+    std::string exonText = T.substr(s, e-s);
+    return exonText;
 }
 
 int SplicingGraph::rank(const int& i) const {
-    return rank_BV(i);
+    return rankBV(i);
 }
 
 int SplicingGraph::select(const int& i) const {
-    return select_BV(i);
+    return selectBV(i);
 }
 
 bool SplicingGraph::contain(const int& x, const int& y) const {
@@ -244,7 +248,7 @@ void SplicingGraph::print() const {
 void SplicingGraph::save(const std::string path) {
     std::ofstream ofile;
     ofile.open(path + ".sg");
-    ofile << reference << " " << ref_length << " ";
+    ofile << reference << " " << refLen << " ";
     if(strand)
       ofile << "+";
     else
@@ -259,67 +263,16 @@ void SplicingGraph::save(const std::string path) {
         ofile << "; ";
     }
     ofile << "\n";
-    for(const std::pair<int,int>& p : Exons_Pos) {
+    for(const std::pair<int,int>& p : ExonsPos) {
         ofile << p.first << "," << p.second << " ";
     }
     ofile << "\n";
-    for(const std::string& name : Exons_Name) {
+    for(const std::string& name : ExonsName) {
         ofile << name << " ";
     }
     ofile << "\n";
     ofile.close();
 }
-
-/**
-SplicingGraph::SplicingGraph(const std::string& f) {
-    load(f);
-    setupBitVector();
-}
-
-void SplicingGraph::load(const std::string path) {
-    std::ifstream ifile;
-    int c = 0;
-    int row = 0;
-    std::string line;
-    ifile.open(path);
-    if(ifile.is_open()) {
-        while(getline(ifile,line)) {
-            switch(c) {
-            case 0: {
-                T = line;
-                break;
-            }
-            case 1: {
-                exsN = stoi(line);
-                edges.resize(exsN);
-                for(int i = 0; i < exsN; i++) {
-                    edges[i] = std::vector< int>(exsN, 0);
-                }
-                break;
-            }
-            default: {
-                int column = 0;
-                std::string token;
-                std::string delimiter = " ";
-                std::size_t pos;
-                while((pos = line.find(delimiter)) != std::string::npos) {
-                    token = line.substr(0, pos);
-                    line.erase(0, pos + delimiter.length());
-                    edges[row][column] = stoi(token);
-                    ++column;
-                }
-                ++row;
-            }
-            }
-            ++c;
-        }
-    } else {
-        std::cout << "SG not found!!" << std::endl;
-        exit(EXIT_FAILURE);
-    }
-    ifile.close();
-}
-**/
 
 int SplicingGraph::getExonsNumber() const {
     return exsN;

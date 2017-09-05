@@ -5,24 +5,11 @@
 #include <utility>
 #include <list>
 
-#include "FastaReader.hpp"
 #include "SplicingGraph.hpp"
 #include "bMEM.hpp"
 #include "utils.hpp"
 
 #include "MEMsGraph.hpp"
-
-/**
-   ### TIME ###
-   clock_t t1,t2;
-   float t;
-   t1=clock();
-   ...
-   t2=clock();
-   t = ((float)t2-(float)t1)/CLOCKS_PER_SEC;
-   printf("%.6f,", t);
-**/
-
 
 void printHelp() {
     std::cout << "Usage: SGAL [options] (required: -g -a -r -l -e)\n" << std::endl;
@@ -37,14 +24,69 @@ void printHelp() {
     std::cout << "  -v, --verbose: explain what is being done and save .dot" << std::endl;
 }
 
+void analyzeRead(BackwardMEM& bm,
+                 const SplicingGraph& sg,
+                 const std::string& head,
+                 const std::string& read,
+                 const int& L,
+                 const int& eps,
+                 const int& exsN,
+                 const bool& verbose,
+                 std::ofstream& outFile) {
+    // Original read
+    std::list<Mem> mems = bm.getMEMs(read,L);
+    std::pair<int, std::list<Mem> > path; // Path: (weight, [mems])
+    if(!mems.empty()) {
+        MemsGraph mg (read, L, eps, exsN, verbose);
+        mg.build(sg, mems);
+        path = mg.visit(sg);
+    }
+    
+    // Reversed-and-complemented read
+    std::string readRC = reverseAndComplement(read);
+    std::list<Mem> memsRC = bm.getMEMs(readRC,L);
+    std::pair<int, std::list<Mem> > pathRC; // Path: (weight, [mems])
+    if(!memsRC.empty()) {
+        MemsGraph mgRC (readRC, L, eps, exsN, verbose);
+        mgRC.build(sg, memsRC);
+        pathRC = mgRC.visit(sg);
+    }
+    int err = path.first;
+    int errRC = pathRC.first;
+    bool empty = path.second.empty();
+    bool emptyRC = pathRC.second.empty();
+    char strand;
+    if(!empty || !emptyRC) {
+        if(!empty && emptyRC) {
+            strand = '+';
+        } else if(empty && !emptyRC) {
+            path = pathRC;
+            err = errRC;
+            strand = '-';
+        } else {
+            if(path.first <= pathRC.first) {
+                strand = '+';
+            } else {
+                path = pathRC;
+                err = errRC;
+                strand = '-';
+            }
+        }
+        outFile << strand << " " << head << " " << err << " ";
+        for(std::list<Mem>::iterator m=path.second.begin(); m!=path.second.end(); ++m) {
+            outFile << m->toStr() << " ";
+        }
+        outFile << "\n";
+    }
+}
+
 int main(int argc, char* argv[]) {
     std::string genomic;
     std::string annotation;
     std::string rna_seqs;
     int L;
     int eps;
-    std::string out1;
-    std::string out2;
+    std::string out;
     bool index_only = false;
     bool verbose = false;
 
@@ -92,8 +134,7 @@ int main(int argc, char* argv[]) {
             eps = std::stoi(optarg);
             break;
         case 'o':
-            out1 = std::string(optarg);
-            out2 = std::string(optarg) + ".ins";
+            out = std::string(optarg);
             break;
         case 'v':
             verbose = true;
@@ -103,9 +144,8 @@ int main(int argc, char* argv[]) {
             exit(EXIT_FAILURE);
         }
     }
-    if(out1.compare("") == 0) {
-        out1 = "out.mem";
-        out2 = "out.ins";
+    if(out.compare("") == 0) {
+        out = "out.mem";
     }
 
     // - Building splicing graph
@@ -115,70 +155,35 @@ int main(int argc, char* argv[]) {
     if(index_only) return 0;
     int exsN = sg.getExonsNumber();
 
-    // - Setting up MEMs Index, Reads reader and out file
+    // - Setting up MEMs Index and out file
     // ---------------------------------------------------
     BackwardMEM bm (sg.getText(), genomic);
-    FastaReader fastas (rna_seqs);
-    std::ofstream outFile1;
-    outFile1.open(out1);
-    std::ofstream outFile2;
-    outFile2.open(out2);
+    std::ofstream outFile;
+    outFile.open(out);
 
     // - Main loop: one iteration, one read
     // ---------------------------------------
-    while(fastas.hasReads()) {
-        // Read: (header, read)
-        // Path: (weight, [mems])
-        std::pair<std::string, std::string> seq = fastas.pop();
-
-        // Original read
-        std::string read = seq.second;
-        std::list<Mem> mems = bm.getMEMs(read,L);
-        std::pair<int, std::list<Mem> > path;
-        if(!mems.empty()) {
-            MemsGraph mg (read, L, eps, exsN, verbose);
-            mg.build(sg, mems);
-            path = mg.visit(sg);
-        }
-
-        // Reversed-and-complemented read
-        std::string readRC = reverseAndComplement(read);
-        std::list<Mem> memsRC = bm.getMEMs(readRC,L);
-        std::pair<int, std::list<Mem> > pathRC;
-        if(!memsRC.empty()) {
-            MemsGraph mgRC (readRC, L, eps, exsN, verbose);
-            mgRC.build(sg, memsRC);
-            pathRC = mgRC.visit(sg);
-        }
-
-        int err = path.first;
-        int errRC = pathRC.first;
-        bool empty = path.second.empty();
-        bool emptyRC = pathRC.second.empty();
-        char strand;
-        if(!empty || !emptyRC) {
-            if(!empty && emptyRC) {
-                strand = '+';
-            } else if(empty && !emptyRC) {
-                path = pathRC;
-                err = errRC;
-                strand = '-';
-            } else {
-                if(path.first <= pathRC.first) {
-                    strand = '+';
+    std::ifstream fastaFile (rna_seqs);
+    if(fastaFile.is_open()) {
+        std::string line;
+        std::string head;
+        std::string read;
+        while(getline(fastaFile,line)) {
+            if(line.compare("") != 0) {
+                if(line[0] == '>') {
+                    if(read.compare("") != 0) {
+                        analyzeRead(bm, sg, head, read, L, eps, exsN, verbose, outFile);
+                        read = "";
+                    }
+                    head = line.substr(1,line.size()-1);
                 } else {
-                    path = pathRC;
-                    err = errRC;
-                    strand = '-';
+                    read += line;
                 }
             }
-            outFile1 << strand << " " << seq.first << " " << err << " ";
-            for(std::list<Mem>::iterator m=path.second.begin(); m!=path.second.end(); ++m) {
-                outFile1 << m->toStr() << " ";
-            }
-            outFile1 << "\n";
         }
+        analyzeRead(bm, sg, head, read, L, eps, exsN, verbose, outFile);
+    } else {
+        std::cerr << "Reads file not found!" << std::endl;
     }
-    outFile1.close();
-    outFile2.close();
+    outFile.close();
 }
