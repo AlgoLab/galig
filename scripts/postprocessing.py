@@ -6,9 +6,7 @@ from BitVector import BitVector
 from utils import *
 
 #Confidence values for each event
-ES_conf = 1
-C_conf = 5
-MEE_conf = 1
+conf = 5
 
 class SplicingGraph:
     def __init__(self, infoPath):
@@ -45,14 +43,16 @@ class SplicingGraph:
     #Augmenting
     def augments(self, memsPath):
         '''
-        - comps: {exID: {offset : weight}}
-        - ins:   {(exID1,exID2): {size : weight}}
-        - SNVs:  {exID: {(posT, posP) : weight}}
+        - comps:   {exID: {offset : weight}}
+        - ins:     {(exID1,exID2,size) : weight}
+        - SNVs:    {(exID, posT, posP) : weight} (posT: distance from label beginning)
+        - introns: {(exID, posT, len) : weight} (posT: distance from label beginning)
         '''
         self.comp3 = {}
         self.comp5 = {}
         self.insertions = {}
         self.SNVs = {}
+        self.introns = {}
         with open(memsPath, 'r') as out:
             for line in out:
                 # 0: strand
@@ -102,33 +102,29 @@ class SplicingGraph:
                             if currOffset == 0 and nextOffset == 0:
                                 #print("ins")
                                 #Insertions
-                                key = (currIndex, nextIndex)
-                                if key not in self.insertions:
-                                    self.insertions[key] = {}
-                                self.insertions[key][overlap] = self.insertions[key][overlap]+1 if overlap in self.insertions[key] else 1
+                                key = (currIndex, nextIndex, overlap)
+                                self.insertions[key] = self.insertions[key]+1 if key in self.insertions else 1
                             else:
                                 #SNV
                                 if overlap == currOffset + nextOffset:
-                                    if currIndex not in self.SNVs:
-                                        self.SNVs[currIndex] = {}
-                                    key = (currMEM[0]+currMEM[2], currMEM[1]+currMEM[2])
-                                    self.SNVs[currIndex][key] = self.SNVs[currIndex][key]+1 if key in self.SNVs[currIndex] else 1
-                                    if nextIndex not in self.SNVs:
-                                        self.SNVs[nextIndex] = {}
-                                    key = (nextMEM[0]-1, nextMEM[1]-1)
-                                    self.SNVs[nextIndex][key] = self.SNVs[nextIndex][key]+1 if key in self.SNVs[nextIndex] else 1
-                    else:
-                        #SNV
+                                    key = (currIndex, currMEM[0]+currMEM[2]-self.BV.select(currIndex), currMEM[1]+currMEM[2])
+                                    self.SNVs[key] = self.SNVs[key]+1 if key in self.SNVs else 1
+                                    key = (nextIndex, nextMEM[0]-1-self.BV.select(nextIndex), nextMEM[1]-1)
+                                    self.SNVs[key] = self.SNVs[key]+1 if key in self.SNVs else 1
+                    else: #mems are aligned to same exon
                         Poverlap = nextMEM[1]-currMEM[1]-currMEM[2]
                         Toverlap = nextMEM[0]-currMEM[0]-currMEM[2]
+                        #NewIntron
+                        if Poverlap == 0 and Toverlap > 0:
+                            key = (currIndex, currMEM[1]+currMEM[2]-self.BV.select(currIndex), Toverlap)
+                            self.introns[key] = self.introns[key]+1 if key in self.introns else 1
+                        #SNV
                         if Poverlap == Toverlap:
-                            if currIndex not in self.SNVs:
-                                self.SNVs[currIndex] = {}
-                            key1 = (currMEM[0]+currMEM[2], currMEM[1]+currMEM[2])
-                            key2 = (nextMEM[0]-1, nextMEM[1]-1)
-                            self.SNVs[currIndex][key1] = self.SNVs[currIndex][key1]+1 if key1 in self.SNVs[currIndex] else 1
+                            key1 = (currIndex, currMEM[0]+currMEM[2]-self.BV.select(currIndex), currMEM[1]+currMEM[2])
+                            key2 = (currIndex, nextMEM[0]-1-self.BV.select(currIndex), nextMEM[1]-1)
+                            self.SNVs[key1] = self.SNVs[key1]+1 if key1 in self.SNVs else 1
                             if key1 != key2:
-                                self.SNVs[currIndex][key2] = self.SNVs[currIndex][key2]+1 if key2 in self.SNVs[currIndex] else 1
+                                self.SNVs[key2] = self.SNVs[key2]+1 if key2 in self.SNVs else 1
 
     ## EVENTS
     ##########
@@ -140,7 +136,7 @@ class SplicingGraph:
 
     def extractES(self):
         for (n1,n2),w in self.newEdges.items():
-            if w > ES_conf:
+            if w > conf:
                 label1 = self.getNodeLabel(n1)
                 label2 = self.getNodeLabel(n2)
                 print("ES {} {} {} {} {}".format(label1, label2, self.ExonPos[label1][1], self.ExonPos[label2][0], w))
@@ -149,7 +145,7 @@ class SplicingGraph:
         for exid,comp in CompDict.items():
             label = self.getNodeLabel(exid)
             for offset,w in comp.items():
-                if w > C_conf:
+                if w > conf:
                     if self.GeneStrand:
                         t = "5'" if t_flag else "3'"
                         ann_pos = self.ExonPos[label][1] if t_flag else self.ExonPos[label][0]
@@ -161,7 +157,7 @@ class SplicingGraph:
                     print("{} {} {} {} {}".format(t, label, ann_pos, new_pos, w))
 
     def extractMEE(self):
-        self.clean(MEE_conf,MEE_conf)
+        self.clean(conf,conf)
         A = self.getAdjMatrix()
         alreadyChecked = []
         for node1 in [node for node in self.nodes]:
@@ -174,8 +170,36 @@ class SplicingGraph:
                         w = 2
                         label1 = self.getNodeLabel(node1)
                         label2 = self.getNodeLabel(node2)
-                        if w > MEE_conf:
+                        if w > conf:
                             print("MEE {} {} {} {} {} {} {}".format(label1, label2, self.ExonPos[label1][0], self.ExonPos[label1][1], self.ExonPos[label2][0], self.ExonPos[label2][1], w))
+
+    ## INFO
+    ########
+    def extractInfo(self):
+        self.extractIns()
+        self.extractSNV()
+        self.extractIntrons()
+
+    def extractIns(self):
+        #{(exID1,exID2,size) : weight}
+        for (n1,n2,l),w in self.insertions.items():
+            if w > conf:
+                label1 = self.getNodeLabel(n1)
+                label2 = self.getNodeLabel(n2)
+                print("INS {} {} {} {} {}".format(label1, label2, self.ExonPos[label1][1], self.ExonPos[label2][0], w))
+
+    def extractSNV(self):
+        #{(exID, posT, posP) : weight}
+        for (n,posT,posP),w in self.SNVs.items():
+            if w > conf:
+                label = self.getNodeLabel(n)
+                print("SNV {} {} {} {}".format(label, self.ExonPos[label][0]+posT, posP, w))
+
+    def extractIntrons(self):
+        #{(exID, posT, len) : weight}
+        for (n,posT,l),w in self.introns.items():
+            label = self.getNodeLabel(n)
+            print("INT {} {} {} {}".format(label, self.ExonPos[label][0]+posT, self.ExonPos[label][0]+posT+l, w))
     
     #Nodes Methods
     def addNode(self, label, w=0):
@@ -299,6 +323,7 @@ def main():
     G = SplicingGraph(infoPath)
     G.augments(memsPath)
     G.extractEvents()
+    G.extractInfo()
 
 if __name__ == '__main__':
     main()
