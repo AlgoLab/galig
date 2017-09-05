@@ -41,7 +41,6 @@ class SAMFormatter:
         self.bv = BitVector(self.text)
 
     def format(self):
-        out_mems = open(self.out_file + "_in_SAM", "w")
         out = open(self.out_file + ".sam", "w")
         out.write("@HD\tVN:1.4\n")
         out.write("@SQ\tSN:{}\tLN:{}\n".format(self.reference, self.ref_length))
@@ -71,9 +70,7 @@ class SAMFormatter:
                 last_start = start
                 last_cigar = cigar
                 out.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\tNM:i:{}\n".format(p_id, f, self.reference, start, 255, cigar, "*", 0, 0, rna_seq, "*", err))
-                out_mems.write("{} {} {} {}\n".format(strand, p_id, err, ' '.join(mems)))
         out.close()
-        out_mems.close()
 
     #Utils
     def extractMEMs(self, mems_S):
