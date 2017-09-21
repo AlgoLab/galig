@@ -1,17 +1,21 @@
 import sys, os
 
+from Bio import SeqIO
 from graphviz import Digraph
 
 from BitVector import BitVector
 from utils import *
 
 #Confidence values for each event
-conf = 5
+conf = 1
 
 class SplicingGraph:
-    def __init__(self, infoPath):
+    def __init__(self, ref, reads, infoPath):
         infofile = open(infoPath)
         lines = infofile.readlines()
+        chromo = lines[0].strip("\n").split(" ")[0]
+        self.ref = list(SeqIO.parse(ref, "fasta"))[0].seq
+        self.reads = SeqIO.index(reads, "fasta")
         if lines[0].strip("\n").split(" ")[2] == '+':
             self.GeneStrand = True
         else:
@@ -21,7 +25,6 @@ class SplicingGraph:
         self.BV = BitVector(self.Text)
         pos = [(int(p[0]), int(p[1])) for p in [pos.split(",") for pos in lines[4].strip("\n").split()]]
         self.ExonPos = dict(zip(self.ExonNames, pos))
-
         self.labels = []
         self.nodes = {}
         self.edges = {}
@@ -60,6 +63,7 @@ class SplicingGraph:
                 # 2: errors
                 # 3+: mems
                 align = line.strip("\n").strip(" ").split(" ")
+                readID = align[1]
                 usedExons = set([self.BV.rank(int(mem[1:-1].split(',')[0]) - 1) for mem in align[3:]])
                 for e in usedExons:
                     self.incrementNode(e)
@@ -100,10 +104,23 @@ class SplicingGraph:
                         #Insertions and SNVs
                         else:
                             if currOffset == 0 and nextOffset == 0:
-                                #print("ins")
                                 #Insertions
-                                key = (currIndex, nextIndex, overlap)
-                                self.insertions[key] = self.insertions[key]+1 if key in self.insertions else 1
+                                IntronStart = self.ExonPos[self.ExonNames[currIndex-1]][1] + 1
+                                IntronEnd = self.ExonPos[self.ExonNames[nextIndex-1]][0]
+                                intron = self.ref[IntronStart:IntronEnd]
+                                read = self.reads[readID].seq
+                                readGap = read[currMEM[1]+currMEM[2]:nextMEM[1]]
+                                if readGap == intron[:len(readGap)]:
+                                    if currIndex not in self.comp5:
+                                        self.comp5[currIndex] = {}
+                                    self.comp5[currIndex][-len(readGap)] = self.comp5[currIndex][-len(readGap)]+1 if -len(readGap) in self.comp5[currIndex] else 1
+                                elif readGap == intron[len(intron)-len(readGap):]:
+                                    if nextIndex not in self.comp3:
+                                        self.comp3[nextIndex] = {}
+                                    self.comp3[nextIndex][-len(readGap)] = self.comp3[nextIndex][-len(readGap)]+1 if -len(readGap) in self.comp3[nextIndex] else 1
+                                else:
+                                    key = (currIndex, nextIndex, overlap)
+                                    self.insertions[key] = self.insertions[key]+1 if key in self.insertions else 1
                             else:
                                 #SNV
                                 if overlap == currOffset + nextOffset:
@@ -186,7 +203,7 @@ class SplicingGraph:
             if w > conf:
                 label1 = self.getNodeLabel(n1)
                 label2 = self.getNodeLabel(n2)
-                print("INS {} {} {} {} {}".format(label1, label2, self.ExonPos[label1][1], self.ExonPos[label2][0], w))
+                print("INS {} {} {} {} {} {}".format(label1, label2, self.ExonPos[label1][1], self.ExonPos[label2][0], l, w))
 
     def extractSNV(self):
         #{(exID, posT, posP) : weight}
@@ -199,7 +216,7 @@ class SplicingGraph:
         #{(exID, posT, len) : weight}
         for (n,posT,l),w in self.introns.items():
             label = self.getNodeLabel(n)
-            print("INT {} {} {} {}".format(label, self.ExonPos[label][0]+posT, self.ExonPos[label][0]+posT+l, w))
+            print("NI {} {} {} {}".format(label, self.ExonPos[label][0]+posT, self.ExonPos[label][0]+posT+l, w))
     
     #Nodes Methods
     def addNode(self, label, w=0):
@@ -318,9 +335,11 @@ class SplicingGraph:
         g.render()
 
 def main():
-    infoPath = sys.argv[1] #index
-    memsPath = sys.argv[2] #MEMs
-    G = SplicingGraph(infoPath)
+    ref = sys.argv[1]      #reference
+    reads = sys.argv[2]    #reads
+    infoPath = sys.argv[3] #index
+    memsPath = sys.argv[4] #MEMs
+    G = SplicingGraph(ref, reads, infoPath)
     G.augments(memsPath)
     G.extractEvents()
     G.extractInfo()
