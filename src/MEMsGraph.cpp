@@ -77,10 +77,10 @@ std::pair<bool, int> MemsGraph::checkMEMs(const SplicingGraph& sg,
                     if(!sg.isNew(id1, id2) && gapE1 == 0 && gapE2 == 0) {
                         type = true;
                     }
-                    else if(err <= K2)
+                    else if(err <= K2) {
                         //Possible Competing
                         type = false;
-                    else
+                    } else
                         err = -1;
                 } else {
                     if(gapE1 == 0 && gapE2 == 0) {
@@ -249,9 +249,7 @@ void MemsGraph::build(const SplicingGraph& sg,
             bool AnnExt = false;
             bool NovExt = false;
             int p2 = p1+1;
-            //int max_p = p1+m1.l+K1;
             while(p2 <= m-L+1) {
-            //while((!twoPass && p2<max_p && p2<m) || (twoPass && p2<m)) {
                 for(Mem& m2 : MEMs[p2]) {
                     Node AnnNode2;
                     Node NovNode2;
@@ -313,29 +311,24 @@ void MemsGraph::build(const SplicingGraph& sg,
                     AnnEdgesMap[arc] = err;
                     arc = NovGraph.addArc(NovNode1,NovEnd);
                     NovEdgesMap[arc] = err;
-                    /**
-                    if(!AnnExt) {
-                        Arc arc = AnnGraph.addArc(AnnNode1,AnnEnd);
-                        AnnEdgesMap[arc] = err;
-                    }
-                    if(!NovExt) {
-                        Arc arc = NovGraph.addArc(NovNode1,NovEnd);
-                        NovEdgesMap[arc] = err;
-                    }
-                    **/
                 }
             }
         }
     }
+
     if(verbose) {
-        save("./Graphs/Graph.dot");
+        save("Graph.dot");
     }
 }
 
-std::pair<int, std::list<Mem> > MemsGraph::visit(const SplicingGraph& sg) {
-    std::list<Mem> path;
-    int w = 0;
-    bool annotated = false;
+std::list<std::pair<int, std::list<Mem> > > MemsGraph::visit(const SplicingGraph& sg) {
+    std::list<std::pair<int, std::list<Mem> > > paths;
+    std::list<Mem> AnnPath1;
+    std::list<Mem> AnnPath2;
+    std::list<Mem> NovPath;
+    int AnnW1 = 0;
+    int AnnW2 = 0;
+    int NovW = 0;
 
     //Visiting Annotated Graph
     lemon::Dijkstra<Graph, lemon::ListDigraph::ArcMap<int> >
@@ -345,20 +338,43 @@ std::pair<int, std::list<Mem> > MemsGraph::visit(const SplicingGraph& sg) {
     FibM AnnHCR (AnnGraph);
     FibH AnnHeap (AnnHCR);
     AnnDijkstra.heap(AnnHeap, AnnHCR);
+
     AnnDijkstra.run(AnnStart,AnnEnd);
     if(AnnDijkstra.reached(AnnEnd)) {
-        w = AnnDijkstra.dist(AnnEnd);
-        if(w <= K2) {
-            annotated = true;
+        AnnW1 = AnnDijkstra.dist(AnnEnd);
+        if(AnnW1 <= K2) {
+            Path p = AnnDijkstra.path(AnnEnd);
+            bool first = true;
+            for(Path::ArcIt it(p); it != lemon::INVALID; ++it) {
+                if(first) {
+                    AnnGraph.erase(it);
+                    first = false;
+                }
+                Arc e = it;
+                Node target = AnnGraph.target(e);
+                Mem m = AnnNodesMap[target];
+                if(NovGraph.id(target) != NovGraph.id(AnnEnd)) {
+                    AnnPath1.push_back(m);
+                }
+            }
+            paths.push_back(std::make_pair(AnnW1, AnnPath1));
+        }
+    }
+
+    AnnDijkstra.run(AnnStart,AnnEnd);
+    if(AnnDijkstra.reached(AnnEnd)) {
+        AnnW2 = AnnDijkstra.dist(AnnEnd);
+        if(AnnW2 <= K2) {
             Path p = AnnDijkstra.path(AnnEnd);
             for(Path::ArcIt it(p); it != lemon::INVALID; ++it) {
                 Arc e = it;
                 Node target = AnnGraph.target(e);
                 Mem m = AnnNodesMap[target];
                 if(NovGraph.id(target) != NovGraph.id(AnnEnd)) {
-                    path.push_back(m);
+                    AnnPath2.push_back(m);
                 }
             }
+            paths.push_back(std::make_pair(AnnW2, AnnPath2));
         }
     }
 
@@ -370,26 +386,28 @@ std::pair<int, std::list<Mem> > MemsGraph::visit(const SplicingGraph& sg) {
     FibM NovHCR (NovGraph);
     FibH NovHeap (NovHCR);
     NovDijkstra.heap(NovHeap, NovHCR);
+
     NovDijkstra.run(NovStart,NovEnd);
     if(NovDijkstra.reached(NovEnd)) {
-        int novW = NovDijkstra.dist(NovEnd);
-        if(!annotated || novW < w) {
-            w = novW;
-            path.clear();
-            if(novW <= K2) {
+        NovW = NovDijkstra.dist(NovEnd);
+        if(NovW < AnnW1) {
+            if(NovW <= K2) {
                 Path p = NovDijkstra.path(NovEnd);
                 for(Path::ArcIt it(p); it != lemon::INVALID; ++it) {
                     Arc e = it;
                     Node target = NovGraph.target(e);
                     Mem m = NovNodesMap[target];
                     if(NovGraph.id(target) != NovGraph.id(NovEnd)) {
-                        path.push_back(m);
+                        NovPath.push_back(m);
                     }
                 }
             }
+            if(paths.size() > 1)
+                paths.pop_back();
+            paths.push_front(std::make_pair(NovW, NovPath));
         }
     }
-    return std::make_pair(w, path);
+    return paths;
 }
 
 void MemsGraph::save(const std::string& s) {

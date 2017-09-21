@@ -76,7 +76,7 @@ public:
               const bool&);
     void build(const SplicingGraph&,
                std::list<Mem>&);
-    std::pair<int, std::list<Mem> > visit(const SplicingGraph&);
+    std::list<std::pair<int, std::list<Mem> > > visit(const SplicingGraph&);
     void save(const std::string&);
 };
 
