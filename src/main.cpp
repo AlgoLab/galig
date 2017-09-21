@@ -24,60 +24,49 @@ void printHelp() {
     std::cout << "  -v, --verbose: explain what is being done and save .dot" << std::endl;
 }
 
-void analyzeRead(BackwardMEM& bm,
-                 const SplicingGraph& sg,
-                 const std::string& head,
-                 const std::string& read,
-                 const int& L,
-                 const int& eps,
-                 const int& exsN,
-                 const bool& verbose,
-                 std::ofstream& outFile) {
+std::pair<char, std::list<std::pair<int, std::list<Mem> > > > analyzeRead(BackwardMEM& bm,
+                                                                                const SplicingGraph& sg,
+                                                                                const std::string& read,
+                                                                                const int& L,
+                                                                                const int& eps,
+                                                                                const int& exsN,
+                                                                                const bool& verbose) {
     // Original read
     std::list<Mem> mems = bm.getMEMs(read,L);
-    std::pair<int, std::list<Mem> > path; // Path: (weight, [mems])
+    std::list<std::pair<int, std::list<Mem> > > paths; // Path: [(weight, [mems])]
     if(!mems.empty()) {
         MemsGraph mg (read, L, eps, exsN, verbose);
         mg.build(sg, mems);
-        path = mg.visit(sg);
+        paths = mg.visit(sg);
     }
-    
     // Reversed-and-complemented read
     std::string readRC = reverseAndComplement(read);
     std::list<Mem> memsRC = bm.getMEMs(readRC,L);
-    std::pair<int, std::list<Mem> > pathRC; // Path: (weight, [mems])
+    std::list<std::pair<int, std::list<Mem> > > pathsRC; // Path: [(weight, [mems])]
     if(!memsRC.empty()) {
         MemsGraph mgRC (readRC, L, eps, exsN, verbose);
         mgRC.build(sg, memsRC);
-        pathRC = mgRC.visit(sg);
+        pathsRC = mgRC.visit(sg);
     }
-    int err = path.first;
-    int errRC = pathRC.first;
-    bool empty = path.second.empty();
-    bool emptyRC = pathRC.second.empty();
-    char strand;
+    bool empty = paths.empty();
+    bool emptyRC = pathsRC.empty();
+    char strand = '/';
     if(!empty || !emptyRC) {
         if(!empty && emptyRC) {
             strand = '+';
         } else if(empty && !emptyRC) {
-            path = pathRC;
-            err = errRC;
+            paths = pathsRC;
             strand = '-';
         } else {
-            if(path.first <= pathRC.first) {
+            if(paths.front().first <= pathsRC.front().first) {
                 strand = '+';
             } else {
-                path = pathRC;
-                err = errRC;
+                paths = pathsRC;
                 strand = '-';
             }
         }
-        outFile << strand << " " << head << " " << err << " ";
-        for(std::list<Mem>::iterator m=path.second.begin(); m!=path.second.end(); ++m) {
-            outFile << m->toStr() << " ";
-        }
-        outFile << "\n";
     }
+    return std::make_pair(strand, paths);
 }
 
 int main(int argc, char* argv[]) {
@@ -161,9 +150,10 @@ int main(int argc, char* argv[]) {
     std::ofstream outFile;
     outFile.open(out);
 
+    std::ifstream fastaFile (rna_seqs);
+    std::pair<char, std::list<std::pair<int, std::list<Mem> > > > paths;
     // - Main loop: one iteration, one read
     // ---------------------------------------
-    std::ifstream fastaFile (rna_seqs);
     if(fastaFile.is_open()) {
         std::string line;
         std::string head;
@@ -172,7 +162,19 @@ int main(int argc, char* argv[]) {
             if(line.compare("") != 0) {
                 if(line[0] == '>') {
                     if(read.compare("") != 0) {
-                        analyzeRead(bm, sg, head, read, L, eps, exsN, verbose, outFile);
+                        paths = analyzeRead(bm, sg, read, L, eps, exsN, verbose);
+                        if(paths.first != '/') {
+                            for(std::pair<int, std::list<Mem> > path : paths.second) {
+                                if(!path.second.empty()) {
+                                    int err = path.first;
+                                    outFile << paths.first << " " << head << " " << err << " ";
+                                    for(std::list<Mem>::iterator m=path.second.begin(); m!=path.second.end(); ++m) {
+                                        outFile << m->toStr() << " ";
+                                    }
+                                    outFile << "\n";
+                                }
+                            }
+                        }
                         read = "";
                     }
                     head = line.substr(1,line.size()-1);
@@ -181,7 +183,19 @@ int main(int argc, char* argv[]) {
                 }
             }
         }
-        analyzeRead(bm, sg, head, read, L, eps, exsN, verbose, outFile);
+        paths = analyzeRead(bm, sg, read, L, eps, exsN, verbose);
+        if(paths.first != '/') {
+            for(std::pair<int, std::list<Mem> > path : paths.second) {
+                if(!path.second.empty()) {
+                    int err = path.first;
+                    outFile << paths.first << " " << head << " " << err << " ";
+                    for(std::list<Mem>::iterator m=path.second.begin(); m!=path.second.end(); ++m) {
+                        outFile << m->toStr() << " ";
+                    }
+                    outFile << "\n";
+                }
+            }
+        }
     } else {
         std::cerr << "Reads file not found!" << std::endl;
     }

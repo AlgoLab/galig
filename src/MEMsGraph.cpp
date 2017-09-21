@@ -227,14 +227,20 @@ void MemsGraph::build(const SplicingGraph& sg,
                     m1.setNovNode(NovNode1);
                     AnnNodesMap[AnnNode1] = m1;
                     NovNodesMap[NovNode1] = m1;
+                    //
+                    Arc arc = AnnGraph.addArc(AnnStart,AnnNode1);
+                    AnnEdgesMap[arc] = err;
+                    arc = NovGraph.addArc(NovStart,NovNode1);
+                    NovEdgesMap[arc] = err;
+                    //
                 } else {
                     AnnNode1 = m1.AnnNode;
                     NovNode1 = m1.NovNode;
                 }
-                Arc arc = AnnGraph.addArc(AnnStart,AnnNode1);
-                AnnEdgesMap[arc] = err;
-                arc = NovGraph.addArc(NovStart,NovNode1);
-                NovEdgesMap[arc] = err;
+                // Arc arc = AnnGraph.addArc(AnnStart,AnnNode1);
+                // AnnEdgesMap[arc] = err;
+                // arc = NovGraph.addArc(NovStart,NovNode1);
+                // NovEdgesMap[arc] = err;
             } else {
                 if(m1.isNew) {
                     continue;
@@ -281,21 +287,6 @@ void MemsGraph::build(const SplicingGraph& sg,
                             NovExt =true;
                         }
                     }
-                    /**
-                    if(flag) {
-                        if(m2.isNew) {
-                            AnnNode2 = AnnGraph.addNode();
-                            NovNode2 = NovGraph.addNode();
-                            m2.setNode(node2);
-                            nodesMap[node2] = m2;
-                        } else {
-                            node2 = m2.node;
-                        }
-                        Arc arc = NovGraph.addArc(node1,node2);
-                        edgesMap[arc] = err;
-                        extended = true;
-                    }
-                    **/
                 }
                 ++p2;
             }
