@@ -143,6 +143,9 @@ class SplicingGraph:
                             if key1 != key2:
                                 self.SNVs[key2] = self.SNVs[key2]+1 if key2 in self.SNVs else 1
 
+    def printEv(self, evType, label1, label2, pos1, pos2, info, w):
+        print("{} {} {} {} {} {} {}".format(evType, label1, label2, pos1, pos2, info, w))
+
     ## EVENTS
     ##########
     def extractEvents(self):
@@ -153,25 +156,25 @@ class SplicingGraph:
 
     def extractES(self):
         for (n1,n2),w in self.newEdges.items():
-            if w > conf:
+            if w >= conf:
                 label1 = self.getNodeLabel(n1)
                 label2 = self.getNodeLabel(n2)
-                print("ES {} {} {} {} {}".format(label1, label2, self.ExonPos[label1][1], self.ExonPos[label2][0], w))
+                self.printEv("ES", label1, label2, self.ExonPos[label1][1], self.ExonPos[label2][0], "-", w)
 
-    def extractC(self,CompDict,t_flag):
+    def extractC(self,CompDict,tFlag):
         for exid,comp in CompDict.items():
             label = self.getNodeLabel(exid)
             for offset,w in comp.items():
-                if w > conf:
+                if w >= conf:
                     if self.GeneStrand:
-                        t = "5'" if t_flag else "3'"
-                        ann_pos = self.ExonPos[label][1] if t_flag else self.ExonPos[label][0]
-                        new_pos = ann_pos-offset if t_flag else ann_pos+offset
+                        t = "A5" if tFlag else "A3"
+                        annPos = self.ExonPos[label][1] if tFlag else self.ExonPos[label][0]
+                        newPos = annPos-offset if tFlag else annPos+offset
                     else:
-                        t = "3'" if t_flag else "5'"
-                        ann_pos = self.ExonPos[label][1] if t_flag else self.ExonPos[label][0]
-                        new_pos = ann_pos-offset if t_flag else ann_pos+offset
-                    print("{} {} {} {} {}".format(t, label, ann_pos, new_pos, w))
+                        t = "A3" if tFlag else "A5"
+                        annPos = self.ExonPos[label][1] if tFlag else self.ExonPos[label][0]
+                        newPos = annPos-offset if tFlag else annPos+offset
+                    self.printEv(t, label, "-", annPos, newPos, "-", w)
 
     def extractMEE(self):
         self.clean(conf,conf)
@@ -187,7 +190,7 @@ class SplicingGraph:
                         w = 2
                         label1 = self.getNodeLabel(node1)
                         label2 = self.getNodeLabel(node2)
-                        if w > conf:
+                        if w >= conf:
                             print("MEE {} {} {} {} {} {} {}".format(label1, label2, self.ExonPos[label1][0], self.ExonPos[label1][1], self.ExonPos[label2][0], self.ExonPos[label2][1], w))
 
     ## INFO
@@ -200,23 +203,23 @@ class SplicingGraph:
     def extractIns(self):
         #{(exID1,exID2,size) : weight}
         for (n1,n2,l),w in self.insertions.items():
-            if w > conf:
+            if w >= conf:
                 label1 = self.getNodeLabel(n1)
                 label2 = self.getNodeLabel(n2)
-                print("INS {} {} {} {} {} {}".format(label1, label2, self.ExonPos[label1][1], self.ExonPos[label2][0], l, w))
+                self.printEv("NE", label1, label2, self.ExonPos[label1][1], self.ExonPos[label2][0], l, w)
 
     def extractSNV(self):
         #{(exID, posT, posP) : weight}
         for (n,posT,posP),w in self.SNVs.items():
-            if w > conf:
+            if w >= conf:
                 label = self.getNodeLabel(n)
-                print("SNV {} {} {} {}".format(label, self.ExonPos[label][0]+posT, posP, w))
+                self.printEv("SNV", label, "-", self.ExonPos[label][0]+posT, "-", posP, w)
 
     def extractIntrons(self):
         #{(exID, posT, len) : weight}
         for (n,posT,l),w in self.introns.items():
             label = self.getNodeLabel(n)
-            print("NI {} {} {} {}".format(label, self.ExonPos[label][0]+posT, self.ExonPos[label][0]+posT+l, w))
+            self.printEv("IR", label, "-", self.ExonPos[label][0]+posT, self.ExonPos[label][0]+posT+l, "-", w)
     
     #Nodes Methods
     def addNode(self, label, w=0):
