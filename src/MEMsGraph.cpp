@@ -227,7 +227,7 @@ void MemsGraph::build(const SplicingGraph& sg,
                     m1.setNovNode(NovNode1);
                     AnnNodesMap[AnnNode1] = m1;
                     NovNodesMap[NovNode1] = m1;
-                    //
+                    //if the MEM has a father, we don't link it to the START (even if it is a valid candidate as starting mem)
                     Arc arc = AnnGraph.addArc(AnnStart,AnnNode1);
                     AnnEdgesMap[arc] = err;
                     arc = NovGraph.addArc(NovStart,NovNode1);
@@ -293,6 +293,7 @@ void MemsGraph::build(const SplicingGraph& sg,
             /*******
              * End *
              *******/
+            //if the MEM doesn't have a son, we link it to the END if it is a valid candidate as ending mem
             if(!AnnExt && !NovExt) {
                 std::pair<bool, int> endInfo = validEnd(sg, m1);
                 bool endFlag = endInfo.first;
@@ -317,9 +318,9 @@ std::list<std::pair<int, std::list<Mem> > > MemsGraph::visit(const SplicingGraph
     std::list<Mem> AnnPath1;
     std::list<Mem> AnnPath2;
     std::list<Mem> NovPath;
-    int AnnW1 = 0;
-    int AnnW2 = 0;
-    int NovW = 0;
+    int AnnW1 = K2+1;
+    int AnnW2 = K2+1;
+    int NovW = K2+1;
 
     //Visiting Annotated Graph
     lemon::Dijkstra<Graph, lemon::ListDigraph::ArcMap<int> >
@@ -329,7 +330,6 @@ std::list<std::pair<int, std::list<Mem> > > MemsGraph::visit(const SplicingGraph
     FibM AnnHCR (AnnGraph);
     FibH AnnHeap (AnnHCR);
     AnnDijkstra.heap(AnnHeap, AnnHCR);
-
     AnnDijkstra.run(AnnStart,AnnEnd);
     if(AnnDijkstra.reached(AnnEnd)) {
         AnnW1 = AnnDijkstra.dist(AnnEnd);
@@ -403,9 +403,24 @@ std::list<std::pair<int, std::list<Mem> > > MemsGraph::visit(const SplicingGraph
 
 void MemsGraph::save(const std::string& s) {
     std::ofstream myfile;
-    myfile.open(s);
+
+    myfile.open("Ann"+s);
 
     std::string dot = "digraph G {\n graph [splines=true overlap=false]\n node  [shape=ellipse, width=0.3, height=0.3]\n";
+    for(NodeIt n (AnnGraph); n != lemon::INVALID; ++n) {
+        dot += " " + std::to_string(AnnGraph.id(n)) + " [label=\"" + AnnNodesMap[n].toStr() + "\"];\n";
+    }
+    for(ArcIt a (AnnGraph); a != lemon::INVALID; ++a) {
+        dot += " " + std::to_string(AnnGraph.id(AnnGraph.source(a))) + " -> " + std::to_string(AnnGraph.id(AnnGraph.target(a))) + "[label=\"" + std::to_string(AnnEdgesMap[a]) + "\"];\n";
+    }
+    dot += "}";
+
+    myfile << dot;
+    myfile.close();
+    
+    myfile.open("Nov"+s);
+
+    dot = "digraph G {\n graph [splines=true overlap=false]\n node  [shape=ellipse, width=0.3, height=0.3]\n";
     for (NodeIt n (NovGraph); n != lemon::INVALID; ++n) {
         dot += " " + std::to_string(NovGraph.id(n)) + " [label=\"" + NovNodesMap[n].toStr() + "\"];\n";
     }
