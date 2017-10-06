@@ -7,6 +7,7 @@
 #include <utility>
 #include <string>
 #include <map>
+#include <unordered_map>
 
 #include "sdsl/bit_vectors.hpp"
 #include "utils.hpp"
@@ -109,7 +110,7 @@ private:
     std::string reference;
     int refLen;
     bool strand;
-    std::list<std::pair<int, int> > ExonsPos;
+    std::vector<std::pair<int, int> > ExonsPos;
     std::vector<std::list<int> > parents;
     std::vector<std::list<int> > sons;
     int exsN;

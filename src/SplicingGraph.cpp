@@ -79,6 +79,7 @@ SplicingGraph::SplicingGraph(const std::string& fa,
     int exID = 1;
     std::map<std::string, int> id2index;
     int curr_i = 1;
+    std::unordered_map<std::string, int> realEdges;
     for(std::map<std::string, std::list<std::string> >::iterator it1=genes.begin(); it1!=genes.end(); ++it1) {
         //Forall gene
         for(std::list<std::string>::iterator it2=it1->second.begin(); it2!=it1->second.end(); ++it2) {
@@ -105,7 +106,8 @@ SplicingGraph::SplicingGraph(const std::string& fa,
                 }
                 curr_i = id2index[posID];
                 if(last_i != -1) {
-                    if(edges[last_i][curr_i] == 0 && last_i != curr_i) {
+                    if(last_i != curr_i && edges[last_i][curr_i] == 0) {
+                        realEdges[std::to_string(ExonsPos[last_i-1].second) + std::to_string(ExonsPos[curr_i-1].first)] = 1;
                         edges[last_i][curr_i] = 1;
                         parents[curr_i].push_back(last_i);
                         sons[last_i].push_back(curr_i);
@@ -113,35 +115,82 @@ SplicingGraph::SplicingGraph(const std::string& fa,
                 }
                 last_i = curr_i;
             }
-            //firstTrans = false
             //Transitive closure on the transcript
-            int i = 0;
-            for(const int& id1 : exonsID) {
-                int j=0;
-                for(const int& id2 : exonsID) {
-                    if(i<j && id1 != id2) {
-                        if(edges[id1][id2] == 0) {
-                            edges[id1][id2] = 2;
-                            parents[id2].push_back(id1);
-                            sons[id1].push_back(id2);
-                        }
-                    }
-                    ++j;
-                }
-                ++i;
-            }
+            // int i = 0;
+            // for(const int& id1 : exonsID) {
+            //     int j=0;
+            //     for(const int& id2 : exonsID) {
+            //         if(i<j && id1 != id2) {
+            //             if(edges[id1][id2] == 0) {
+            //                 edges[id1][id2] = 2;
+            //                 parents[id2].push_back(id1);
+            //                 sons[id1].push_back(id2);
+            //             }
+            //         }
+            //         ++j;
+            //     }
+            //     ++i;
+            // }
             exonsID.clear();
         }
     }
+    // std::cout << std::endl;
+    // for(auto p : ExonsPos) {
+    //     std::cout << p.first << " " << p.second << std::endl;
+    // }
+    // std::cout << std::endl;
+    // for(auto it=realEdges.begin(); it!=realEdges.end(); ++it) {
+    //     std::cout << it->first << std::endl;
+    // }
+    // std::cout << std::endl;
+    // for(std::vector<int> v : edges) {
+    //     for(const int& e : v) {
+    //         std::cout << e << " ";
+    //     }
+    //     std::cout << std::endl;
+    // }
+    // std::cout << std::endl << std::endl;
 
     //Transitive closure on the full graph
     int i = 1;
     for(const std::pair<int,int>& p1 : ExonsPos) {
+        int start1 = p1.first;
+        int end1 = p1.second;
         int j = 1;
         for(const std::pair<int,int>& p2 : ExonsPos) {
-            if(p1.second <= p2.first) {
+            int start2 = p2.first;
+            int end2 = p2.second;
+            if(end1 <= start2) {
                 if(edges[i][j] == 0) {
-                    edges[i][j] = 3;
+                    //If the intron end/start of e1/e2 is already an edge (different start/end), it is not a new edge
+                    bool isAnnIntron = false; //realEdges.find(std::to_string(end1) + std::to_string(start2)) != realEdges.end();
+                    //Here we check for alternative end/start of e1/e2 (but equal start/end)
+                    if(!isAnnIntron) {
+                        std::list<int> FirstExons;
+                        std::list<int> SecondExons;
+                        for(const std::pair<int,int>& p3 : ExonsPos) {
+                            int start3 = p3.first;
+                            int end3 = p3.second;
+                            if(start1 == start3 or end1 == end3) {
+                                FirstExons.push_back(end3);
+                            } else if(start2 == start3 or end2 == end3) {
+                                SecondExons.push_back(start3);
+                            }
+                        }
+                        for(const int& e : FirstExons) {
+                            for(const int& s : SecondExons) {
+                                if(realEdges.find(std::to_string(e) + std::to_string(s)) != realEdges.end()) {
+                                    isAnnIntron = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    if(isAnnIntron) {
+                        edges[i][j] = 1;
+                    } else {
+                        edges[i][j] = 2;
+                    }
                     parents[j].push_back(i);
                     sons[i].push_back(j);
                 }
