@@ -42,15 +42,27 @@ std::pair<bool, int> MemsGraph::checkMEMs(const SplicingGraph& sg,
 
     int err = -1;
     bool type = true;
+    if(verbose) {
+        std::cout << "Extending " << m1.toStr() << " with " << m2.toStr() << std::endl;
+    }
     if(id1 == id2) { //m1 and m2 in the same exon
         if(m2.p+m2.l>m1.p+m1.l && m1.t<m2.t && m2.t<m1.t+m1.l+K1 && m1.t+m1.l<m2.t+m2.l) {
+            if(verbose) {
+                std::cout << "same exon" << std::endl;
+            }
             int gapP = m2.p-m1.p-m1.l;
             int gap_E = m2.t-m1.t-m1.l;
             if(gapP>=0 && gap_E>=0) {
                 if(gapP == 0) {
-                    //Possible intron
-                    err = 0;
-                    type = false;
+                    if(gap_E > K2) {
+                        //Possible intron
+                        err = 0;
+                        type = false;
+                    } else {
+                        //Errors
+                        err = gap_E;
+                        type = true;
+                    }
                 } else if(abs(gapP-gap_E) <= K2) {
                     //Possible SNV
                     std::string sub_P = read.substr(m1.p+m1.l-1, m2.p-m1.p-m1.l);
@@ -68,12 +80,18 @@ std::pair<bool, int> MemsGraph::checkMEMs(const SplicingGraph& sg,
         }
     } else { //m1 and m2 in different exons
         if(sg.contain(id1, id2)) {
+            if(verbose) {
+                std::cout << "different exons" << std::endl;
+            }
             if(m2.p+m2.l>m1.p+m1.l) {
                 int gapP = m2.p-m1.p-m1.l;
                 int gapE1 = sg.select(id1+1)+1-m1.t-m1.l;
                 int gapE2 = m2.t-sg.select(id2)-1-1;
                 if(gapP <= 0) {
                     err = abs(gapP);
+                    if(verbose) {
+                        std::cout << id1 << " " << id2 << " " << sg.isNew(id1, id2) << " " << gapE1 << " " << gapE2 << std::endl;
+                    }
                     if(!sg.isNew(id1, id2) && gapE1 == 0 && gapE2 == 0) {
                         type = true;
                     }
@@ -84,26 +102,42 @@ std::pair<bool, int> MemsGraph::checkMEMs(const SplicingGraph& sg,
                         err = -1;
                 } else {
                     if(gapE1 == 0 && gapE2 == 0) {
-                        //Possible insertion
-                        err = 0;
-                        type = false;
+                        //Possible insertion (only if annotated edge)
+                        if(!sg.isNew(id1,id2)) {
+                            err = 0;
+                            type = false;
+                        }
                     } else {
                         if(abs(gapP-(gapE1+gapE2)) <= K2) {
                             //Possible SNV
+                            if(verbose) {
+                                std::cout << "SNV" << std::endl;
+                            }
                             std::string subP = read.substr(m1.p+m1.l-1, gapP);
                             std::string subE1 = exon1_text.substr(m1.t+m1.l-sg.select(id1)-1-1, gapE1);
                             std::string subE2 = exon2_text.substr(0, gapE2);
                             std::string subE = subE1 + subE2;
                             err = editDistance(subP, subE);
-                            type = true;
+                            if(!sg.isNew(id1, id2)) {
+                                type = true;
+                            } else {
+                                type = false;
+                            }
                         }
                     }
                 }
+            }
+        } else {
+            if(verbose) {
+                std::cout << "no edge" << std::endl;
             }
         }
     }
     if(err > K2) {
         err = -1;
+    }
+    if(verbose) {
+        std::cout << type << " " << err << std::endl;
     }
     return std::make_pair(type, err);
 }
@@ -308,6 +342,52 @@ void MemsGraph::build(const SplicingGraph& sg,
         }
     }
 
+    //Transitive reduction
+    std::list<InArc> arcsToDeleteAnn;
+    for(NodeIt x (AnnGraph); x!=lemon::INVALID; ++x) {
+        for(OutArc XY (AnnGraph, x); XY!=lemon::INVALID; ++XY) {
+            Node y = AnnGraph.target(XY);
+            for(OutArc YZ (AnnGraph, y); YZ!=lemon::INVALID; ++YZ) {
+                Node z = AnnGraph.target(YZ);
+                for(InArc XZ (AnnGraph, z); XZ!=lemon::INVALID; ++XZ) {
+                    Node x_ = AnnGraph.source(XZ);
+                    if(AnnGraph.id(x) == AnnGraph.id(x_)) {
+                        if(AnnEdgesMap[XY]+AnnEdgesMap[YZ]<=AnnEdgesMap[XZ]) {
+                            arcsToDeleteAnn.push_back(XZ);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    std::list<InArc> arcsToDeleteNov;
+    for(NodeIt x (NovGraph); x!=lemon::INVALID; ++x) {
+        for(OutArc XY (NovGraph, x); XY!=lemon::INVALID; ++XY) {
+            Node y = NovGraph.target(XY);
+            for(OutArc YZ (NovGraph, y); YZ!=lemon::INVALID; ++YZ) {
+                Node z = NovGraph.target(YZ);
+                for(InArc XZ (NovGraph, z); XZ!=lemon::INVALID; ++XZ) {
+                    Node x_ = NovGraph.source(XZ);
+                    if(NovGraph.id(x) == NovGraph.id(x_)) {
+                        if(NovEdgesMap[XY]+NovEdgesMap[YZ]<=NovEdgesMap[XZ]) {
+                            arcsToDeleteNov.push_back(XZ);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    for(const InArc& a : arcsToDeleteAnn) {
+        if(AnnGraph.valid(a)) {
+            AnnGraph.erase(a);
+        }
+    }
+    for(const InArc& a : arcsToDeleteNov) {
+        if(NovGraph.valid(a)) {
+            NovGraph.erase(a);
+        }
+    }
+
     if(verbose) {
         save("Graph.dot");
     }
@@ -318,6 +398,7 @@ std::list<std::pair<int, std::list<Mem> > > MemsGraph::visit(const SplicingGraph
     std::list<Mem> AnnPath1;
     std::list<Mem> AnnPath2;
     std::list<Mem> NovPath;
+    bool FoundAnnotated = false;
     int AnnW1 = K2+1;
     int AnnW2 = K2+1;
     int NovW = K2+1;
@@ -334,6 +415,7 @@ std::list<std::pair<int, std::list<Mem> > > MemsGraph::visit(const SplicingGraph
     if(AnnDijkstra.reached(AnnEnd)) {
         AnnW1 = AnnDijkstra.dist(AnnEnd);
         if(AnnW1 <= K2) {
+            FoundAnnotated = true;
             Path p = AnnDijkstra.path(AnnEnd);
             bool first = true;
             for(Path::ArcIt it(p); it != lemon::INVALID; ++it) {
@@ -381,7 +463,7 @@ std::list<std::pair<int, std::list<Mem> > > MemsGraph::visit(const SplicingGraph
     NovDijkstra.run(NovStart,NovEnd);
     if(NovDijkstra.reached(NovEnd)) {
         NovW = NovDijkstra.dist(NovEnd);
-        if(NovW < AnnW1) {
+        if(!FoundAnnotated) {
             if(NovW <= K2) {
                 Path p = NovDijkstra.path(NovEnd);
                 for(Path::ArcIt it(p); it != lemon::INVALID; ++it) {

@@ -33,6 +33,12 @@ std::pair<char, std::list<std::pair<int, std::list<Mem> > > > analyzeRead(Backwa
                                                                                 const bool& verbose) {
     // Original read
     std::list<Mem> mems = bm.getMEMs(read,L);
+    if(verbose) {
+        for(const Mem& m : mems) {
+            std::cout << m.toStr() << " ";
+        }
+        std::cout << std::endl;
+    }
     std::list<std::pair<int, std::list<Mem> > > paths; // Path: [(weight, [mems])]
     if(!mems.empty()) {
         MemsGraph mg (read, L, eps, exsN, verbose);
@@ -42,6 +48,12 @@ std::pair<char, std::list<std::pair<int, std::list<Mem> > > > analyzeRead(Backwa
     // Reversed-and-complemented read
     std::string readRC = reverseAndComplement(read);
     std::list<Mem> memsRC = bm.getMEMs(readRC,L);
+    if(verbose) {
+        for(const Mem& m : memsRC) {
+            std::cout << m.toStr() << " ";
+        }
+        std::cout << std::endl;
+    }
     std::list<std::pair<int, std::list<Mem> > > pathsRC; // Path: [(weight, [mems])]
     if(!memsRC.empty()) {
         MemsGraph mgRC (readRC, L, eps, exsN, verbose);
