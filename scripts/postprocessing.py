@@ -7,7 +7,8 @@ from BitVector import BitVector
 from utils import *
 
 #Confidence values for each event
-conf = 1
+conf = int(sys.argv[5])
+SNVconf = 5
 
 class SplicingGraph:
     def __init__(self, ref, reads, infoPath):
@@ -56,6 +57,7 @@ class SplicingGraph:
         self.insertions = {}
         self.SNVs = {}
         self.introns = {}
+        lastID = ""
         with open(memsPath, 'r') as out:
             for line in out:
                 # 0: strand
@@ -65,6 +67,12 @@ class SplicingGraph:
                 align = line.strip("\n").strip(" ").split(" ")
                 readID = align[1]
                 usedExons = set([self.BV.rank(int(mem[1:-1].split(',')[0]) - 1) for mem in align[3:]])
+
+                #Only the first alignment is considered (primary one)
+                if lastID == readID:
+                    continue
+                lastID = readID
+
                 for e in usedExons:
                     self.incrementNode(e)
                 if len(align[3:]) <= 1:
@@ -77,6 +85,8 @@ class SplicingGraph:
                     nextIndex = self.BV.rank(nextMEM[0] - 1)
                     if currIndex != nextIndex: #mems are aligned to different exons
                         #edge is incremented
+                        #if self.isNew(currIndex, nextIndex):
+                        #    print(readID)
                         self.incrementEdge(currIndex, nextIndex)
 
                         overlap = nextMEM[1]-currMEM[1]-currMEM[2]
@@ -133,7 +143,7 @@ class SplicingGraph:
                         Toverlap = nextMEM[0]-currMEM[0]-currMEM[2]
                         #NewIntron
                         if Poverlap == 0 and Toverlap > 0:
-                            key = (currIndex, currMEM[1]+currMEM[2]-self.BV.select(currIndex), Toverlap)
+                            key = (currIndex, currMEM[0]+currMEM[2]-self.BV.select(currIndex), Toverlap)
                             self.introns[key] = self.introns[key]+1 if key in self.introns else 1
                         #SNV
                         if Poverlap == Toverlap:
@@ -146,6 +156,12 @@ class SplicingGraph:
     def printEv(self, evType, label1, label2, pos1, pos2, info, w):
         print("{} {} {} {} {} {} {}".format(evType, label1, label2, pos1, pos2, info, w))
 
+    def isExonBound(self, pos):
+        for (s,e) in self.ExonPos.values():
+            if pos == s or pos == e:
+                return True
+        return False
+
     ## EVENTS
     ##########
     def extractEvents(self):
@@ -154,12 +170,33 @@ class SplicingGraph:
         self.extractC(self.comp3, False)
         self.extractMEE()
 
+    '''
     def extractES(self):
+        realES = {}
         for (n1,n2),w in self.newEdges.items():
             if w >= conf:
                 label1 = self.getNodeLabel(n1)
                 label2 = self.getNodeLabel(n2)
-                self.printEv("ES", label1, label2, self.ExonPos[label1][1], self.ExonPos[label2][0], "-", w)
+                key = (self.ExonPos[label1][1], self.ExonPos[label2][0])
+                if key not in realES:
+                    realES.update({key:0})
+                realES[key]=realES[key]+w
+        for (p1,p2),w in realES.items():
+            self.printEv("ES", "-", "-", p1, p2, "-", w)
+    '''
+    def extractES(self):
+        combinedES = {}
+        for (n1,n2),w in self.newEdges.items():
+            label1 = self.getNodeLabel(n1)
+            label2 = self.getNodeLabel(n2)
+            pos1 = self.ExonPos[label1][1]
+            pos2 = self.ExonPos[label2][0]
+            if (pos1,pos2) not in combinedES:
+                combinedES.update({(pos1,pos2):0})
+            combinedES[(pos1,pos2)] = combinedES[(pos1,pos2)] + w
+        for (pos1,pos2),w in combinedES.items():
+            if w >= conf:
+                self.printEv("ES", "-", "-", pos1, pos2, "-", w)
 
     def extractC(self,CompDict,tFlag):
         for exid,comp in CompDict.items():
@@ -174,7 +211,9 @@ class SplicingGraph:
                         t = "A3" if tFlag else "A5"
                         annPos = self.ExonPos[label][1] if tFlag else self.ExonPos[label][0]
                         newPos = annPos-offset if tFlag else annPos+offset
-                    self.printEv(t, label, "-", annPos, newPos, "-", w)
+                    #Only new competing are printed
+                    if not self.isExonBound(newPos):
+                        self.printEv(t, label, "-", annPos, newPos, "-", w)
 
     def extractMEE(self):
         self.clean(conf,conf)
@@ -211,15 +250,16 @@ class SplicingGraph:
     def extractSNV(self):
         #{(exID, posT, posP) : weight}
         for (n,posT,posP),w in self.SNVs.items():
-            if w >= conf:
+            if w >= SNVconf:
                 label = self.getNodeLabel(n)
                 self.printEv("SNV", label, "-", self.ExonPos[label][0]+posT, "-", posP, w)
 
     def extractIntrons(self):
         #{(exID, posT, len) : weight}
         for (n,posT,l),w in self.introns.items():
-            label = self.getNodeLabel(n)
-            self.printEv("IR", label, "-", self.ExonPos[label][0]+posT, self.ExonPos[label][0]+posT+l, "-", w)
+            if w >= conf:
+                label = self.getNodeLabel(n)
+                self.printEv("IR", label, "-", self.ExonPos[label][0]+posT, self.ExonPos[label][0]+posT+l, "-", w)
     
     #Nodes Methods
     def addNode(self, label, w=0):
@@ -256,6 +296,12 @@ class SplicingGraph:
         if (n1,n2) in self.edges:
             return True
         elif (n1,n2) in self.newEdges:
+            return True
+        else:
+            return False
+
+    def isNew(self, n1, n2):
+        if (n1,n2) in self.newEdges:
             return True
         else:
             return False
