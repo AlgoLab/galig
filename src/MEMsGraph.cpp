@@ -1,6 +1,4 @@
 #include "MEMsGraph.hpp"
-#include <time.h>
-#include <stdio.h>
 
 MemsGraph::MemsGraph(const std::string& read_,
                      const int& L_,
@@ -14,9 +12,12 @@ MemsGraph::MemsGraph(const std::string& read_,
     m = read.size();
     L = L_;
     eps = eps_;
-    K0 = (eps*m*L)/100;
-    K1 = (eps*m*L)/100 - L + 1;
-    K2 = (eps*m)/100;
+    float t1 = eps*m*L;
+    float t2 = eps*m;
+    K0 = ceil(t1/100);
+    K1 = ceil(t1/100) - L + 1;
+    K2 = ceil(t2/100);
+    //std::cout << m << " " << t2 << " " << K2 << std::endl;
     exsN = exsN_;
     verbose = verbose_;
 
@@ -46,7 +47,8 @@ std::pair<bool, int> MemsGraph::checkMEMs(const SplicingGraph& sg,
         std::cout << "Extending " << m1.toStr() << " with " << m2.toStr() << std::endl;
     }
     if(id1 == id2) { //m1 and m2 in the same exon
-        if(m2.p+m2.l>m1.p+m1.l && m1.t<m2.t && m2.t<m1.t+m1.l+K1 && m1.t+m1.l<m2.t+m2.l) {
+        //if(m2.p+m2.l>m1.p+m1.l && m1.t<m2.t && m2.t<m1.t+m1.l+K1 && m1.t+m1.l<m2.t+m2.l) {
+        if(m2.p+m2.l>m1.p+m1.l && m1.t<m2.t && m1.t+m1.l<m2.t+m2.l) {
             if(verbose) {
                 std::cout << "same exon" << std::endl;
             }
@@ -56,24 +58,46 @@ std::pair<bool, int> MemsGraph::checkMEMs(const SplicingGraph& sg,
                 if(gapP == 0) {
                     if(gap_E > K2) {
                         //Possible intron
+                        if(verbose) {
+                            std::cout << "Possible intron without overlap" << std::endl;
+                        }
                         err = 0;
                         type = false;
                     } else {
                         //Errors
+                        if(verbose) {
+                            std::cout << "Nothing" << std::endl;
+                        }
                         err = gap_E;
                         type = true;
                     }
                 } else if(abs(gapP-gap_E) <= K2) {
                     //Possible SNV
+                    if(verbose) {
+                        std::cout << "Nothing" << std::endl;
+                    }
                     std::string sub_P = read.substr(m1.p+m1.l-1, m2.p-m1.p-m1.l);
                     std::string sub_E = exon1_text.substr(m1.t+m1.l-sg.select(id1)-1-1, m2.t-m1.t-m1.l);
                     err = editDistance(sub_P, sub_E);
                     type = true;
                 }
             } else if(gapP<=0 && gap_E<=0) {
+                if(verbose) {
+                    std::cout << "Nothing" << std::endl;
+                }
                 err = abs(gapP-gap_E);
                 type = true;
+            } else if(gapP<=0 && gap_E>K2) {
+                //Possible intron
+                if(verbose) {
+                    std::cout << "Possible intron with overlap" << std::endl;
+                }
+                err = 0;
+                type = false;
             } else {
+                if(verbose) {
+                    std::cout << "Nothing" << std::endl;
+                }
                 err = abs(gapP) + abs(gap_E);
                 type = true;
             }
@@ -88,7 +112,7 @@ std::pair<bool, int> MemsGraph::checkMEMs(const SplicingGraph& sg,
                 int gapE1 = sg.select(id1+1)+1-m1.t-m1.l;
                 int gapE2 = m2.t-sg.select(id2)-1-1;
                 if(gapP <= 0) {
-                    err = abs(gapP);
+                    err = 0; //abs(gapP);
                     if(verbose) {
                         std::cout << id1 << " " << id2 << " " << sg.isNew(id1, id2) << " " << gapE1 << " " << gapE2 << std::endl;
                     }

@@ -5,6 +5,9 @@
 #include <list>
 #include <forward_list>
 #include <utility>
+#include <time.h>
+#include <stdio.h>
+#include <math.h>
 
 #include "utils.hpp"
 #include "SplicingGraph.hpp"
