@@ -1,23 +1,22 @@
 import sys
-from Bio import SeqIO
+#from Bio import SeqIO
 
 from BitVector import BitVector
 
 class SAMFormatter:
-    def __init__(self, out_file, index_file, rna_seqs_file):
-        self.out_file = out_file
+    def __init__(self, outFile, indexFile):#, rna_seqs_file):
+        self.outFile = outFile
 
         #Output reader
-        with open(out_file) as o:
-            self.outs = []
-            for line in o.read().split("\n"):
-                if line != "":
-                    l = line.split(" ")
-                    l.remove("")
-                    self.outs.append([l[0], l[1], l[2], l[3:]])
+        self.outs = []
+        for line in open(outFile).readlines():
+            line = line.strip('\n')
+            if line != "":
+                l = line.split(" ")
+                self.outs.append([l[0], l[1], l[2], l[3:-1], l[-1]])
 
         #Index reader
-        with open(index_file) as o:
+        with open(indexFile) as o:
             line = o.readline()
             i = 0
             while line:
@@ -35,41 +34,39 @@ class SAMFormatter:
                 line = o.readline()
 
         #Rna-Seqs extraction
-        self.rna_seqs = SeqIO.index(rna_seqs_file, "fasta")
+        #self.rna_seqs = SeqIO.index(rna_seqs_file, "fasta")
 
         #Bit Vector Setup
         self.bv = BitVector(self.text)
 
     def format(self):
-        out = open(self.out_file + ".sam", "w")
+        out = open(self.outFile + ".sam", "w")
         out.write("@HD\tVN:1.4\n")
         out.write("@SQ\tSN:{}\tLN:{}\n".format(self.reference, self.ref_length))
-        last_id = ""
-        last_start = ""
-        last_cigar = ""
-        for (strand, p_id, err, mems) in self.outs:
-            mems_list = self.extractMEMs(mems)
-            rna_seq = self.rna_seqs[p_id].seq
+        lastID = ""
+        lastStart = ""
+        lastCigar = ""
+        for (strand, rID, err, mems, read) in self.outs:
+            memsList = self.extractMEMs(mems)
             if strand == "-":
-                if last_id == p_id:
+                if lastID == rID:
                     f = 272
                 else:
                     f = 16
-                rna_seq = self.reverse_and_complement(rna_seq)
+                #read = self.reverse_and_complement(read)
             else:
-                if last_id == p_id:
+                if lastID == rID:
                     f=256
                 else:
                     f = 0
-            start = self.getStart(mems_list[0])
-            end = self.getEnd(mems_list[-1])
-            cigar = self.getCIGAR(mems_list, len(rna_seq))
+            start = self.getStart(memsList[0])
+            cigar = self.getCIGAR(memsList, len(read))
             #Same alignment is not output twice
-            if p_id != last_id or start != last_start or cigar != last_cigar:
-                last_id = p_id
-                last_start = start
-                last_cigar = cigar
-                out.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\tNM:i:{}\n".format(p_id, f, self.reference, start, 255, cigar, "*", 0, 0, rna_seq, "*", err))
+            if rID != lastID or start != lastStart or cigar != lastCigar:
+                lastID = rID
+                lastStart = start
+                lastCigar = cigar
+                out.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\tNM:i:{}\n".format(rID, f, self.reference, start, 255, cigar, "*", 0, 0, read, "*", err))
         out.close()
 
     #Utils
@@ -201,5 +198,8 @@ class SAMFormatter:
 
 
 if __name__ == '__main__':
-    sf = SAMFormatter(sys.argv[1], sys.argv[2], sys.argv[3])
+    outFile = sys.argv[1]
+    indexFile = sys.argv[2]
+    #reads = sys.argv[3]
+    sf = SAMFormatter(outFile, indexFile)
     sf.format()
