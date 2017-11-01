@@ -72,7 +72,7 @@ SplicingGraph::SplicingGraph(const std::string& fa,
     parents.resize(exsN+1);
     sons.resize(exsN+1);
     for(int i = 0; i <= exsN; i++) {
-        edges[i] = std::vector< int>(exsN+1, 0);  
+        edges[i] = std::vector<int>(exsN+1, 0);
     }
     T = "|";
 
@@ -115,43 +115,27 @@ SplicingGraph::SplicingGraph(const std::string& fa,
                 }
                 last_i = curr_i;
             }
-            //Transitive closure on the transcript
-            // int i = 0;
-            // for(const int& id1 : exonsID) {
-            //     int j=0;
-            //     for(const int& id2 : exonsID) {
-            //         if(i<j && id1 != id2) {
-            //             if(edges[id1][id2] == 0) {
-            //                 edges[id1][id2] = 2;
-            //                 parents[id2].push_back(id1);
-            //                 sons[id1].push_back(id2);
-            //             }
-            //         }
-            //         ++j;
-            //     }
-            //     ++i;
-            // }
             exonsID.clear();
         }
     }
-    // std::cout << std::endl;
-    // for(auto p : ExonsPos) {
-    //     std::cout << p.first << " " << p.second << std::endl;
-    // }
-    // std::cout << std::endl;
-    // for(auto it=realEdges.begin(); it!=realEdges.end(); ++it) {
-    //     std::cout << it->first << std::endl;
-    // }
-    // std::cout << std::endl;
-    // for(std::vector<int> v : edges) {
-    //     for(const int& e : v) {
-    //         std::cout << e << " ";
-    //     }
-    //     std::cout << std::endl;
-    // }
-    // std::cout << std::endl << std::endl;
 
-    //Transitive closure on the full graph
+    //Transitive closure on the graph
+    int i = 1;
+    for(const std::pair<int,int>& p1 : ExonsPos) {
+        int j = 1;
+        for(const std::pair<int,int>& p2 : ExonsPos) {
+            if(p1.second <= p2.first) {
+                if(edges[i][j] == 0) {
+                    edges[i][j] = 2;
+                    parents[j].push_back(i);
+                    sons[i].push_back(j);
+                }
+            }
+            ++j;
+        }
+        ++i;
+    }
+    /**
     int i = 1;
     for(const std::pair<int,int>& p1 : ExonsPos) {
         int start1 = p1.first;
@@ -199,6 +183,7 @@ SplicingGraph::SplicingGraph(const std::string& fa,
         }
         ++i;
     }
+    **/
     gtfFile.close();
 
     setupBitVector();
