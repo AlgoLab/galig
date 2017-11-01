@@ -166,6 +166,7 @@ int main(int argc, char* argv[]) {
     std::pair<char, std::list<std::pair<int, std::list<Mem> > > > paths;
     // - Main loop: one iteration, one read
     // ---------------------------------------
+    int i = 1;
     if(fastaFile.is_open()) {
         std::string line;
         std::string head;
@@ -183,11 +184,22 @@ int main(int argc, char* argv[]) {
                                     for(std::list<Mem>::iterator m=path.second.begin(); m!=path.second.end(); ++m) {
                                         outFile << m->toStr() << " ";
                                     }
+                                    if(paths.first == '+')
+                                        outFile << read;
+                                    else
+                                        outFile << reverseAndComplement(read);
                                     outFile << "\n";
                                 }
                             }
                         }
                         read = "";
+                        if(i%1000 == 0) {
+                            std::cerr << i << " ";
+                        }
+                        if(i%10000 == 0) {
+                            std::cerr << std::endl;
+                        }
+                        ++i;
                     }
                     head = line.substr(1,line.size()-1);
                 } else {
@@ -204,6 +216,10 @@ int main(int argc, char* argv[]) {
                     for(std::list<Mem>::iterator m=path.second.begin(); m!=path.second.end(); ++m) {
                         outFile << m->toStr() << " ";
                     }
+                    if(paths.first == '+')
+                        outFile << read;
+                    else
+                        outFile << reverseAndComplement(read);
                     outFile << "\n";
                 }
             }
