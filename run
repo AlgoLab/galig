@@ -43,8 +43,8 @@ do
     out=${outFold}/${name}.aligns
     event=${outFold}/${name}.events
     ${WD}/bin/main -g ${genome} -a ${annotation} -r ${sample} -l ${L} -e ${e} -o ${out}
-    python3 ${WD}/scripts/SAMFormatter.py ${out} ${annotation}.sg ${sample}
-    python3 ${WD}/scripts/postprocessing.py ${annotation}.sg ${out} > ${event}
+    python3 ${WD}/scripts/SAMFormatter.py ${out} ${annotation}.sg
+    python3 ${WD}/scripts/postprocessing.py ${genome} ${annotation}.sg ${out} 3 5 1 > ${event}
     events="${events} ${event}"
 done
 
