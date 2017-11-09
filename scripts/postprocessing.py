@@ -217,6 +217,8 @@ def main():
                             maxErr = round(len(read)*errRate/100)
                             err1 = editDistance(readGapString, intronString[:len(readGapString)])
                             err2 = editDistance(readGapString, intronString[len(intronString)-len(readGapString):])
+
+                            pos1, pos2 = -1, -1
                             if err1 <= err2:
                                 # We check the start of the intron
                                 if err1 + err <= maxErr:
@@ -227,8 +229,10 @@ def main():
                                 if err2 + err <= maxErr:
                                     pos1 = intronStart
                                     pos2 = intronEnd - Poverlap
-                            key = (pos1, pos2)
-                            newIntrons[key] = newIntrons[key]+1 if key in newIntrons else 1
+
+                            if pos1 != -1 and pos2 != -1:
+                                key = (pos1, pos2)
+                                newIntrons[key] = newIntrons[key]+1 if key in newIntrons else 1
 
     # for (p1,p2),w in newIntrons.items():
     #     print("{}-{} : {}".format(p1,p2,w))
