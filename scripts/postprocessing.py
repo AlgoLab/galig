@@ -67,7 +67,7 @@ def extractFromGTF(gtf):
 # Extracts text and exon positions from "index"
 def extractFromInfoFile(infoPath):
     lines = open(infoPath).readlines()
-    text = lines[1]
+    text = lines[1].strip("\n")
     exons = [(int(p[0]), int(p[1])) for p in [pos.split(",") for pos in lines[4].strip("\n").split()]]
     return text, exons
 
