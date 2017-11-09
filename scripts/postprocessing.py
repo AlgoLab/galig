@@ -93,6 +93,10 @@ def cleanIntrons(newIntrons, annIntrons, tresh):
         if (p1,p2) not in annIntrons:
             if w >= tresh:
                 introns.update({(p1,p2):w})
+            else:
+                print("# W {} {}".format(p1,p2))
+        else:
+            print("# A {} {}".format(p1,p2))
     return introns
 
 def checkNewIntrons(newIntrons, strand, transcripts):
