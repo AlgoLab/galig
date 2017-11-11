@@ -4,7 +4,7 @@ import sys
 from BitVector import BitVector
 
 class SAMFormatter:
-    def __init__(self, outFile, indexFile):#, rna_seqs_file):
+    def __init__(self, outFile, indexFile):
         self.outFile = outFile
 
         #Output reader
@@ -32,9 +32,6 @@ class SAMFormatter:
                         self.pos.append([int(x[0]), int(x[1])])
                 i+=1
                 line = o.readline()
-
-        #Rna-Seqs extraction
-        #self.rna_seqs = SeqIO.index(rna_seqs_file, "fasta")
 
         #Bit Vector Setup
         self.bv = BitVector(self.text)
@@ -200,6 +197,5 @@ class SAMFormatter:
 if __name__ == '__main__':
     outFile = sys.argv[1]
     indexFile = sys.argv[2]
-    #reads = sys.argv[3]
     sf = SAMFormatter(outFile, indexFile)
     sf.format()

@@ -46,7 +46,7 @@ def openGTF(gtfPath):
         gtf = gffutils.FeatureDB("{}.db".format(gtfPath), keep_order=True)
     return gtf
 
-# Extracts transcripts and introns from gtf
+# Extracts strand, transcripts and introns from gtf
 def extractFromGTF(gtf):
     strand = "+"
     introns = set()
@@ -61,10 +61,9 @@ def extractFromGTF(gtf):
 
             introns_ = set(zip([ex.end+1 for ex in exons[:-1]], [ex.start-1 for ex in exons[1:]]))
             introns = introns | introns_
-            
     return strand, transcripts, introns
 
-# Extracts text and exon positions from "index"
+# Extracts text and exon positions from "index" file
 def extractFromInfoFile(infoPath):
     lines = open(infoPath).readlines()
     text = lines[1].strip("\n")
@@ -86,19 +85,108 @@ def readLine(line):
     read = line[-1]
     return readID, err, mems, read
 
-# Filters annotated introns and new introns not sufficiently covered 
-def cleanIntrons(newIntrons, annIntrons, tresh):
+# Removes annotated introns
+def filterAnnotated(newIntrons, annIntrons, tresh):
     introns = {}
     for (p1,p2),w in newIntrons.items():
         if (p1,p2) not in annIntrons:
-            if w >= tresh:
-                introns.update({(p1,p2):w})
-            else:
-                print("# W {} {}".format(p1,p2))
+            introns.update({(p1,p2):w})
         else:
-            print("# A {} {}".format(p1,p2))
+            if w >= tresh:
+                print("# A {} {}".format(p1,p2))
+            else:
+                print("# B {} {}".format(p1,p2))
     return introns
 
+# Filters new introns that are not sufficiently covered
+def filterLowCovered(newIntrons, tresh):
+    introns = {}
+    for (p1,p2),w in newIntrons.items():
+        if w >= tresh:
+            introns.update({(p1,p2):w})
+        else:
+            print("# W {} {}".format(p1,p2))
+    return introns
+
+# Reconciliate a given intron (start/end) position with respect to the input pattern
+def reconciliate(pos, ref, patt, isStart):
+    off = 1
+    MaxOff = 3
+    while off<=MaxOff:
+        newPos = pos-off
+        if isStart:
+            newPatt = str(ref[newPos-1:newPos+1].seq)
+        else:
+            newPatt = str(ref[newPos-2:newPos].seq)
+        if newPatt == patt:
+            return True,newPos
+
+        newPos = pos+off
+        if isStart:
+            newPatt = str(ref[newPos-1:newPos+1].seq)
+        else:
+            newPatt = str(ref[newPos-2:newPos].seq)
+        if newPatt == patt:
+            return True,newPos
+        off+=1
+    return False,-1
+
+# Cleans new introns basing on canonical patterns (reconciliation)
+def reconciliateIntrons(newIntrons, ref):
+    introns = {}
+    for (p1,p2),w in newIntrons.items():
+        ipS = str(ref[p1-1:p1+1].seq)
+        ipE = str(ref[p2-2:p2].seq)
+        canIP = {"GT":["AG"], "CT":["AC", "GC"], "GC":"AG"}
+        canIPrev = {"AG":["GT", "GC"], "AC":["CT"], "GC":"CT"}
+        if ipS in canIP.keys() and ipE in canIP[ipS]:
+            key = (p1,p2)
+            introns[key] = introns[key]+w if key in introns else w
+        elif ipS in canIP.keys():
+            newPos = float('inf')
+            for rightIP in canIP[ipS]:
+                found,pos = reconciliate(p2, ref, rightIP, False)
+                if found:
+                    if abs(pos-p2) < abs(newPos-p2):
+                        newPos = pos
+            if newPos == float('inf'):
+                newPos = p2
+            key = (p1,newPos)
+            introns[key] = introns[key]+w if key in introns else w
+        elif ipE in canIPrev:
+            newPos = float('inf')
+            for rightIP in canIPrev[ipE]:
+                found,pos = reconciliate(p1, ref, rightIP, True)
+                if found:
+                    if abs(pos-p1) < abs(newPos-p1):
+                        newPos = pos
+            if newPos == float('inf'):
+                newPos = p1
+            key = (newPos,p2)
+            introns[key] = introns[key]+w if key in introns else w
+        else:
+            off = 1
+            MaxOff = 3
+            while off <= MaxOff:
+                newP1, newP2 = p1-1, p2-1
+                ipS = str(ref[newP1-1:newP1+1].seq)
+                ipE = str(ref[newP2-2:newP2].seq)
+                if ipS in canIP.keys() and ipE in canIP[ipS]:
+                    key = (newP1,newP2)
+                    introns[key] = introns[key]+w if key in introns else w
+                    break
+
+                newP1, newP2 = p1+1, p2+1
+                ipS = str(ref[newP1-1:newP1+1].seq)
+                ipE = str(ref[newP2-2:newP2].seq)
+                if ipS in canIP.keys() and ipE in canIP[ipS]:
+                    key = (newP1,newP2)
+                    introns[key] = introns[key]+w if key in introns else w
+                    break
+                off+=1
+    return introns
+
+# Extract events from novel introns
 def checkNewIntrons(newIntrons, strand, transcripts):
     events = {'ES': {}, 'A3': {}, 'A5': {}, 'IR': {}}
     for (p1,p2),w in newIntrons.items():
@@ -158,7 +246,7 @@ def main():
     tresh = int(sys.argv[5])   #New introns treshold
 
     Ref = list(SeqIO.parse(refPath, "fasta"))[0]
-    
+
     gtf = openGTF(gtfPath)
     strand, transcripts, annIntrons = extractFromGTF(gtf)
 
@@ -191,9 +279,6 @@ def main():
                             key = (pos1, pos2)
                             newIntrons[key] = newIntrons[key]+1 if key in newIntrons else 1
                 else: #MEMs on different exons
-                    #  --- TODO -----------
-                    # - Canonical Patterns -
-                    #  --------------------
                     offset1 = BitV.select(id1 + 1) - (mem1[0] + mem1[2])
                     offset2 = mem2[0] - BitV.select(id2)-1
                     if Poverlap <= 0:
@@ -201,7 +286,7 @@ def main():
                         # No gap on P: possible Int.Alt.S.S.
                         if offset1 == 0:
                             offset2 += Poverlap
-                        else: #anyway, not only if offset2 == 0
+                        else: #anyway, not only if offset2 == 0 !!! maybe this is wrong
                             offset1 += Poverlap
                         pos1 = exons[id1-1][1] - offset1 + 1
                         pos2 = exons[id2-1][0] + offset2 - 1
@@ -237,7 +322,11 @@ def main():
     # for (p1,p2),w in newIntrons.items():
     #     print("{}-{} : {}".format(p1,p2,w))
     # print("")
-    newIntrons = cleanIntrons(newIntrons, annIntrons, tresh)
+    newIntrons = filterAnnotated(newIntrons, annIntrons, tresh)
+    newIntrons = reconciliateIntrons(newIntrons, Ref)
+    newIntrons = filterAnnotated(newIntrons, annIntrons, tresh)
+    newIntrons = filterLowCovered(newIntrons, tresh)
+
     # for (p1,p2),w in newIntrons.items():
     #     print("{}-{} : {}".format(p1,p2,w))
     # print("")
