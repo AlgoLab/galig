@@ -132,13 +132,17 @@ def reconciliate(pos, ref, patt, isStart):
     return False,-1
 
 # Cleans new introns basing on canonical patterns (reconciliation)
-def reconciliateIntrons(newIntrons, ref):
+def reconciliateIntrons(newIntrons, ref, strand):
     introns = {}
     for (p1,p2),w in newIntrons.items():
         ipS = str(ref[p1-1:p1+1].seq)
         ipE = str(ref[p2-2:p2].seq)
-        canIP = {"GT":["AG"], "CT":["AC", "GC"], "GC":"AG"}
-        canIPrev = {"AG":["GT", "GC"], "AC":["CT"], "GC":"CT"}
+        if strand == '+':
+            canIP = {"GT":["AG"], "GC":["AG"]}
+            canIPrev = {"AG":["GT", "GC"]}
+        else:
+            canIP = {"CT":["AC", "GC"]}
+            canIPrev = {"AC":["CT"], "GC":["CT"]}
         if ipS in canIP.keys() and ipE in canIP[ipS]:
             key = (p1,p2)
             introns[key] = introns[key]+w if key in introns else w
@@ -323,7 +327,7 @@ def main():
     #     print("{}-{} : {}".format(p1,p2,w))
     # print("")
     newIntrons = filterAnnotated(newIntrons, annIntrons, tresh)
-    newIntrons = reconciliateIntrons(newIntrons, Ref)
+    newIntrons = reconciliateIntrons(newIntrons, Ref, strand)
     newIntrons = filterAnnotated(newIntrons, annIntrons, tresh)
     newIntrons = filterLowCovered(newIntrons, tresh)
 
