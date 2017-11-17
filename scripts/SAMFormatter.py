@@ -1,4 +1,4 @@
-import sys
+import sys, os
 #from Bio import SeqIO
 
 from BitVector import BitVector
@@ -37,7 +37,11 @@ class SAMFormatter:
         self.bv = BitVector(self.text)
 
     def format(self):
-        out = open(self.outFile + ".sam", "w")
+        if os.path.dirname(self.outFile) == "":
+            out = "./" + os.path.basename(self.outFile).split(".")[0] + ".sam"
+        else:
+            out = os.path.normpath(os.path.dirname(self.outFile) + "/" + os.path.basename(self.outFile).split(".")[0] + ".sam")
+        out = open(out, "w")
         out.write("@HD\tVN:1.4\n")
         out.write("@SQ\tSN:{}\tLN:{}\n".format(self.reference, self.ref_length))
         lastID = ""
