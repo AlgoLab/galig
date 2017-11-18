@@ -193,10 +193,10 @@ int main(int argc, char* argv[]) {
                             }
                         }
                         read = "";
-                        if(i%1000 == 0) {
+                        if(i%10000 == 0) {
                             std::cerr << i << " ";
                         }
-                        if(i%10000 == 0) {
+                        if(i%100000 == 0) {
                             std::cerr << std::endl;
                         }
                         ++i;
