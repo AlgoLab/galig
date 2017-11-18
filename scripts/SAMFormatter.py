@@ -38,9 +38,9 @@ class SAMFormatter:
 
     def format(self):
         if os.path.dirname(self.outFile) == "":
-            out = "./" + os.path.basename(self.outFile).split(".")[0] + ".sam"
+            out = "./" + ".".join(os.path.basename(self.outFile).split(".")[0:-1]) + ".sam"
         else:
-            out = os.path.normpath(os.path.dirname(self.outFile) + "/" + os.path.basename(self.outFile).split(".")[0] + ".sam")
+            out = os.path.normpath(os.path.dirname(self.outFile) + "/" + ".".join(os.path.basename(self.outFile).split(".")[0:-1]) + ".sam")
         out = open(out, "w")
         out.write("@HD\tVN:1.4\n")
         out.write("@SQ\tSN:{}\tLN:{}\n".format(self.reference, self.ref_length))
