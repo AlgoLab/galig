@@ -88,18 +88,13 @@ def readLine(line):
 # Removes annotated introns
 def filterAnnotated(newIntrons, annIntrons, tresh):
     introns = {}
-    allIntrons = set()
+    annIntrons = {}
     for (p1,p2),w in newIntrons.items():
         if (p1,p2) not in annIntrons:
             introns.update({(p1,p2):w})
-            allIntrons.add((p1,p2))
         else:
-            allIntrons.add((p1,p2))
-            if w >= tresh:
-                print("# A {} {}".format(p1,p2))
-            else:
-                print("# B {} {}".format(p1,p2))
-    return introns, allIntrons
+            annIntrons.update({(p1,p2):w})
+    return introns, annIntrons
 
 # Filters new introns that are not sufficiently covered
 def filterLowCovered(newIntrons, tresh):
@@ -356,7 +351,7 @@ def checkNewIntrons(newIntrons, allIntrons, strand, transcripts):
                         if key not in events[t]:
                             events[t][key] = []
                         events[t][key].append(trID)
-        print("# {}-{}: {}, {}, {}, {}".format(p1, p2, ES, IR, A3, A5))
+        #print("# {}-{}: {}, {}, {}, {}".format(p1, p2, ES, IR, A3, A5))
     for t,evs in events.items():
         for (p1,p2,w),trs in evs.items():
             print(t,p1,p2,w,"/".join(trs))
@@ -382,10 +377,12 @@ def main():
     BitV = BitVector(text)
 
     newIntrons = {}
-    ass = {}
+    # lastID = ""
     for line in open(memsPath, 'r').readlines():
         readID, err, mems, read = readLine(line)
-
+        # if readID == lastID:
+        #    continue
+        # lastID = readID
         if len(mems) > 1:
             for mem1,mem2 in pairwise(mems):
                 # Remove ( and ) from mem and cast to int
@@ -447,20 +444,18 @@ def main():
                                 key = (pos1, pos2)
                                 newIntrons[key] = newIntrons[key]+1 if key in newIntrons else 1
 
-    # for (p1,p2),w in newIntrons.items():
-    #     print("{}-{} : {}".format(p1,p2,w))
-    # print("")
-
-    newIntrons, allIntrons = filterAnnotated(newIntrons, annIntrons, tresh)
-    if reconciliate:
-        newIntrons = reconciliateIntrons(newIntrons, Ref, strand)
-    newIntrons, allIntrons_ = filterAnnotated(newIntrons, annIntrons, tresh)
-    allIntrons = allIntrons | allIntrons_
+    newIntrons, annFoundIntrons = filterAnnotated(newIntrons, annIntrons, tresh)
+    newIntrons = reconciliateIntrons(newIntrons, Ref, strand)
+    newIntrons, annFoundIntrons_ = filterAnnotated(newIntrons, annIntrons, tresh)
+    for (p1,p2),w in annFoundIntrons_:
+        if (p1,p2) in annFoundIntrons:
+            annFoundIntrons[(p1,p2)]+=w
+        else:
+            annFoundIntrons[(p1,p2)] = w
     newIntrons = filterLowCovered(newIntrons, tresh)
+    annFoundIntrons = filterLowCovered(annFoundIntrons, tresh)
+    allIntrons = set(newIntrons.keys()) | set(annFoundIntrons.keys())
 
-    # for (p1,p2),w in newIntrons.items():
-    #     print("{}-{} : {}".format(p1,p2,w))
-    # print("")
     checkNewIntrons(newIntrons, allIntrons, strand, transcripts)
 
 if __name__ == '__main__':
