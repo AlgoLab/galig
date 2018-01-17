@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+
 import sys, os, itertools, operator
 
 from Bio import SeqIO
@@ -63,6 +65,7 @@ def extractFromGTF(gtf):
             introns = introns | introns_
     return strand, transcripts, introns
 
+# TODO: extract directly from FASTA + GTF
 # Extracts text and exon positions from "index" file
 def extractFromInfoFile(infoPath):
     lines = open(infoPath).readlines()
@@ -70,7 +73,7 @@ def extractFromInfoFile(infoPath):
     exons = [(int(p[0]), int(p[1])) for p in [pos.split(",") for pos in lines[4].strip("\n").split()]]
     return text, exons
 
-# Extracts elements from one line of the custom alignments file
+# Extracts elements from one line of the spliced graph-alignments file
 def readLine(line):
     # 0: strand
     # 1: ID
@@ -83,33 +86,33 @@ def readLine(line):
     err = int(line[2])
     mems = line[3:-1]
     read = line[-1]
-    return readID, err, mems, read
+    return strand, readID, err, mems, read
 
 # Removes annotated introns
-def filterAnnotated(newIntrons, annIntrons, tresh):
+def filterAnnotated(newIntrons, annIntrons):
     introns = {}
-    annIntrons = {}
+    annFoundIntrons = {}
     for (p1,p2),w in newIntrons.items():
         if (p1,p2) not in annIntrons:
             introns.update({(p1,p2):w})
         else:
-            annIntrons.update({(p1,p2):w})
-    return introns, annIntrons
+            annFoundIntrons.update({(p1,p2):w})
+    return introns, annFoundIntrons
 
 # Filters new introns that are not sufficiently covered
-def filterLowCovered(newIntrons, tresh):
-    introns = {}
-    for (p1,p2),w in newIntrons.items():
+def filterLowCovered(introns, tresh):
+    filtIntrons = {}
+    for (p1,p2),w in introns.items():
         if w >= tresh:
-            introns.update({(p1,p2):w})
+            filtIntrons.update({(p1,p2):w})
         else:
             print("# W {} {}".format(p1,p2))
-    return introns
+    return filtIntrons
 
 # Reconciliate a given intron (start/end) position with respect to the input pattern
 def reconciliate(pos, ref, patt, isStart):
     off = 1
-    MaxOff = 3
+    MaxOff = 3 # TODO: this one could be a parameter
     while off<=MaxOff:
         newPos = pos-off
         if isStart:
@@ -129,108 +132,99 @@ def reconciliate(pos, ref, patt, isStart):
         off+=1
     return False,-1
 
-# Cleans new introns basing on canonical patterns (reconciliation)
-def reconciliateIntrons(newIntrons, ref, strand):
-    introns = {}
-    for (p1,p2),w in newIntrons.items():
-        ipS = str(ref[p1-1:p1+1].seq)
-        ipE = str(ref[p2-2:p2].seq)
+# Cleans introns basing on canonical patterns (reconciliation)
+def reconciliateIntrons(introns, ref, strand):
+    recIntrons = {}
+    for (p1,p2),w in introns.items():
+        intronPref = str(ref[p1-1:p1+1].seq)
+        intronSuff = str(ref[p2-2:p2].seq)
         if strand == '+':
             canIP = {"GT":["AG"], "GC":["AG"]}
             canIPrev = {"AG":["GT", "GC"]}
         else:
             canIP = {"CT":["AC", "GC"]}
             canIPrev = {"AC":["CT"], "GC":["CT"]}
-        if ipS in canIP.keys() and ipE in canIP[ipS]:
+        if intronPref in canIP.keys() and intronSuff in canIP[intronPref]:
             key = (p1,p2)
-            introns[key] = introns[key]+w if key in introns else w
-        elif ipS in canIP.keys():
+            recIntrons[key] = recIntrons[key]+w if key in recIntrons else w
+        elif intronPref in canIP.keys():
             newPos = float('inf')
-            for rightIP in canIP[ipS]:
-                found,pos = reconciliate(p2, ref, rightIP, False)
+            for acceptedIntronicPattern in canIP[intronPref]:
+                found,pos = reconciliate(p2, ref, acceptedIntronicPattern, False)
                 if found:
                     if abs(pos-p2) < abs(newPos-p2):
                         newPos = pos
             if newPos == float('inf'):
                 newPos = p2
             key = (p1,newPos)
-            introns[key] = introns[key]+w if key in introns else w
-        elif ipE in canIPrev:
+            recIntrons[key] = recIntrons[key]+w if key in recIntrons else w
+        elif intronSuff in canIPrev:
             newPos = float('inf')
-            for rightIP in canIPrev[ipE]:
-                found,pos = reconciliate(p1, ref, rightIP, True)
+            for acceptedIntronicPattern in canIPrev[intronSuff]:
+                found,pos = reconciliate(p1, ref, acceptedIntronicPattern, True)
                 if found:
                     if abs(pos-p1) < abs(newPos-p1):
                         newPos = pos
             if newPos == float('inf'):
                 newPos = p1
             key = (newPos,p2)
-            introns[key] = introns[key]+w if key in introns else w
+            recIntrons[key] = recIntrons[key]+w if key in recIntrons else w
         else:
             off = 1
             MaxOff = 3
             while off <= MaxOff:
                 newP1, newP2 = p1-1, p2-1
-                ipS = str(ref[newP1-1:newP1+1].seq)
-                ipE = str(ref[newP2-2:newP2].seq)
-                if ipS in canIP.keys() and ipE in canIP[ipS]:
+                intronPref = str(ref[newP1-1:newP1+1].seq)
+                intronSuff = str(ref[newP2-2:newP2].seq)
+                if intronPref in canIP.keys() and intronSuff in canIP[intronPref]:
                     key = (newP1,newP2)
-                    introns[key] = introns[key]+w if key in introns else w
+                    recIntrons[key] = recIntrons[key]+w if key in recIntrons else w
                     break
 
                 newP1, newP2 = p1+1, p2+1
-                ipS = str(ref[newP1-1:newP1+1].seq)
-                ipE = str(ref[newP2-2:newP2].seq)
-                if ipS in canIP.keys() and ipE in canIP[ipS]:
+                intronPref = str(ref[newP1-1:newP1+1].seq)
+                intronSuff = str(ref[newP2-2:newP2].seq)
+                if intronPref in canIP.keys() and intronSuff in canIP[intronPref]:
                     key = (newP1,newP2)
-                    introns[key] = introns[key]+w if key in introns else w
+                    recIntrons[key] = recIntrons[key]+w if key in recIntrons else w
                     break
                 off+=1
-    return introns
+    return recIntrons
 
-def isClose(Ps,p):
-    for p_ in Ps:
-        if abs(p-p_) <= 100-30: ###readLen - 2*L
-            return True
-    return False
-
-def isInsideExon(Es,p):
-    for (s,e) in Es:
-        if s <= p <= e:
-            return True
-    return False
-
-#######################
+# Returns all the exons starting and ending close to a given position
 def getExonsCloseTo(Es,p):
     exsS = set()
     exsE = set()
     for (s,e) in Es:
-        if 0 <= s-p <= 100-30: ###readLen - 2*L
+        if 0 <= s-p <= 100-30: # TODO: set 100-30 to readLen - 2*L
             exsS.add((s,e))
-        elif 0 <= p-e <= 100-30: ###readLen - 2*L
+        elif 0 <= p-e <= 100-30: # TODO: set 100-30 to readLen - 2*L
             exsE.add((s,e))
     return (list(exsS),list(exsE))
 
+# Returns all the exons containing a position
 def getExonsContaining(Es,p):
     exs = set()
     for (s,e) in Es:
         if s <= p <= e:
             exs.add((s,e))
     return list(exs)
-#######################
 
+# Returns True if there exists an intron ending at the given position, False otherwise
 def existsIntronEndingAt(introns, p):
     for (s,e) in introns:
         if e == p:
             return True
     return False
 
+# Returns True if there exists an intron starting at the given position, False otherwise
 def existsIntronStartingAt(introns, p):
     for (s,e) in introns:
         if s == p:
             return True
     return False
 
+# Returns all the (possibly overlapping) introns that follow the given intron
 def getSuccIntrons(Introns, I):
     Introns.sort()
     i = Introns.index(I)
@@ -255,6 +249,7 @@ def getSuccIntrons(Introns, I):
                 flag = False
     return list(Succ)
 
+# Returns all the (possibly overlapping) introns that precede the given intron
 def getPrecIntrons(Introns, I):
     Introns.sort(key=operator.itemgetter(1))
     i = Introns.index(I)
@@ -279,35 +274,33 @@ def getPrecIntrons(Introns, I):
                 flag = False
     return list(Prec)
 
-# Extract events from novel introns
+# Extracts events from introns
 def checkNewIntrons(newIntrons, allIntrons, strand, transcripts):
     allIntrons = list(allIntrons)
     allIntrons.sort()
     events = {'ES': {}, 'A3': {}, 'A5': {}, 'IR': {}}
     for (p1,p2),w in newIntrons.items():
+        # Getting introns preceding and following the considered intron
         precIntrons = getPrecIntrons(allIntrons, (p1,p2))
         succIntrons = getSuccIntrons(allIntrons, (p1,p2))
-        ES = False
-        IR = False
-        A3 = False
-        A5 = False
+
+        # For each transcript...
         for trID,exons in transcripts.items():
             tranSt,tranEnd = exons[0][0], exons[-1][1]
-            starts = [ex[0]-1 for ex in exons]
-            ends = [ex[1]+1 for ex in exons]
+            intronsEnds = [ex[0]-1 for ex in exons]
+            intronsStarts = [ex[1]+1 for ex in exons]
 
-            #Checking exon skippings...
-            if p1 in ends and p2 in starts:
-                i1 = ends.index(p1)
-                i2 = starts.index(p2)
+            # Checking exon skippings
+            if p1 in intronsStarts and p2 in intronsEnds:
+                i1 = intronsStarts.index(p1)
+                i2 = intronsEnds.index(p2)
                 if i1 != i2-1:
                     key = (p1,p2,w)
                     if key not in events['ES']:
                         events['ES'][key] = []
                     events['ES'][key].append(trID)
-                    ES = True
 
-            #Checking intron retentions...
+            # Checking intron retentions
             for (s,e) in exons:
                 if s < p1 < p2 < e:
                     if (len(precIntrons) == 0 or s-1 in [i[1] for i in precIntrons]) and (len(succIntrons) == 0 or e+1 in [i[0] for i in succIntrons]):
@@ -315,74 +308,51 @@ def checkNewIntrons(newIntrons, allIntrons, strand, transcripts):
                         if key not in events['IR']:
                             events['IR'][key] = []
                         events['IR'][key].append(trID)
-                        IR = True
 
-            #Given (p1,p2), checking alt splice sites:
-            if p1 in ends and p1 != tranEnd and p2 not in starts and p2 < tranEnd:
+            # Checking alternative splice sites
+            if p1 in intronsStarts and p1 != tranEnd and p2 not in intronsEnds and p2 < tranEnd:
                 exonsContaining = getExonsContaining(exons,p2)
                 exonsCloseS,_ = getExonsCloseTo(exons,p2)
-                #if isInsideExon(exons,p2) or isClose(starts,p2):
                 if len(exonsContaining)>0 or len(exonsCloseS)>0:
-                    if len(succIntrons) == 0 or any([i[0] in ends for i in succIntrons]) or tranEnd in [e[1] for e in exonsCloseS + exonsContaining]:
+                    if len(succIntrons) == 0 or any([i[0] in intronsStarts for i in succIntrons]) or tranEnd in [e[1] for e in exonsCloseS + exonsContaining]:
                         if strand == '+':
                             t = 'A3'
-                            A3 = True
                         else:
                             t = 'A5'
-                            A5 = True
                         key = (p1,p2,w)
                         if key not in events[t]:
                             events[t][key] = []
                         events[t][key].append(trID)
 
-            if p1 not in ends and p2 in starts and p2 != tranSt and p1 > tranSt:
+            if p1 not in intronsStarts and p2 in intronsEnds and p2 != tranSt and p1 > tranSt:
                 exonsContaining = getExonsContaining(exons,p1)
                 _,exonsCloseE = getExonsCloseTo(exons,p1)
-                #if isInsideExon(exons,p1) or isClose(ends,p1):
                 if len(exonsContaining)>0 or len(exonsCloseE)>0:
-                    if len(precIntrons) == 0 or any([i[1] in starts for i in precIntrons]) or tranSt in [e[0] for e in exonsCloseE + exonsContaining]:
+                    if len(precIntrons) == 0 or any([i[1] in intronsEnds for i in precIntrons]) or tranSt in [e[0] for e in exonsCloseE + exonsContaining]:
                         if strand == '+':
                             t = 'A5'
-                            A5 = True
                         else:
                             t = 'A3'
-                            A3 = True
                         key = (p1,p2,w)
                         if key not in events[t]:
                             events[t][key] = []
                         events[t][key].append(trID)
-        #print("# {}-{}: {}, {}, {}, {}".format(p1, p2, ES, IR, A3, A5))
+
+    # Printing events... (TODO: they can be printed when found, but maybe the dict could be useful for some analysis)
     for t,evs in events.items():
         for (p1,p2,w),trs in evs.items():
             print(t,p1,p2,w,"/".join(trs))
 
-def main():
-    #Cmd line arguments
-    refPath = sys.argv[1]      #Reference
-    gtfPath = sys.argv[2]      #GTF
-    memsPath = sys.argv[3]     #MEMs file
-    errRate = int(sys.argv[4]) #Error rate
-    tresh = int(sys.argv[5])   #New introns treshold
-    if len(sys.argv)<7:
-        reconciliate = True
-    else:
-        reconciliate = bool(int(sys.argv[6]))
-
-    Ref = list(SeqIO.parse(refPath, "fasta"))[0]
-
-    gtf = openGTF(gtfPath)
-    strand, transcripts, annIntrons = extractFromGTF(gtf)
-
-    text, exons = extractFromInfoFile(gtfPath + ".sg")
-    BitV = BitVector(text)
-
-    newIntrons = {}
-    # lastID = ""
+def extractIntrons(memsPath, Ref, exons, BitV, errRate, onlyPrimary):
+    introns = {}
+    lastID = ""
     for line in open(memsPath, 'r').readlines():
-        readID, err, mems, read = readLine(line)
-        # if readID == lastID:
-        #    continue
-        # lastID = readID
+        alStrand, readID, err, mems, read = readLine(line)
+        if onlyPrimary:
+            if readID == lastID:
+                continue
+            lastID = readID
+
         if len(mems) > 1:
             for mem1,mem2 in pairwise(mems):
                 # Remove ( and ) from mem and cast to int
@@ -402,7 +372,7 @@ def main():
                             pos1 = exons[id1-1][0] + mem1[0] + mem1[2] - BitV.select(id1) + Poverlap
                             pos2 = pos1 + gap
                             key = (pos1, pos2)
-                            newIntrons[key] = newIntrons[key]+1 if key in newIntrons else 1
+                            introns[key] = introns[key]+1 if key in introns else 1
                 else: #MEMs on different exons
                     offset1 = BitV.select(id1 + 1) - (mem1[0] + mem1[2])
                     offset2 = mem2[0] - BitV.select(id2)-1
@@ -416,7 +386,7 @@ def main():
                         pos1 = exons[id1-1][1] - offset1 + 1
                         pos2 = exons[id2-1][0] + offset2 - 1
                         key = (pos1, pos2)
-                        newIntrons[key] = newIntrons[key]+1 if key in newIntrons else 1
+                        introns[key] = introns[key]+1 if key in introns else 1
                     else:
                         #Gap on P
                         if offset1 == 0 and offset2 == 0:
@@ -442,21 +412,51 @@ def main():
 
                             if pos1 != -1 and pos2 != -1:
                                 key = (pos1, pos2)
-                                newIntrons[key] = newIntrons[key]+1 if key in newIntrons else 1
+                                introns[key] = introns[key]+1 if key in introns else 1
+    return introns
 
-    newIntrons, annFoundIntrons = filterAnnotated(newIntrons, annIntrons, tresh)
-    newIntrons = reconciliateIntrons(newIntrons, Ref, strand)
-    newIntrons, annFoundIntrons_ = filterAnnotated(newIntrons, annIntrons, tresh)
-    for (p1,p2),w in annFoundIntrons_:
-        if (p1,p2) in annFoundIntrons:
-            annFoundIntrons[(p1,p2)]+=w
-        else:
-            annFoundIntrons[(p1,p2)] = w
-    newIntrons = filterLowCovered(newIntrons, tresh)
-    annFoundIntrons = filterLowCovered(annFoundIntrons, tresh)
-    allIntrons = set(newIntrons.keys()) | set(annFoundIntrons.keys())
+def main():
+    #Cmd line arguments
+    refPath = sys.argv[1]      # Reference
+    gtfPath = sys.argv[2]      # Annotation
+    memsPath = sys.argv[3]     # Spliced-Graph alignments file
+    errRate = int(sys.argv[4]) # Error rate
+    tresh = int(sys.argv[5])   # Events treshold
 
-    checkNewIntrons(newIntrons, allIntrons, strand, transcripts)
+    #TODO: add these as cmd line parameters
+    onlyPrimary = False
+    onlyNovel = True
+
+    # Reading reference genome
+    Ref = list(SeqIO.parse(refPath, "fasta"))[0]
+
+    # Reading annotation
+    gtf = openGTF(gtfPath)
+    strand, transcripts, annIntrons = extractFromGTF(gtf)
+
+    # Extracting text and exons from "index" file
+    text, exons = extractFromInfoFile(gtfPath + ".sg")
+    BitV = BitVector(text)
+
+    # Extracting introns from spliced graph-alignments
+    introns = extractIntrons(memsPath, Ref, exons, BitV, errRate, onlyPrimary)
+
+    # Cleaning introns
+    if onlyNovel:
+        newIntrons, annFoundIntrons = filterAnnotated(introns, annIntrons)
+        newIntrons = reconciliateIntrons(newIntrons, Ref, strand)
+        newIntrons, annFoundIntrons_ = filterAnnotated(newIntrons, annIntrons)
+        newIntrons = filterLowCovered(newIntrons, tresh)
+        annFoundIntrons = filterLowCovered(annFoundIntrons, tresh)
+        annFoundIntrons_ = filterLowCovered(annFoundIntrons_, tresh)
+        allIntronsKey = set(newIntrons.keys()) | set(annFoundIntrons.keys())
+    else:
+        newIntrons = reconciliateIntrons(introns, Ref, strand)
+        newIntrons = filterLowCovered(newIntrons, tresh)
+        allIntronsKey = newIntrons.keys()
+
+    # Extracting events from introns
+    checkNewIntrons(newIntrons, allIntronsKey, strand, transcripts)
 
 if __name__ == '__main__':
     main()
