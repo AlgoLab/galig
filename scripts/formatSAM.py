@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 import sys, os
+import argparse
 from Bio import SeqIO
 
 from BitVector import BitVector
@@ -237,23 +238,13 @@ def getCIGAR(mems, RefSeq, bv, exPos, read, errRate, err):
         CIGAR += str(n) + l
     return CIGAR
 
-def main():
-    memsPath = sys.argv[1]
-    infoPath = sys.argv[2]
-    refPath = sys.argv[3]
-    errRate = int(sys.argv[4])
-
+def main(memsPath, refPath, gtfPath, errRate, outPath):
     RefSeq = list(SeqIO.parse(refPath, "fasta"))[0]
 
-    ref, refLen, text, exPos = extractFromInfoFile(infoPath)
+    ref, refLen, text, exPos = extractFromInfoFile(gtfPath + ".sg")
     bv = BitVector(text)
 
-    #if os.path.dirname(self.outFile) == "":
-    #    out = "./" + ".".join(os.path.basename(self.outFile).split(".")[0:-1]) + ".sam"
-    #else:
-    #    out = os.path.normpath(os.path.dirname(self.outFile) + "/" + ".".join(os.path.basename(self.outFile).split(".")[0:-1]) + ".sam")
-    out = memsPath + ".sam"
-    out = open(out, "w")
+    out = open(outPath, "w")
     out.write("@HD\tVN:1.4\n")
     out.write("@SQ\tSN:{}\tLN:{}\n".format(ref, refLen))
 
@@ -278,4 +269,16 @@ def main():
     out.close()
 
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser(description = "Converts alignments to a splicing graph to alignments to a reference genome (in SAM format)")
+    parser.add_argument('-g', '--genome', required=True, help='FASTA input file containing the reference')
+    parser.add_argument('-a', '--annotation', required=True, help='GTF input file containing the gene annotation')
+    parser.add_argument('-m', '--mems', required=True, help='input file containing the alignments to the splicing graph')
+    parser.add_argument('-o', '--output', required=True, help='SAM output file')
+    parser.add_argument('-e', '--erate', required=False, default=3, type=int, help='error rate (from 0 to 100, default: 3)')
+    args = parser.parse_args()
+    memsPath = args.mems
+    refPath = args.genome
+    gtfPath = args.annotation
+    errRate = args.erate
+    outPath = args.output
+    main(memsPath, refPath, gtfPath, errRate, outPath)

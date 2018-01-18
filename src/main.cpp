@@ -12,16 +12,17 @@
 #include "MEMsGraph.hpp"
 
 void printHelp() {
-    std::cout << "Usage: SGAL [options] (required: -g -a -r -l -e)\n" << std::endl;
+    std::cout << "Usage: SGAL [options] (required: -g -a -s -o)\n" << std::endl;
     std::cout << "Options:" << std::endl;
-    std::cout << "  -I, --index: index only" << std::endl;
-    std::cout << "  -g, --genomic <path>" << std::endl;
+    //std::cout << "  -I, --index: index only" << std::endl;
+    std::cout << "  -g, --genome <path>" << std::endl;
     std::cout << "  -a, --annotation <path>" << std::endl;
-    std::cout << "  -r, --reads <path>" << std::endl;
-    std::cout << "  -l, --L <int>: MEMs length" << std::endl;
-    std::cout << "  -e, --eps <int>: " << std::endl;
-    std::cout << "  -o, --output <path>: output path" << std::endl;
-    std::cout << "  -v, --verbose: explain what is being done and save .dot" << std::endl;
+    std::cout << "  -s, --sample <path>" << std::endl;
+    std::cout << "  -o, --output <path>: output file" << std::endl;
+    std::cout << "  -l, --L <int>: minimum lenght of MEMs used to build the alignments (default: 15)" << std::endl;
+    std::cout << "  -e, --eps <int>: error rate, a value from 0 to 100 (default: 3)" << std::endl;
+    std::cout << "  -h, --help: show this help message and exit" << std::endl;
+    //std::cout << "  -v, --verbose: explain what is being done and save .dot" << std::endl;
 }
 
 std::pair<char, std::list<std::pair<int, std::list<Mem> > > > analyzeRead(BackwardMEM& bm,
@@ -85,8 +86,8 @@ int main(int argc, char* argv[]) {
     std::string genomic;
     std::string annotation;
     std::string rna_seqs;
-    int L;
-    int eps;
+    int L = 0;
+    int eps = -1;
     std::string out;
     bool index_only = false;
     bool verbose = false;
@@ -97,35 +98,36 @@ int main(int argc, char* argv[]) {
     while (1) {
         static struct option long_options[] =
             {
-                {"index", no_argument, 0, 'I'},
+                //{"index", no_argument, 0, 'I'},
                 {"genomic", required_argument, 0, 'g'},
                 {"annotation", required_argument, 0, 'a'},
-                {"reads",  required_argument, 0, 'r'},
+                {"sample",  required_argument, 0, 's'},
                 {"L",  required_argument, 0, 'l'},
-                {"eps",    required_argument, 0, 'e'},
+                {"erate",    required_argument, 0, 'e'},
                 {"output", required_argument, 0, 'o'},
-                {"verbose", no_argument, 0, 'v'},
+                {"help", no_argument, 0, 'h'},
+                //{"verbose", no_argument, 0, 'v'},
                 {0, 0, 0, 0}
             };
 
         int option_index = 0;
-        c = getopt_long(argc, argv, "Ig:a:r:l:e:o:v", long_options, &option_index);
+        c = getopt_long(argc, argv, "g:a:s:l:e:o:h", long_options, &option_index);
 
         if (c == -1) {
             break;
         }
 
         switch(c) {
-        case 'I':
-            index_only = true;
-            break;
+        // case 'I':
+        //     index_only = true;
+        //     break;
         case 'g':
             genomic = optarg;
             break;
         case 'a':
             annotation = optarg;
             break;
-        case 'r':
+        case 's':
             rna_seqs = optarg;
             break;
         case 'l':
@@ -137,16 +139,22 @@ int main(int argc, char* argv[]) {
         case 'o':
             out = std::string(optarg);
             break;
-        case 'v':
-            verbose = true;
-            break;
+        // case 'v':
+        //     verbose = true;
+        //     break;
+        case 'h':
+            printHelp();
+            exit(EXIT_SUCCESS);
         default:
             printHelp();
             exit(EXIT_FAILURE);
         }
     }
-    if(out.compare("") == 0) {
-        out = "out.mem";
+    if(L == 0) {
+        L=15;
+    }
+    if(eps < 0 || eps > 100) {
+        eps = 3;
     }
 
     // - Building splicing graph
@@ -228,4 +236,5 @@ int main(int argc, char* argv[]) {
         std::cerr << "Reads file not found!" << std::endl;
     }
     outFile.close();
+    std::cout << std::endl;
 }

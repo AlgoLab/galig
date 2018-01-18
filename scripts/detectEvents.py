@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 import sys, os, itertools, operator
+import argparse
 
 from Bio import SeqIO
 import gffutils
@@ -105,8 +106,8 @@ def filterLowCovered(introns, tresh):
     for (p1,p2),w in introns.items():
         if w >= tresh:
             filtIntrons.update({(p1,p2):w})
-        else:
-            print("# W {} {}".format(p1,p2))
+        #else:
+        #    print("# W {} {}".format(p1,p2))
     return filtIntrons
 
 # Reconciliate a given intron (start/end) position with respect to the input pattern
@@ -337,11 +338,14 @@ def checkNewIntrons(newIntrons, allIntrons, strand, transcripts):
                         if key not in events[t]:
                             events[t][key] = []
                         events[t][key].append(trID)
+    return events
 
-    # Printing events... (TODO: they can be printed when found, but maybe the dict could be useful for some analysis)
+# Printing events (TODO: they can be printed when found, but maybe the dict could be useful for some analysis)
+def printEvents(events, outPath):
+    out = open(outPath, 'w')
     for t,evs in events.items():
         for (p1,p2,w),trs in evs.items():
-            print(t,p1,p2,w,"/".join(trs))
+            out.write("{},{},{},{},{}\n".format(t,p1,p2,w,"/".join(trs)))
 
 def extractIntrons(memsPath, Ref, exons, BitV, errRate, onlyPrimary):
     introns = {}
@@ -415,17 +419,9 @@ def extractIntrons(memsPath, Ref, exons, BitV, errRate, onlyPrimary):
                                 introns[key] = introns[key]+1 if key in introns else 1
     return introns
 
-def main():
-    #Cmd line arguments
-    refPath = sys.argv[1]      # Reference
-    gtfPath = sys.argv[2]      # Annotation
-    memsPath = sys.argv[3]     # Spliced-Graph alignments file
-    errRate = int(sys.argv[4]) # Error rate
-    tresh = int(sys.argv[5])   # Events treshold
-
-    #TODO: add these as cmd line parameters
+def main(memsPath, refPath, gtfPath, errRate, tresh, outPath, allevents):
+    #TODO: add this as cmd line parameter
     onlyPrimary = False
-    onlyNovel = True
 
     # Reading reference genome
     Ref = list(SeqIO.parse(refPath, "fasta"))[0]
@@ -442,7 +438,7 @@ def main():
     introns = extractIntrons(memsPath, Ref, exons, BitV, errRate, onlyPrimary)
 
     # Cleaning introns
-    if onlyNovel:
+    if not(allevents):
         newIntrons, annFoundIntrons = filterAnnotated(introns, annIntrons)
         newIntrons = reconciliateIntrons(newIntrons, Ref, strand)
         newIntrons, annFoundIntrons_ = filterAnnotated(newIntrons, annIntrons)
@@ -456,7 +452,27 @@ def main():
         allIntronsKey = newIntrons.keys()
 
     # Extracting events from introns
-    checkNewIntrons(newIntrons, allIntronsKey, strand, transcripts)
+    events = checkNewIntrons(newIntrons, allIntronsKey, strand, transcripts)
+    printEvents(events, outPath)
 
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser(description = "Detects alternative splicing events from splice-aware alignments to a splicing graph")
+    parser.add_argument('-g', '--genome', required=True, help='FASTA input file containing the reference')
+    parser.add_argument('-a', '--annotation', required=True, help='GTF input file containing the gene annotation')
+    parser.add_argument('-m', '--mems', required=True, help='input file containing the alignments to the splicing graph')
+    parser.add_argument('-o', '--output', required=True, help='SAM output file')
+    parser.add_argument('-e', '--erate', required=False, default=3, type=int, help='error rate (from 0 to 100, default: 3)')
+    parser.add_argument('-w', '--support', required=False, default=3, type=int, help='minimum number of reads needed to confirm an event (default: 3)')
+    parser.add_argument('--allevents', required=False, action='store_true', help='error rate (from 0 to 100, default: 3)')
+
+    args = parser.parse_args()
+
+    memsPath = args.mems
+    refPath = args.genome
+    gtfPath = args.annotation
+    errRate = args.erate
+    tresh = args.support
+    outPath = args.output
+    allevents = args.allevents
+
+    main(memsPath, refPath, gtfPath, errRate, tresh, outPath, allevents)
