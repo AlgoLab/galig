@@ -1,1 +1,5 @@
-theme: jekyll-theme-modernist
+title: ASGAL
+description: Detection of alternative splicing events by splice-aware RNA-Seq alignment
+show_downloads: false
+google_analytics:
+theme: jekyll-theme-slate
