@@ -138,7 +138,7 @@ cd example
 # Download reference and annotation from ensembl
 wget ftp://ftp.ensembl.org/pub/release-91/fasta/drosophila_melanogaster/dna/Drosophila_melanogaster.BDGP6.dna.chromosome.X.fa.gz
 gunzip Drosophila_melanogaster.BDGP6.dna.chromosome.X.fa.gz
-mv Drosophila_melanogaster.BDGP6.dna.chromosome.X.fa DrosMel.chrX.fa
+mv Drosophila_melanogaster.BDGP6.dna.chromosome.X.fa DrosMel.BDGP6.chrX.fa
 wget ftp://ftp.ensembl.org/pub/release-91/gtf/drosophila_melanogaster/Drosophila_melanogaster.BDGP6.91.chr.gtf.gz
 gunzip Drosophila_melanogaster.BDGP6.91.chr.gtf.gz
 
@@ -147,9 +147,9 @@ grep "CG13375" Drosophila_melanogaster.BDGP6.91.chr.gtf > CG13375.gtf
 rm Drosophila_melanogaster.BDGP6.91.chr.gtf
 
 # Run _ASGAL_
-../bin/main -g DrosMel.chrX.fa -a CG13375.gtf -s CG13375.fasta -o CG13375.mem
-python3 ../scripts/formatSAM.py -m CG13375.mem -g DrosMel.chrX.fa -a CG13375.gtf -o CG13375.sam
-python3 ../scripts/detectEvents.py -g DrosMel.chrX.fa -a CG13375.gtf -m CG13375.mem -o CG13375.events
+../bin/main -g DrosMel.BDGP6.chrX.fa -a CG13375.gtf -s CG13375.fasta -o CG13375.mem
+python3 ../scripts/formatSAM.py -m CG13375.mem -g DrosMel.BDGP6.chrX.fa -a CG13375.gtf -o CG13375.sam
+python3 ../scripts/detectEvents.py -g DrosMel.BDGP6.chrX.fa -a CG13375.gtf -m CG13375.mem -o CG13375.events
 ```
 
 We should obtain an empty file _CG13375.events_. This means that no
