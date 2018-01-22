@@ -1,6 +1,6 @@
-[Documentation](documentation) [Examples](examples) [Experiments](experiments)
+[Documentation](documentation) [Experiments](experiments)
 
-**--- Work in Progress ---**
+<!--[Examples](examples) -->
 
 **ASGAL** (**A**lternative **S**plicing **G**raph **AL**igner) is a
 tool for detecting the alternative splicing events expressed in a
@@ -16,10 +16,10 @@ graph of the input gene
 sample with respect to the input annotation
 
 The main difference between _ASGAL_ and the other tools for the
-detection of alternative splicing events is that _ASGAL_ considers each
-annotated transcript as an expressed isoform and detects all the
-differences between them and the input RNA-Seq reads. For this reason,
-we say that:
+detection of alternative splicing events is that _ASGAL_ compares the
+input RNA-Seq reads directly with the splicing graph of the gene
+considering its annonotation as a reference. For this reason, we say
+that:
 > _ASGAL_ detects the alternative splicing events expressed
 > in a RNA-Seq sample with respect to a given gene annotation
 
@@ -32,18 +32,21 @@ events:
 * _intron retention_ (caused by the insertion of a new intron inside an
 exon)
 
+<!--
 We are working on extending our approach in order to support:
 * _(small) cassette exon_
 * (more complex but less probable) events arising from the combination
   of two or more events
 
-Right now, _ASGAL_ is not be able to detect:
+Right now, _ASGAL_ is not able to detect:
 * _(long) cassette exon_
 * _intron retention_ (caused by the union of two exons)
+-->
 
 <!--  since it aligns the reads to the
 splicing graph and it cannot align to the introns of the gene: -->
---- figure ---
+<!-- --- figure --- -->
+
 
 <!--
 ### Citations
