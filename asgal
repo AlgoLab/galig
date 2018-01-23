@@ -1,0 +1,90 @@
+#!/bin/bash
+
+WD="$(pwd)/$(dirname $0)"
+
+function printHelp {
+    echo "usage: asgal -g GENOME -a ANNOTATION -s SAMPLE -o OUTPUT"
+    echo "             [-l LENGTH] [-e ERATE] [-w SUPPORT] [-N] [-h]"
+    echo ""
+    echo -e "  -h\t\t\tshow this help message and exit"
+    echo ""
+    echo "Required parameters:"
+    echo -e "  -g GENOME\t\treference in FASTA format"
+    echo -e "  -a ANNOTATION\t\tanotation in GTF format"
+    echo -e "  -s SAMPLE\t\tRNA-Seq sample in FASTA/Q format"
+    echo -e "  -o OUTPUT\t\tOutput file (without extension)"
+    echo ""
+    echo "Optional parameters:"
+    echo -e "  -l LENGTH\t\tminimum lenght of MEMs used to build the alignments (default: 15)"
+    echo -e "  -e ERATE\t\terror rate of alignments (from 0 to 100, default: 3)"
+    echo -e "  -w SUPPORT\t\tminimum number of reads needed to confirm an event (default: 3)"
+    echo -e "  -N\t\t\toutput also Non-novel events (default: only novel)"
+}
+
+# Setting default values
+l=15
+e=3
+w=3
+allEvents=""
+
+# Parsing arguments
+while getopts ":hg:a:s:o:l:e:w:N" opt; do
+    case $opt in
+        h) printHelp ; exit 0 ;;
+        g) genome=$OPTARG ;;
+        a) annotation=$OPTARG ;;
+        s) sample=$OPTARG ;;
+        o) out=$OPTARG ;;
+        l) l=$OPTARG ;;
+        e) e=$OPTARG ;;
+        w) w=$OPTARG ;;
+        N) allEvents="--allevents" ;;
+        #\?) echo "Invalid option: -$OPTARG" >&2 ;;
+        :) echo "Option -$OPTARG requires an argument." >&2 ; exit 1 ;;
+    esac
+done
+
+echo ""
+
+# Checking input files
+if [ ! -f $genome ]
+then
+    echo "### Genome file does not exist"
+    echo ""
+    exit 1
+fi
+
+if [ ! -f $annotation ]
+then
+    echo "### Annotation file does not exist"
+    exit 1
+fi
+
+if [ ! -f $sample ]
+then
+    echo "### Sample file does not exist"
+    exit 1
+fi
+
+# Convert fastq to fasta
+sampleType="${sample##*.}"
+if [ ${sampleType} = "fastq" ]
+then
+    echo "* Converting FASTQ sample to FASTA format"
+    bn=$(basename $sample .fastq)
+    fastq_to_fasta -i $sample -o $bn".fasta"
+    sample=$bn".fasta"
+fi
+
+# Running ASGAL
+echo "* (1/3) Aligning the RNA-Seq sample to the splicing graph"
+${WD}/bin/SpliceAwareAligner -g ${genome} -a ${annotation} -s ${sample} -o ${out}.mem -l $l -e $e
+echo ""
+
+echo "* (2/3) Converting the alignments to SAM format"
+python3 ${WD}/scripts/formatSAM.py -m ${out}.mem -g ${genome} -a ${annotation} -o ${out}.sam -e $e
+echo ""
+
+echo "* (3/3) Detecting events from the alignments to the splicing graph"
+python3 ${WD}/scripts/detectEvents.py -g ${genome} -a ${annotation} -m ${out}.mem -o ${out}.events -e $e -w $w ${allEvents}
+echo ""
