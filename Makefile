@@ -26,7 +26,6 @@ CPPFLAGS= $(INCLUDE_FLAGS)
 
 # Common C and C++ flags
 CCXXFLAGS:=-std=c++11 -Wall -O3 -DNDEBUG -march=native -Wno-deprecated -ffunction-sections -fdata-sections -fopenmp
-#CCXXFLAGS:=-g -std=c++11 -Wall -O0 -march=native -Wno-deprecated -ffunction-sections -fdata-sections -fopenmp
 # C-only flags
 CFLAGS+= $(CCXXFLAGS)
 # C++-only flags
@@ -46,18 +45,18 @@ LIBS:= \
 # - OBJS_xxx = the object files that compose the program
 # - LIBS_xxx = the libraries which must be linked
 #
-PROGRAMS:=main
+PROGRAMS:=SpliceAwareAligner
 
 # analyzegraph SNAP library
-OBJS_main = \
+OBJS_SpliceAwareAligner = \
 	utils.o \
 	bMEM.o \
 	SplicingGraph.o \
 	MEMsGraph.o \
-	main.o
+	SpliceAwareAligner.o
 
 #LIBS_main= $(LIBS) $(LOC_DIR)/include/snap-core/Snap.o -lrt -lsdsl -ldivsufsort -ldivsufsort64 -lemon
-LIBS_main= $(LIBS) -lrt -lsdsl -ldivsufsort -ldivsufsort64 -lemon
+LIBS_SpliceAwareAligner= $(LIBS) -lrt -lsdsl -ldivsufsort -ldivsufsort64 -lemon
 
 #
 # END List of programs
