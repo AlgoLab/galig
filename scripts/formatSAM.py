@@ -274,7 +274,7 @@ if __name__ == '__main__':
     parser.add_argument('-a', '--annotation', required=True, help='GTF input file containing the gene annotation')
     parser.add_argument('-m', '--mems', required=True, help='input file containing the alignments to the splicing graph')
     parser.add_argument('-o', '--output', required=True, help='SAM output file')
-    parser.add_argument('-e', '--erate', required=False, default=3, type=int, help='error rate (from 0 to 100, default: 3)')
+    parser.add_argument('-e', '--erate', required=False, default=3, type=int, help='error rate of alignments (from 0 to 100, default: 3)')
     args = parser.parse_args()
     memsPath = args.mems
     refPath = args.genome

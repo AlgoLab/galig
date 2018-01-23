@@ -461,9 +461,9 @@ if __name__ == '__main__':
     parser.add_argument('-a', '--annotation', required=True, help='GTF input file containing the gene annotation')
     parser.add_argument('-m', '--mems', required=True, help='input file containing the alignments to the splicing graph')
     parser.add_argument('-o', '--output', required=True, help='SAM output file')
-    parser.add_argument('-e', '--erate', required=False, default=3, type=int, help='error rate (from 0 to 100, default: 3)')
+    parser.add_argument('-e', '--erate', required=False, default=3, type=int, help='error rate of alignments (from 0 to 100, default: 3)')
     parser.add_argument('-w', '--support', required=False, default=3, type=int, help='minimum number of reads needed to confirm an event (default: 3)')
-    parser.add_argument('--allevents', required=False, action='store_true', help='error rate (from 0 to 100, default: 3)')
+    parser.add_argument('--allevents', required=False, action='store_true', help='output all events, not only the novel ones')
 
     args = parser.parse_args()
 
