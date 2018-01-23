@@ -4,24 +4,12 @@
 
 **ASGAL** (**A**lternative **S**plicing **G**raph **AL**igner) is a
 tool for detecting the alternative splicing events expressed in a
-RNA-Seq sample with respect to a gene annotation. The **main idea**
-behind _ASGAL_ is the following one: the alternative splicing events can
-be detected by aligning the RNA-Seq reads against the splicing graph
-of the gene.
-
-_ASGAL_ approach can be divided in two steps:
-1. **splice-aware alignment** of the RNA-Seq reads against the splicing
-graph of the input gene
-2. **detection of the alternative splicing events** expressed in the
-sample with respect to the input annotation
-
-The main difference between _ASGAL_ and the other tools for the
-detection of alternative splicing events is that _ASGAL_ compares the
-input RNA-Seq reads directly with the splicing graph of the gene
-considering its annonotation as a reference. For this reason, we say
-that:
-> _ASGAL_ detects the alternative splicing events expressed
-> in a RNA-Seq sample with respect to a given gene annotation
+RNA-Seq sample with respect to a gene annotation. The 
+_ASGAL_ approach consists of some  steps:
+1. **splicing graph construction**: from the gene annotation, _ASGAL_ builds the splicing graph representing the gene structure that is implied by the set of input transcripts.
+1. **splice-aware alignment**: _ASGAL_ aligns the RNA-Seq reads against the splicing
+graph of the input gene. This procedure is tailored for such kind of alignments.
+2. **detection of the alternative splicing events**: the spliced alignments are analyzed to detect the alternative splicing events that are induced by the reads in the sample. Moreover _ASGAL_ can report all events found, or only those that are not in the input annotation.
 
 ### Alternative Splicing Events
 Actually, _ASGAL_ fully supports the following alternative splicing
@@ -48,9 +36,21 @@ splicing graph and it cannot align to the introns of the gene: -->
 <!-- --- figure --- -->
 
 
-<!--
-### Citations
--->
+### Citation
+
+If you use _ASGAL_, please cite its use as:
+Luca Denti, Raffaella Rizzi, Stefano Beretta, Gianluca Della Vedova, Marco Previtali and Paola Bonizzoni.
+_ASGAL: Aligning RNA-Seq Data to a Splicing Graph to Detect Novel Alternative Splicing Events_
+
+### Install
+
+_ASGAL_ is available at conda-forge. A detailed installation walkthrough and the documentation is [available](documentation). 
+
+### Example
+
+The `example` directory contains a small dataset on the  gene [CG13375](http://www.ensembl.org/Drosophila_melanogaster/Gene/Summary?db=core;g=FBgn0040370;r=X:283186-294962) of Drosophila Melanogaster.
+
+If you want to run _ASGAL_ on the example dataset, you can use the command `command`. The results are `screenshot`
 
 ### Contacts
 If you have any question or you have any problem using the tool,
