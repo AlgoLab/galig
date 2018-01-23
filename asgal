@@ -2,73 +2,198 @@
 
 WD="$(pwd)/$(dirname $0)"
 
-function printHelp {
-    echo "usage: asgal -g GENOME -a ANNOTATION -s SAMPLE -o OUTPUT"
-    echo "             [-l LENGTH] [-e ERATE] [-w SUPPORT] [-N] [-h]"
-    echo ""
-    echo -e "  -h\t\t\tshow this help message and exit"
-    echo ""
-    echo "Required parameters:"
-    echo -e "  -g GENOME\t\treference in FASTA format"
-    echo -e "  -a ANNOTATION\t\tanotation in GTF format"
-    echo -e "  -s SAMPLE\t\tRNA-Seq sample in FASTA/Q format"
-    echo -e "  -o OUTPUT\t\tOutput file (without extension)"
-    echo ""
-    echo "Optional parameters:"
-    echo -e "  -l LENGTH\t\tminimum lenght of MEMs used to build the alignments (default: 15)"
-    echo -e "  -e ERATE\t\terror rate of alignments (from 0 to 100, default: 3)"
-    echo -e "  -w SUPPORT\t\tminimum number of reads needed to confirm an event (default: 3)"
-    echo -e "  -N\t\t\toutput also Non-novel events (default: only novel)"
+# Argbash is a bash code generator used to get arguments parsing right.
+# Argbash is FREE SOFTWARE, see https://argbash.io for more info
+# Generated online by https://argbash.io/generate
+
+die() {
+	local _ret=$2
+	test -n "$_ret" || _ret=1
+	test "$_PRINT_HELP" = yes && print_help >&2
+	echo "$1" >&2
+	exit ${_ret}
 }
 
-# Setting default values
-l=15
-e=3
-w=3
-allEvents=""
+begins_with_short_option() {
+	local first_option all_short_options
+	all_short_options='gasolewh'
+	first_option="${1:0:1}"
+	test "$all_short_options" = "${all_short_options/$first_option/}" && return 1 || return 0
+}
 
-# Parsing arguments
-while getopts ":hg:a:s:o:l:e:w:N" opt; do
-    case $opt in
-        h) printHelp ; exit 0 ;;
-        g) genome=$OPTARG ;;
-        a) annotation=$OPTARG ;;
-        s) sample=$OPTARG ;;
-        o) out=$OPTARG ;;
-        l) l=$OPTARG ;;
-        e) e=$OPTARG ;;
-        w) w=$OPTARG ;;
-        N) allEvents="--allevents" ;;
-        #\?) echo "Invalid option: -$OPTARG" >&2 ;;
-        :) echo "Option -$OPTARG requires an argument." >&2 ; exit 1 ;;
-    esac
-done
+
+
+# THE DEFAULTS INITIALIZATION - OPTIONALS
+genome=""
+annotation=""
+sample=""
+output=""
+l=15
+erate=3
+support=3
+allevents=""
+
+print_help ()
+{
+	echo "usage: asgal -g GENOME -a ANNOTATION -s SAMPLE -o OUTPUT"
+    echo "             [-l LENGTH] [-e ERATE] [-w SUPPORT] [-N] [-h]"
+    echo ""
+    echo -e "  -h, --help\t\t\t\tshow this help message and exit"
+    echo ""
+    echo "Required parameters:"
+    echo -e "  -g, --genome GENOME\t\t\treference in FASTA format"
+    echo -e "  -a, --annotation ANNOTATION\t\tanotation in GTF format"
+    echo -e "  -s, --sample SAMPLE\t\t\tRNA-Seq sample in FASTA/Q format"
+    echo -e "  -o, --output OUTPUT\t\t\tOutput file (without extension)"
+    echo ""
+    echo "Optional parameters:"
+    echo -e "  -l, -L LENGTH\t\t\t\tminimum lenght of MEMs used to build the alignments (default: 15)"
+    echo -e "  -e, -erate ERATE\t\t\terror rate of alignments (from 0 to 100, default: 3)"
+    echo -e "  -w, -support SUPPORT\t\t\tminimum number of reads needed to confirm an event (default: 3)"
+    echo -e "  --allevents\t\t\t\toutput also Non-novel events (default: only novel)"
+}
+
+parse_commandline ()
+{
+	while test $# -gt 0
+	do
+		_key="$1"
+		case "$_key" in
+			-g|--genome)
+				test $# -lt 2 && die "Missing value for the optional argument '$_key'." 1
+				genome="$2"
+				shift
+				;;
+			--genome=*)
+				genome="${_key##--genome=}"
+				;;
+			-g*)
+				genome="${_key##-g}"
+				;;
+			-a|--annotation)
+				test $# -lt 2 && die "Missing value for the optional argument '$_key'." 1
+				annotation="$2"
+				shift
+				;;
+			--annotation=*)
+				annotation="${_key##--annotation=}"
+				;;
+			-a*)
+				annotation="${_key##-a}"
+				;;
+			-s|--sample)
+				test $# -lt 2 && die "Missing value for the optional argument '$_key'." 1
+				sample="$2"
+				shift
+				;;
+			--sample=*)
+				sample="${_key##--sample=}"
+				;;
+			-s*)
+				sample="${_key##-s}"
+				;;
+			-o|--output)
+				test $# -lt 2 && die "Missing value for the optional argument '$_key'." 1
+				output="$2"
+				shift
+				;;
+			--output=*)
+				output="${_key##--output=}"
+				;;
+			-o*)
+				output="${_key##-o}"
+				;;
+			-l|--L)
+				test $# -lt 2 && die "Missing value for the optional argument '$_key'." 1
+				l="$2"
+				shift
+				;;
+			--L=*)
+				l="${_key##--L=}"
+				;;
+			-l*)
+				l="${_key##-l}"
+				;;
+			-e|--erate)
+				test $# -lt 2 && die "Missing value for the optional argument '$_key'." 1
+				erate="$2"
+				shift
+				;;
+			--erate=*)
+				erate="${_key##--erate=}"
+				;;
+			-e*)
+				erate="${_key##-e}"
+				;;
+			-w|--support)
+				test $# -lt 2 && die "Missing value for the optional argument '$_key'." 1
+				support="$2"
+				shift
+				;;
+			--support=*)
+				support="${_key##--support=}"
+				;;
+			-w*)
+				support="${_key##-w}"
+				;;
+			--no-allevents|--allevents)
+				allevents="--allevents"
+				test "${1:0:5}" = "--no-" && allevents="off"
+				;;
+			-h|--help)
+				print_help
+				exit 0
+				;;
+			-h*)
+				print_help
+				exit 0
+				;;
+			*)
+				_PRINT_HELP=yes die "FATAL ERROR: Got an unexpected argument '$1'" 1
+				;;
+		esac
+		shift
+	done
+}
+
+
+# Parsing commandline
+parse_commandline "$@"
 
 echo ""
 
 # Checking input files
-if [ ! -f $genome ]
+if [ "${genome}" = "" ] || [ ! -f $genome ]
 then
     echo "### Genome file does not exist"
     echo ""
     exit 1
 fi
 
-if [ ! -f $annotation ]
+if [ "${annotation}" = "" ] || [ ! -f $annotation ]
 then
     echo "### Annotation file does not exist"
+    echo ""
     exit 1
 fi
 
-if [ ! -f $sample ]
+if [ "${sample}" = "" ] || [ ! -f $sample ]
 then
     echo "### Sample file does not exist"
+    echo ""
+    exit 1
+fi
+
+if [ "${output}" = "" ]
+then
+    echo "### Empty output file"
+    echo ""
     exit 1
 fi
 
 # Convert fastq to fasta
 sampleType="${sample##*.}"
-if [ ${sampleType} = "fastq" ]
+if [ "${sampleType}" = "fastq" ]
 then
     echo "* Converting FASTQ sample to FASTA format"
     bn=$(basename $sample .fastq)
@@ -76,15 +201,18 @@ then
     sample=$bn".fasta"
 fi
 
+# Creating folder for output
+mkdir -p $(dirname ${output})
+
 # Running ASGAL
 echo "* (1/3) Aligning the RNA-Seq sample to the splicing graph"
-${WD}/bin/SpliceAwareAligner -g ${genome} -a ${annotation} -s ${sample} -o ${out}.mem -l $l -e $e
+${WD}/bin/SpliceAwareAligner -g ${genome} -a ${annotation} -s ${sample} -o ${output}.mem -l ${l} -e ${erate}
 echo ""
 
 echo "* (2/3) Converting the alignments to SAM format"
-python3 ${WD}/scripts/formatSAM.py -m ${out}.mem -g ${genome} -a ${annotation} -o ${out}.sam -e $e
+python3 ${WD}/scripts/formatSAM.py -m ${output}.mem -g ${genome} -a ${annotation} -o ${output}.sam -e ${erate}
 echo ""
 
 echo "* (3/3) Detecting events from the alignments to the splicing graph"
-python3 ${WD}/scripts/detectEvents.py -g ${genome} -a ${annotation} -m ${out}.mem -o ${out}.events -e $e -w $w ${allEvents}
+python3 ${WD}/scripts/detectEvents.py -g ${genome} -a ${annotation} -m ${output}.mem -o ${output}.events -e ${erate} -w ${support} ${allevents}
 echo ""

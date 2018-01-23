@@ -44,7 +44,7 @@ python3 ./scripts/detectEvents.py -g [reference] -a [annotation] -m output.mem -
 ```bash
 cd example
 tar xfJ DrosMel.BDGP6.chrX.tar.xz
-../asgal -g ../example/DrosMel.BDGP6.chrX.fa -a ../example/CG13375.gtf -s ../example/CG13375.fasta -o output -N
+../asgal -g ../example/DrosMel.BDGP6.chrX.fa -a ../example/CG13375.gtf -s ../example/CG13375.fasta -o output --allevents
 ```
 
 This will produce three file:
