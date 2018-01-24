@@ -343,6 +343,7 @@ def checkNewIntrons(newIntrons, allIntrons, strand, transcripts):
 # Printing events (TODO: they can be printed when found, but maybe the dict could be useful for some analysis)
 def printEvents(events, outPath):
     out = open(outPath, 'w')
+    out.write("Type,Start,End,Support,Transcripts\n")
     for t,evs in events.items():
         for (p1,p2,w),trs in evs.items():
             out.write("{},{},{},{},{}\n".format(t,p1,p2,w,"/".join(trs)))
