@@ -19,4 +19,4 @@ RUN git clone https://github.com/AlgoLab/galig.git && \
 
 ENTRYPOINT ["/galig/asgal"]
 
-CMD ["-g /data/DrosMel.BDGP6.chrX.fa", "-a /data/CG13375.gtf", "-s /data/CG13375.fasta", "-o /data/CG13375.events", "--allevents"]
+CMD ["-g /data/genome.fa", "-a /data/annotation.gtf", "-s /data/reads.fasta", "-o /data/events"]
