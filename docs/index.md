@@ -44,13 +44,25 @@ _ASGAL: Aligning RNA-Seq Data to a Splicing Graph to Detect Novel Alternative Sp
 
 ### Install
 
-_ASGAL_ is available at conda-forge. A detailed installation walkthrough and the documentation is [available](documentation). 
+
+
+_ASGAL_ is available at conda-forge and at Docker Hub. A detailed installation walkthrough and the documentation is [available](documentation). 
 
 ### Example
 
 The `example` directory contains a small dataset on the  gene [CG13375](http://www.ensembl.org/Drosophila_melanogaster/Gene/Summary?db=core;g=FBgn0040370;r=X:283186-294962) of Drosophila Melanogaster.
 
-If you want to run _ASGAL_ on the example dataset, you can use the command `command`. The results are `screenshot`
+If you already have [docker](https://www.docker.com) installed, you can run _ASGAL_ on
+that sample with  the commands
+```
+wget https://github.com/AlgoLab/galig/raw/master/example/example.tar.xz
+tar cvJf example.tar.xz
+docker run -v "$PWD"/example:/data algolab/asgal
+```
+
+The running times will be a few seconds. Then you will find the file
+[events.events](https://github.com/AlgoLab/galig/raw/master/example/events.events) in the
+`example` directory.
 
 ### Contacts
 If you have any question or you have any problem using the tool,

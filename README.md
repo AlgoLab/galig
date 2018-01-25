@@ -7,6 +7,10 @@ behind _ASGAL_ is the following one: the alternative splicing events can
 be detected by aligning the RNA-Seq reads against the splicing graph
 of the gene.
 
+The instructions to install and use _ASGAL_ are at
+[http://asgal.algolab.eu](http://asgal.algolab.eu)
+
+
 ### Prerequisites
   * [git](https://git-scm.com/)
   * [python3](https://www.python.org)
