@@ -5,6 +5,7 @@ RUN apt-get update && apt-get install -y \
     git-core \
     graphviz \
     python3-biopython \
+    python3-biopython-sql \
     python3-gffutils \
     python3-graphviz \
     python3
