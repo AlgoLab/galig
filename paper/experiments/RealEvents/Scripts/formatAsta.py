@@ -54,12 +54,12 @@ class Feature:
         print("------------------")
 
 def printES(f,p1,p2):
-    print("{0} {1} {2} {3}".format(f.ref, "ES", min(p1,p2), max(p1,p2)))
+    print("{0} {1} {2} {3}".format(f.ref, "ES", min(p1,p2)+1, max(p1,p2)-1))
 
 def printIR(f,i,j):
     i = f.getSplice(i)
     j = f.getSplice(j)
-    print("{0} {1} {2} {3}".format(f.ref, "IR", min(i,j), max(i,j)))
+    print("{0} {1} {2} {3}".format(f.ref, "IR", min(i,j)+1, max(i,j)-1))
 
 def printA3(f, i, j):
     i = f.getSplice(i)
@@ -97,7 +97,7 @@ def main():
             printIR(f,7,8)
         elif f.structure == "1^2-,3^4-":
             printIR(f,1,2)
-            printIR(f,3,4)        
+            printIR(f,3,4)
         else:
             pass
 
