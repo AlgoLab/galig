@@ -24,7 +24,7 @@ def main():
         dat = line.strip("\n")
         Ts.append(splitTime(dat))
 
-    print(sum(Ts))
+    print(round(sum(Ts) / float(len(Ts)), 3))
 
 if __name__ == '__main__':
     main()

@@ -7,7 +7,7 @@ def main():
         dat = int(line.strip("\n"))
         Rs.append(dat)
 
-    print(max(Rs))
+    print(round(sum(Rs)/float(len(Rs)), 3))
 
 if __name__ == '__main__':
     main()

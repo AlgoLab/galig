@@ -16,7 +16,7 @@ function analyzeSgal {
 
     while read chr
     do
-        python3 ${ScriptsFold}/analyzeAligns.py ${Samples}/${chr}.fasta ${Annos}/${chr} ${Aligns}/asgal/${chr} ${chr} >> ${ResFold}/asgal.csv
+        python3 ${ScriptsFold}/analyzeAligns.py ${Samples}/${chr}.fasta ${Annos}/${chr} ${Aligns}/asgal/${chr} >> ${ResFold}/asgal.csv
     done < ./CHRs
 
     grep -h "Elapsed (wall clock) time" ${Aligns}/asgal/*/*.time | cut -f 8 -d' ' > ${ResFold}/asgal.time
@@ -31,7 +31,7 @@ function analyze {
     rm -f ${ResFold}/${tool}.*
     while read chr
     do
-        python3 ${ScriptsFold}/analyzeAligns.py ${Samples}/${chr}.fasta ${Annos}/${chr} ${Aligns}/${tool}/${chr} ${chr} >> ${ResFold}/${tool}.csv
+        python3 ${ScriptsFold}/analyzeAligns.py ${Samples}/${chr}.fasta ${Annos}/${chr} ${Aligns}/${tool}/${chr} >> ${ResFold}/${tool}.csv
     done < ./CHRs
 
     grep -h "Elapsed (wall clock) time" ${Aligns}/${tool}/*/*.index.time | cut -f 8 -d' ' > ${ResFold}/${tool}.index.time

@@ -1,8 +1,6 @@
 #!/bin/bash
 
-ResFold=$1/Results/RealEvents/asgal
-
-ResFold
+ResFold=$1
 
 function print {
     sample=$1
@@ -12,7 +10,7 @@ function print {
     Rres=${ResFold}/${sample}/ResultsRecall.csv
     Ires=${ResFold}/${sample}/IntronsAnalysis.csv
 
-    for ev in ES IR A3 A5
+    for ev in ES A3 A5 IR
     do
         totR=$(grep -c $ev $Rres)
         foundR=$(grep $ev $Rres | grep -c " 1$")
@@ -27,7 +25,7 @@ function print {
     Prec=$(bc <<< "scale = 3; ($FoundRealIntrons / $FoundIntrons)")
     Rec=$(bc <<< "scale = 3; ($FoundRealIntrons / $RealIntrons)")
     
-    echo -e "Introns: $FoundRealIntrons/$FoundIntrons ($Prec)"
+    echo -e "* Introns: $FoundRealIntrons/$FoundIntrons ($Prec)"
     echo ""
 }
 

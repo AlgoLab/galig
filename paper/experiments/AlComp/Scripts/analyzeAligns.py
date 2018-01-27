@@ -35,7 +35,6 @@ def main():
     samplePath = sys.argv[1]
     GTFsFold = sys.argv[2]
     SAMsFold = sys.argv[3]
-    chrom = sys.argv[4]
 
     sample = [extractTrID(x.id) for x in list(SeqIO.parse(samplePath, "fasta"))]
 
@@ -66,7 +65,7 @@ def main():
                         else:
                             FP += 1
             FN = Truth - TP
-            print(chrom, gene, TP, FP, FN, sep=",")
+            print(gene, TP, FP, FN, sep=",")
 
 if __name__ == '__main__':
     main()

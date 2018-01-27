@@ -3,7 +3,7 @@
 ScriptsFold=$(dirname $0)/Scripts
 
 WorkFold=$1/RealData
-ResFold=$1/Results/RealEvents/SplAdder
+ResFold=$1/Results/RealEvents/spladder
 
 mkdir -p ${ResFold}
 
@@ -18,6 +18,6 @@ do
         gene=$(basename ${truth} .ort.events)
         events=${fold}/${gene}.events
         chr=$(head -1 ${WorkFold}/SRR354041/${gene}.new.gtf | cut -f 1 -d$'\t')
-        python3 ${ScriptsFold}/checkRec.py ${events} ${truth} ${chr} ${gene} >> ${ResFold}/${run}.recall.csv
+        python3 ${ScriptsFold}/checkRec.py ${events} ${truth} ${chr} ${gene} >> ${res}
     done
 done
