@@ -1,15 +1,13 @@
 [Documentation](documentation) [Experiments](experiments)
 
-<!--[Examples](examples) -->
-
 **ASGAL** (**A**lternative **S**plicing **G**raph **AL**igner) is a
 tool for detecting the alternative splicing events expressed in a
 RNA-Seq sample with respect to a gene annotation. The 
 _ASGAL_ approach consists of some  steps:
 1. **splicing graph construction**: from the gene annotation, _ASGAL_ builds the splicing graph representing the gene structure that is implied by the set of input transcripts.
-1. **splice-aware alignment**: _ASGAL_ aligns the RNA-Seq reads against the splicing
+2. **splice-aware alignment**: _ASGAL_ aligns the RNA-Seq reads against the splicing
 graph of the input gene. This procedure is tailored for such kind of alignments.
-2. **detection of the alternative splicing events**: the spliced alignments are analyzed to detect the alternative splicing events that are induced by the reads in the sample. Moreover _ASGAL_ can report all events found, or only those that are not in the input annotation.
+3. **detection of the alternative splicing events**: the spliced alignments are analyzed to detect the alternative splicing events that are induced by the reads in the sample. Moreover _ASGAL_ can report all events found, or only those that are not in the input annotation.
 
 ### Alternative Splicing Events
 Actually, _ASGAL_ fully supports the following alternative splicing
@@ -44,8 +42,6 @@ _ASGAL: Aligning RNA-Seq Data to a Splicing Graph to Detect Novel Alternative Sp
 
 ### Install
 
-
-
 _ASGAL_ is available at conda-forge and at Docker Hub. A detailed installation walkthrough and the documentation is [available](documentation). 
 
 ### Example
@@ -56,13 +52,15 @@ If you already have [docker](https://www.docker.com) installed, you can run _ASG
 that sample with  the commands
 ```
 wget https://github.com/AlgoLab/galig/raw/master/example/example.tar.xz
-tar cvJf example.tar.xz
-docker run -v "$PWD"/example:/data algolab/asgal
+tar xfz input.tar.gz
+docker run -v "$PWD"/input:/data algolab/asgal
 ```
 
 The running times will be a few seconds. Then you will find the file
-[events.events](https://github.com/AlgoLab/galig/raw/master/example/events.events) in the
-`example` directory.
+[events.events](https://github.com/AlgoLab/galig/raw/master/example/events.events)
+in the `example` directory. An extended explanation of this example
+can be found <a href="http://asgal.algolab.eu/documentation#example"
+target="_blank">here</a>.
 
 ### Contacts
 If you have any question or you have any problem using the tool,

@@ -42,33 +42,40 @@ instead, are in the _scripts_ folder.
 
 ## Input
 _ASGAL_ takes as input:
-* a reference genome (in _FASTA_ format)
+* a reference genome (in _FASTA_ or _FASTQ_ format)
 * a gene annotation (in _GTF_ format)
 * an RNA-Seq sample (in _FASTA_ format)
 
-##### Note on FASTQ support
-_ASGAL_ accepts only RNA-Seq sample in _FASTA_ format. If you have a sample in _FASTQ_ format, you can easily convert it using [FASTX-Toolkit](http://hannonlab.cshl.edu/fastx_toolkit/):
-```bash
-fastq_to_fasta -i sample.fastq -o sample.fasta
-```
 <br />
 
 ## Usage
 _ASGAL_ is composed of three different modules, each one performing a
-different task.
+different task. However, we make available a script that run the full pipeline.
 
-### Step 1 - Splice-Aware Aligner
+### Full Pipeline Script
+To run _ASGAL_ pipeline, run the following command:
+```bash
+./asgal -g [genome] -a [annotation] -s [sample] -o output
+```
+This command will produce three files:
+  * _output.mem_, containing the alignments to the splicing graph
+  * _output.sam_, containing the alignments to the splicing graph mapped to the reference genome
+  * _output.events.csv_, containing the alternative splicing events detected in the RNA-Seq sample
+
+We will now specify in more detail the three steps of _ASGAL_ pipeline.
+
+#### Step 1 - Splice-Aware Aligner
 
 To build the splicing graph and align the input
 sample to it, run the following command:
 ```bash
-./bin/main -g [reference] -a [annotation] -r [sample] -o output.mem
+./bin/SpliceAwareAligner -g [reference] -a [annotation] -r [sample] -o output.mem
 ```
 
 In this way, the alignments to the splicing graph are computed and
 stored in _output.mem_ file.
 
-### Step 2 (optional) - SAM Formatter
+#### Step 2 (optional) - SAM Formatter
 The file obtained in the previous step can be converted into a
 [SAM](https://samtools.github.io/hts-specs/SAMv1.pdf) file (that can
 be open, for example, with
@@ -86,19 +93,19 @@ genome computed by any spliced aligner (such as
 [STAR](https://github.com/alexdobin/STAR) or
 [HISAT2](https://ccb.jhu.edu/software/hisat2/index.shtml)).
 Indeed, our alignments could contain long insertions representing the
-portions of reads that could align to an intron (and represents a
-cassette exon).
+portions of reads that could align to an intron (and that could
+represent, for example, a _cassette exon_).
 
-### Step 3 - Events Detector
+#### Step 3 - Events Detector
 
 To analyze the alignments and detect the possible presence of
 alternative splicing events, run:
 
 ```bash
-python3 ./scripts/detectEvents.py -g [reference] -a [annotation] -m output.mem -o output.events
+python3 ./scripts/detectEvents.py -g [reference] -a [annotation] -m output.mem -o output.events.csv
 ```
 
-##### Output Format
+###### Output Format
 The alternative splicing events are stored in the file
 _output.events_, a _space-separated value_ file where each line
 represents an event. Each alternative splicing event is associated to
@@ -114,7 +121,7 @@ the intron inducing it and it is described by:
 
 For example,
 
-| Type | Start | End | #Reads | Annotated Transcripts |
+| Type | Start | End | Support | Transcripts |
 |:-:|:-:|:-:|:-:|:-:|
 | ES | 2000 | 2500 | 150 | Transcript1/Transcript2/Transcript3 |
 
@@ -135,39 +142,35 @@ of _Drosophila Melanogaster_.
 ```bash
 cd example
 
+# Extract the RNA-Seq sample
+tar xfz input.tar.gz
+
 # Download reference and annotation from ensembl
 wget ftp://ftp.ensembl.org/pub/release-91/fasta/drosophila_melanogaster/dna/Drosophila_melanogaster.BDGP6.dna.chromosome.X.fa.gz
 gunzip Drosophila_melanogaster.BDGP6.dna.chromosome.X.fa.gz
-mv Drosophila_melanogaster.BDGP6.dna.chromosome.X.fa DrosMel.BDGP6.chrX.fa
+mv Drosophila_melanogaster.BDGP6.dna.chromosome.X.fa input/genome.fa
 wget ftp://ftp.ensembl.org/pub/release-91/gtf/drosophila_melanogaster/Drosophila_melanogaster.BDGP6.91.chr.gtf.gz
 gunzip Drosophila_melanogaster.BDGP6.91.chr.gtf.gz
 
 # Extract the annotation of the gene of interest
-grep "CG13375" Drosophila_melanogaster.BDGP6.91.chr.gtf > CG13375.gtf
+grep "CG13375" Drosophila_melanogaster.BDGP6.91.chr.gtf > input/annotation.gtf
 rm Drosophila_melanogaster.BDGP6.91.chr.gtf
 
 # Run _ASGAL_
-../bin/main -g DrosMel.BDGP6.chrX.fa -a CG13375.gtf -s CG13375.fasta -o CG13375.mem
-python3 ../scripts/formatSAM.py -m CG13375.mem -g DrosMel.BDGP6.chrX.fa -a CG13375.gtf -o CG13375.sam
-python3 ../scripts/detectEvents.py -g DrosMel.BDGP6.chrX.fa -a CG13375.gtf -m CG13375.mem -o CG13375.events
+../bin/SpliceAwareAligner -g input/genome.fa -a input/annotation.gtf -s input/reads.fasta -o CG13375.mem
+python3 ../scripts/formatSAM.py -m CG13375.mem -g input/genome.fa -a input/annotation.gtf -o CG13375.sam
+python3 ../scripts/detectEvents.py -g input/genome.fa -a input/annotation.gtf -m CG13375.mem -o CG13375.events
 ```
 
-We should obtain an empty file _CG13375.events_. This means that no
-**novel** alternative splicing events are expressed in the sample with
-respect to the gene annotation. But if we add the __\-\-allevents__ parameter to the _events detector_
+We should obtain a novel _exon skipping_ events:
 ```bash
-python3 ../scripts/detectEvents.py -g DrosMel.chrX.fa -a CG13375.gtf -m CG13375.mem --allevents -o CG13375.all.events
+Type,Start,End,Support,Transcripts
+ES,287042,289040,410,FBtr0300326/FBtr0070103/FBtr0342963
 ```
-
-we should obtain two alternative splicing events, an _exon skipping_
-and an _alternative acceptor site_: these events are expressed in the
-sample but are not **novel**. This means that these events are already
-known since they are induced by an intron already contained in the
-input annotation.
 
 ###### Observation
 The correctness of the output can be verified opening the genome, the
-annotation and the alignments with _IGV_.
+annotation and the alignments with _IGV_ and generating a _sashimi plot_:
 
 <br />
 
@@ -175,11 +178,38 @@ annotation and the alignments with _IGV_.
 * all programs show usage information with **-h** (**\-\-help**)
 * all programs write to a specific output file, defined with **-o**
 
+### Full Pipeline script
+
+File:
+```bash
+./asgal
+```
+Required parameters:
+```bash
+-g,--genome INFILE          FASTA input file containing the reference
+-a,--annotation INFILE      GTF input file containing the gene annotation
+-s,--sample INFILE          FASTA/Q input file containing the RNA-Seq reads
+-o,--output OUTFILE         output file name (without extension)
+```
+
+Optional parameters:
+```bash
+-l,--L <int>                minimum lenght of MEMs used to build the
+                            alignments (default: 15)
+-e,--eps <int>              error rate, a value from 0 to 100 used to
+                            compute the maximum number of allowed errors
+                            (default: 3)
+-w,--support <int>          minimum number of reads needed to confirm an event
+                            (default: 3)
+--allevents                 output all events, not only the novel ones
+                            (default: only novels)
+```
+
 ### Splice-Aware Aligner
 
 File:
 ```bash
-./bin/main
+./bin/SpliceAwareAligner
 ```
 
 Required parameters:
@@ -201,6 +231,10 @@ Optional parameters:
 ```
 
 ###### Observations
+* the SpliceAwareAligner takes as input only FASTA samples. If you have a FASTQ sample, you can convert it into FASTA format using the following command:
+  ```bash
+  python3 ./scripts/fastq2fasta.py -i [FASTQ] -o [FASTA]
+  ```
 * an higher value of _L_ improves the speed but reduces the number of aligned reads
 * the number of allowed errors is computed for each read as the ratio between the error rate and its length
 
@@ -246,7 +280,7 @@ Optional parameters:
 -e,--erate <int>            error rate, a value from 0 to 100 (default: 3)
 -w,--support <int>          minimum number of reads needed to confirm an event
                             (default: 3)
---allevents                output all events, not only the novel ones
+--allevents                 output all events, not only the novel ones
 ```
 
 ###### Observation
