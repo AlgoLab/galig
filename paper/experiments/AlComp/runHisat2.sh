@@ -30,7 +30,8 @@ do
 
         echo "* Aligning $gene ($chr) - $(date +%r)"
         \time -v -o ${out}.align.time ${ToolsFold}/hisat2 -f -x ${Index} -U ${Sample} -S ${out}.sam &>> ${out}.log
-
+        samtools view -S -F 4 ${out}.sam > ${out}.sam.tmp
+        mv ${out}.sam.tmp ${out}.sam
         rm -r $(dirname ${Index})
         echo ""
     done
