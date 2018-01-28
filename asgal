@@ -192,13 +192,14 @@ then
 fi
 
 # Convert fastq to fasta
-sampleType="${sample##*.}"
-if [ "${sampleType}" = "fastq" ]
+sampleExt="${sample##*.}"
+if [ "${sampleExt}" = "fastq" ] || [ "${sampleExt}" = "fq" ]
 then
-    echo "* Converting FASTQ sample to FASTA format"
-    bn=$(basename $sample .fastq)
-    fastq_to_fasta -i $sample -o $bn".fasta"
+    echo "* (0/3) Converting FASTQ sample to FASTA format"
+    bn=$(basename $sample ".${sampleExt}")
+    python3 ${WD}/scripts/fastq2fasta.py ${sample} $bn".fasta"
     sample=$bn".fasta"
+    echo ""
 fi
 
 # Creating folder for output
@@ -214,5 +215,5 @@ python3 ${WD}/scripts/formatSAM.py -m ${output}.mem -g ${genome} -a ${annotation
 echo ""
 
 echo "* (3/3) Detecting events from the alignments to the splicing graph"
-python3 ${WD}/scripts/detectEvents.py -g ${genome} -a ${annotation} -m ${output}.mem -o ${output}.events -e ${erate} -w ${support} ${allevents}
+python3 ${WD}/scripts/detectEvents.py -g ${genome} -a ${annotation} -m ${output}.mem -o ${output}.events.csv -e ${erate} -w ${support} ${allevents}
 echo ""
