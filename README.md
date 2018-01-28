@@ -17,7 +17,6 @@ The instructions to install and use _ASGAL_ are at
   * [gffutils](http://daler.github.io/gffutils/)
   * [biopython](http://biopython.org)
   * [cmake](https://cmake.org)
-  * [FASTX-Toolkit](http://hannonlab.cshl.edu/fastx_toolkit/)
 
 ### Compiling
 ```bash
@@ -41,17 +40,17 @@ In more detail:
 python3 ./scripts/formatSAM.py -m output.mem -g [reference] -a [anotation] -o output.sam
 
 # Detect events from alignments
-python3 ./scripts/detectEvents.py -g [reference] -a [annotation] -m output.mem -o output.events 
+python3 ./scripts/detectEvents.py -g [reference] -a [annotation] -m output.mem -o output.events.csv
 ```
 
 ### Example
 ```bash
 cd example
-tar xfJ DrosMel.BDGP6.chrX.tar.xz
-../asgal -g ../example/DrosMel.BDGP6.chrX.fa -a ../example/CG13375.gtf -s ../example/CG13375.fasta -o output --allevents
+tar xfz input.tar.gz
+../asgal -g ./input/genome.fa -a ./input/annotation.gtf -s ./input/reads.fasta -o output
 ```
 
-This will produce three file:
+This command will produce three files:
   * _output.mem_, containing the alignments to the splicing graph
   * _output.sam_, containing the alignments to the splicing graph mapped to the reference genome
   * _output.events_, containing the alternative splicing events detected in the RNA-Seq sample
