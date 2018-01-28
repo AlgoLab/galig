@@ -165,12 +165,16 @@ python3 ../scripts/detectEvents.py -g input/genome.fa -a input/annotation.gtf -m
 We should obtain a novel _exon skipping_ events:
 ```bash
 Type,Start,End,Support,Transcripts
-ES,287042,289040,410,FBtr0300326/FBtr0070103/FBtr0342963
+ES,287042,289040,411,FBtr0300326/FBtr0070103/FBtr0342963
 ```
 
 ###### Observation
 The correctness of the output can be verified opening the genome, the
 annotation and the alignments with _IGV_ and generating a _sashimi plot_:
+
+<img src="https://raw.githubusercontent.com/AlgoLab/galig/master/example/sashimi.png" width="630">
+
+From the picture, we can see that 411 reads support the skipping of the third exon and this event involves the three transcript of the gene.
 
 <br />
 
