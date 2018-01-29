@@ -58,7 +58,7 @@ If you want to run the experiments step by step, move to the experiments folder 
    ```
 5. download the real data
    ```bash
-   bash 4runSimEvents.sh ${DesiredFolder}
+   bash 5downloadRealData.sh ${DesiredFolder}
    ```
 6. run _ASGAL_ on real data: this script will build the truth, create the reduced annotations and run _ASGAL_ full pipeline
    ```

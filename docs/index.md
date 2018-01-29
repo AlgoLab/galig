@@ -46,19 +46,21 @@ _ASGAL_ is available at conda-forge and at Docker Hub. A detailed installation w
 
 ### Example
 
-The `example` directory contains a small dataset on the  gene [CG13375](http://www.ensembl.org/Drosophila_melanogaster/Gene/Summary?db=core;g=FBgn0040370;r=X:283186-294962) of Drosophila Melanogaster.
+The `example` directory contains a small dataset on the gene
+[CG13375](http://www.ensembl.org/Drosophila_melanogaster/Gene/Summary?db=core;g=FBgn0040370;r=X:283186-294962)
+of Drosophila Melanogaster.
 
-If you already have [docker](https://www.docker.com) installed, you can run _ASGAL_ on
-that sample with  the commands
+If you already have [docker](https://www.docker.com) installed, you
+can run _ASGAL_ on that sample with the commands
 ```
-wget https://github.com/AlgoLab/galig/raw/master/example/example.tar.xz
+wget https://github.com/AlgoLab/galig/raw/master/example/input.tar.gz
 tar xfz input.tar.gz
 docker run -v "$PWD"/input:/data algolab/asgal
 ```
 
 The running times will be a few seconds. Then you will find the file
 [events.events](https://github.com/AlgoLab/galig/raw/master/example/events.events)
-in the `example` directory. An extended explanation of this example
+in the `input` directory. An extended explanation of this example
 can be found <a href="http://asgal.algolab.eu/documentation#example"
 target="_blank">here</a>.
 

@@ -75,6 +75,14 @@ sample to it, run the following command:
 In this way, the alignments to the splicing graph are computed and
 stored in _output.mem_ file.
 
+###### Observation
+The SpliceAwareAligner takes as input only FASTA samples. If you have
+a FASTQ sample, you can convert it into FASTA format using the
+following command:
+```bash
+python3 ./scripts/fastq2fasta.py -i [FASTQ] -o [FASTA]
+```
+
 #### Step 2 (optional) - SAM Formatter
 The file obtained in the previous step can be converted into a
 [SAM](https://samtools.github.io/hts-specs/SAMv1.pdf) file (that can
