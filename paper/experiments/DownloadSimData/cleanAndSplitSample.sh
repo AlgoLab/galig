@@ -11,10 +11,11 @@ sample=$(basename ${inFasta} .fastq)
 echo -e "* Converting to FASTA"
 
 cutadapt -o ${sample}.fasta ${sample}.fastq &> ${log}
+
 rm ${sample}.fastq
 
 echo -e "* Trimming sample"
-cutadapt -m 40 -a "A{100}" -g "T{100}" ${sample}.fasta > ${sample}.trimmed &> ${log}
+cutadapt -m 40 -a "A{100}" -g "T{100}" ${sample}.fasta > ${sample}.trimmed 2>> ${log}
 mv ${sample}.trimmed ${sample}.fasta
 
 echo -e "* Splitting sample"

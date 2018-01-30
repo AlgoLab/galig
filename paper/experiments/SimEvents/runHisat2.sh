@@ -23,7 +23,7 @@ do
     echo "* Indexing $chr - $(date +%r)"
     ${HisatFold}/hisat2-build ${ref} ${Index} &> ${out}.log
 
-    echo "* Aligning $gene ($chr) - $(date +%r)"
+    echo "* Aligning $chr - $(date +%r)"
     ${HisatFold}/hisat2 -f -x ${Index} -U ${Sample} -S ${out}.sam &>> ${out}.log
 
     bash ${ScriptsFold}/sam2bam.sh ${out}.sam

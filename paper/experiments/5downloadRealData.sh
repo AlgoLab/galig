@@ -4,16 +4,27 @@ CurrFold=$(pwd)
 
 WF=$1
 
-cd ${WF}
-mkdir -p RealData
-cd RealData
+mkdir -p ${WF}/RealData
+cd ${WF}/RealData
 
-for sample in SRR354041 SRR354042 SRR354043
-do
-    echo "* Downloading and extracting ${sample}"
-    #scp lxc_gralign:/data/SgalRealExp/${sample}.tar.xz .
-    #tar xJf ${sample}.tar.xz
-    #rm ${sample}.tar.xz
-done
+log="./RealDataDownload.log"
+
+sample="SRR354041"
+echo "* Downloading and extracting ${sample}"
+bash ${CurrFold}/getFromDrive.sh 'https://drive.google.com/open?id=1VfAMjnFIcVSdyp-MaXU7FkW4VgLVKHew' &> ${log}
+tar xfz ${sample}.tar.gz
+rm ${sample}.tar.gz
+
+sample="SRR354042"
+echo "* Downloading and extracting ${sample}"
+bash ${CurrFold}/getFromDrive.sh 'https://drive.google.com/open?id=1nF-wk9ML1DZvz7PvOrJMueJnl3yycX6c' &>> ${log}
+tar xfz ${sample}.tar.gz
+rm ${sample}.tar.gz
+
+sample="SRR354043"
+echo "* Downloading and extracting ${sample}"
+bash ${CurrFold}/getFromDrive.sh 'https://drive.google.com/open?id=1EWKatEx3WaXFsMn3Pr2xTYx8XEnJov4o' &>> ${log}
+tar xfz ${sample}.tar.gz
+rm ${sample}.tar.gz
 
 cd ${CurrFold}
