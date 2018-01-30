@@ -6,8 +6,8 @@ This page contains information on how to replicate the experiments described in 
 
 ##### Data availability
 All the data used in the experiments are available at the following locations:
-* [simulated data](https://public.bmi.inf.ethz.ch/projects/2015/spladder/)
-* [real data]()
+* [simulated data](https://drive.google.com/open?id=1mbEYLIn9193WdSEBp3rsEpiqC9mS2Vi2), this is a copy of the data available [here](https://public.bmi.inf.ethz.ch/projects/2015/spladder/)
+* [real data](https://drive.google.com/open?id=1N5zg3z9XQiOuzpEZUW0HxfKxTGrf5Vtz)
 
 Notice that our scripts will download and set up the data automatically.
 
@@ -61,11 +61,11 @@ If you want to run the experiments step by step, move to the experiments folder 
    bash 5downloadRealData.sh ${DesiredFolder}
    ```
 6. run _ASGAL_ on real data: this script will build the truth, create the reduced annotations and run _ASGAL_ full pipeline
-   ```
+   ```bash
    bash 6runRealAsgal.sh ${DesiredFolder}
    ```
 7. run _SplAdder_ on real data (4 different setups): this script will run _SplAdder_ using the reduced annotation **computed in the previous step** and the spliced alignments computed by _STAR_ and _Hisat2_
-   ```
+   ```bash
    bash 7runRealSplAdder.sh ${DesiredFolder}
    ```
 
