@@ -9,7 +9,23 @@ All the data used in the experiments are available at the following locations:
 * [simulated data](https://drive.google.com/open?id=1mbEYLIn9193WdSEBp3rsEpiqC9mS2Vi2), this is a copy of the data available [here](https://public.bmi.inf.ethz.ch/projects/2015/spladder/)
 * [real data](https://drive.google.com/open?id=1N5zg3z9XQiOuzpEZUW0HxfKxTGrf5Vtz)
 
-Notice that our scripts will download and set up the data automatically.
+Notice that our scripts will download and set up the data
+automatically. The data are hosted on _google drive_ and to
+download them, we use the script available
+[here](https://gist.github.com/darencard/079246e43e3c4b97e373873c6c9a3798).
+
+However, it is not guaranteed that this script will work indefinitely: if it fails, please let
+me known. A possible workaround is the following one:
+
+1. download manually the data and copy everything in a single folder (let ${DataFolder} be this folder)
+2. move to the experiments folder:
+   ```bash
+   cd paper/experiments
+   ```
+3. run the following script (${DesiredFolder} is the folder where you want to store all the data used and produced during these experiments)
+   ```bash
+   bash moveData.sh ${DataFolder} ${DesiredFolder}
+   ```
 
 ### Prerequisites
 Before running the experiments, install the following prerequisites:
@@ -42,31 +58,35 @@ The one-step script is fully sequential and, on our server (Four 8-core Intel Xe
 If you want to run the experiments step by step, move to the experiments folder and
 1. download _Hisat2_, _STAR_, _SplAdder_, and _AStalavista_
    ```bash
-   bash 1downloadTools.sh ${DesiredFolder}
+   bash downloadTools.sh ${DesiredFolder}
    ```
-2. download and set up the simulated data
+2. download simulated data (if you did not download them manually)
    ```bash
-   bash 2downloadSimData.sh ${DesiredFolder}
+   bash downloadSimData.sh ${DesiredFolder}
+   ```
+3. set up the simulated data
+   ```bash
+   bash setupSimData.sh ${DesiredFolder}
    ```
 3. run _ASGAL_ aligner, _Hisat2_, and _STAR_ on simulated data (_5M_ dataset)
    ```bash
-   bash 3runAlignersComparison.sh ${DesiredFolder}
+   bash runAlignersComparison.sh ${DesiredFolder}
    ```
 4. run _ASGAL_ and _SplAdder_ on simulated data (_5M_ and _10M_ datasets): this script will build the truth, create the reduced annotations, run _ASGAL_ full pipeline, _Hisat2_ + _SplAdder_ and _STAR_ + _SplAdder_ 
    ```bash
-   bash 4runSimEvents.sh ${DesiredFolder}
+   bash runSimEvents.sh ${DesiredFolder}
    ```
-5. download the real data
+5. download the real data (if you did not download them manually)
    ```bash
-   bash 5downloadRealData.sh ${DesiredFolder}
+   bash downloadRealData.sh ${DesiredFolder}
    ```
 6. run _ASGAL_ on real data: this script will build the truth, create the reduced annotations and run _ASGAL_ full pipeline
    ```bash
-   bash 6runRealAsgal.sh ${DesiredFolder}
+   bash runRealAsgal.sh ${DesiredFolder}
    ```
 7. run _SplAdder_ on real data (4 different setups): this script will run _SplAdder_ using the reduced annotation **computed in the previous step** and the spliced alignments computed by _STAR_ and _Hisat2_
    ```bash
-   bash 7runRealSplAdder.sh ${DesiredFolder}
+   bash runRealSplAdder.sh ${DesiredFolder}
    ```
 
 ###### <a name="parallel"></a>Parallel execution

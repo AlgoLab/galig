@@ -6,7 +6,7 @@ log=$3
 
 mkdir -p ${outDir}
 
-sample=$(basename ${inFasta} .fastq)
+sample=$(dirname ${inFasta})/$(basename ${inFasta} .fastq)
 
 echo -e "* Converting to FASTA"
 

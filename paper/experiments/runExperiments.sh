@@ -4,22 +4,23 @@ WF=$1
 mkdir -p ${WF}
 
 # Downloading tools
-bash 1downloadTools.sh ${WF}
+bash downloadTools.sh ${WF}
 
 # Simulated Data
-bash 2downloadSimData.sh ${WF}
+bash downloadSimData.sh ${WF}
+bash setupSimData.sh ${WF}
 
 # Aligners comparison on Simulated Data
-bash 3runAlignersComparison.sh ${WF}
+bash runAlignersComparison.sh ${WF}
 
 # Events detection comparison on Simulated Data
-bash 4runSimEvents.sh ${WF}
+bash runSimEvents.sh ${WF}
 
 # Real Data
-bash 5downloadRealData.sh ${WF}
+bash downloadRealData.sh ${WF}
 
 # ASGAL on Real Data
-bash 6runRealAsgal.sh ${WF}
+bash runRealAsgal.sh ${WF}
 
 # SplAdder on Real Data
-bash 7runRealSplAdder.sh ${WF}
+bash runRealSplAdder.sh ${WF}
