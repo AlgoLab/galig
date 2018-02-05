@@ -92,9 +92,10 @@ If you want to run the experiments step by step, move to the experiments folder 
 ###### <a name="parallel"></a>Parallel execution
 The seven steps can be run in parallel reducing the time needed to complete the experiments (**the parallel execution has not been tested**):
 1. run step 1
-2. run step 2 and 5
-3. run step 3, 4, and 6
-4. run step 7
+2. run step 2 and 6
+3. run step 3
+3. run step 4, 5, and 7
+4. run step 8
 
 ##### Printing the results
 To analyze the _CSV_ files and print the results, run the following commands:

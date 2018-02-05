@@ -1,7 +1,5 @@
 #!/bin/bash
 
-CF=$(pwd)
-
 WF=$1
 DataFold=${WF}/SimData
 
