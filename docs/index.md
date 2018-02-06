@@ -18,22 +18,6 @@ events:
 * _intron retention_ (caused by the insertion of a new intron inside an
 exon)
 
-<!--
-We are working on extending our approach in order to support:
-* _(small) cassette exon_
-* (more complex but less probable) events arising from the combination
-  of two or more events
-
-Right now, _ASGAL_ is not able to detect:
-* _(long) cassette exon_
-* _intron retention_ (caused by the union of two exons)
--->
-
-<!--  since it aligns the reads to the
-splicing graph and it cannot align to the introns of the gene: -->
-<!-- --- figure --- -->
-
-
 ### Citation
 
 If you use _ASGAL_, please cite its use as:
@@ -42,7 +26,7 @@ _ASGAL: Aligning RNA-Seq Data to a Splicing Graph to Detect Novel Alternative Sp
 
 ### Install
 
-_ASGAL_ is available at conda-forge and at Docker Hub. A detailed installation walkthrough and the documentation is [available](documentation). 
+_ASGAL_ is available <!--at conda-forge and--> at Docker Hub. A detailed installation walkthrough and the documentation is [available](documentation). 
 
 ### Example
 
