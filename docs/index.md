@@ -21,8 +21,9 @@ exon)
 ### Citation
 
 If you use _ASGAL_, please cite its use as:
+
 Luca Denti, Raffaella Rizzi, Stefano Beretta, Gianluca Della Vedova, Marco Previtali and Paola Bonizzoni.
-_ASGAL: Aligning RNA-Seq Data to a Splicing Graph to Detect Novel Alternative Splicing Events_
+_ASGAL: Aligning RNA-Seq Data to a Splicing Graph to Detect Novel Alternative Splicing Events_ (preprint available at [bioRxiv](https://doi.org/10.1101/260372))
 
 ### Install
 
