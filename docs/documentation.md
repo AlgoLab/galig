@@ -42,9 +42,9 @@ instead, are in the _scripts_ folder.
 
 ## Input
 _ASGAL_ takes as input:
-* a reference genome (in _FASTA_ or _FASTQ_ format)
+* a reference genome (in _FASTA_ format)
 * a gene annotation (in _GTF_ format)
-* an RNA-Seq sample (in _FASTA_ format)
+* an RNA-Seq sample (in _FASTA_ or _FASTQ_ format)
 
 <br />
 
