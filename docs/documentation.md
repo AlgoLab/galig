@@ -46,6 +46,14 @@ _ASGAL_ takes as input:
 * a gene annotation (in _GTF_ format)
 * an RNA-Seq sample (in _FASTA_ or _FASTQ_ format)
 
+###### Note on Paired-End sample
+At the moment, _ASGAL_ is not able to directly manage paired-end
+samples: the only way to use both the fastq files (the reverse and the
+forward one) consists in merging them into a unique fastq file and
+then using this file as input for _ASGAL_. In this way, _ASGAL_ will align
+each read independently and then it will use the alignments to detect
+the AS events.
+
 <br />
 
 ## Usage
@@ -69,7 +77,7 @@ We will now specify in more detail the three steps of _ASGAL_ pipeline.
 To build the splicing graph and align the input
 sample to it, run the following command:
 ```bash
-./bin/SpliceAwareAligner -g [reference] -a [annotation] -r [sample] -o output.mem
+./bin/SpliceAwareAligner -g [reference] -a [annotation] -s [sample] -o output.mem
 ```
 
 In this way, the alignments to the splicing graph are computed and
