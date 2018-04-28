@@ -43,7 +43,7 @@ print_help ()
     echo "Required parameters:"
     echo -e "  -g, --genome GENOME\t\t\treference in FASTA format"
     echo -e "  -a, --annotation ANNOTATION\t\tanotation in GTF format"
-    echo -e "  -s, --sample SAMPLE\t\t\tRNA-Seq sample in FASTA/Q format"
+    echo -e "  -s, --sample SAMPLE\t\t\tRNA-Seq sample in FASTA/Q format (gzip allowed)"
     echo -e "  -o, --output OUTPUT\t\t\tOutput file (without extension)"
     echo ""
     echo "Optional parameters:"
@@ -189,17 +189,6 @@ then
     echo "### Empty output file"
     echo ""
     exit 1
-fi
-
-# Convert fastq to fasta
-sampleExt="${sample##*.}"
-if [ "${sampleExt}" = "fastq" ] || [ "${sampleExt}" = "fq" ]
-then
-    echo "* (0/3) Converting FASTQ sample to FASTA format"
-    bn=$(basename $sample ".${sampleExt}")
-    python3 ${WD}/scripts/fastq2fasta.py ${sample} $bn".fasta"
-    sample=$bn".fasta"
-    echo ""
 fi
 
 # Creating folder for output

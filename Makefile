@@ -56,7 +56,7 @@ OBJS_SpliceAwareAligner = \
 	SpliceAwareAligner.o
 
 #LIBS_main= $(LIBS) $(LOC_DIR)/include/snap-core/Snap.o -lrt -lsdsl -ldivsufsort -ldivsufsort64 -lemon
-LIBS_SpliceAwareAligner= $(LIBS) -lrt -lsdsl -ldivsufsort -ldivsufsort64 -lemon
+LIBS_SpliceAwareAligner= $(LIBS) -lrt -lsdsl -ldivsufsort -ldivsufsort64 -lemon -lz
 
 #
 # END List of programs

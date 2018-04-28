@@ -5,16 +5,21 @@
 #include <utility>
 #include <list>
 
+#include <zlib.h>  
+#include <stdio.h>  
+
+#include "kseq.h"
+
 #include "SplicingGraph.hpp"
 #include "bMEM.hpp"
 #include "utils.hpp"
-
 #include "MEMsGraph.hpp"
+
+KSEQ_INIT(gzFile, gzread)
 
 void printHelp() {
     std::cout << "Usage: SGAL [options] (required: -g -a -s -o)\n" << std::endl;
     std::cout << "Options:" << std::endl;
-    //std::cout << "  -I, --index: index only" << std::endl;
     std::cout << "  -g, --genome <path>" << std::endl;
     std::cout << "  -a, --annotation <path>" << std::endl;
     std::cout << "  -s, --sample <path>" << std::endl;
@@ -89,7 +94,6 @@ int main(int argc, char* argv[]) {
     int L = 0;
     int eps = -1;
     std::string out;
-    bool index_only = false;
     bool verbose = false;
 
     // - Collecting command line parameters
@@ -98,7 +102,6 @@ int main(int argc, char* argv[]) {
     while (1) {
         static struct option long_options[] =
             {
-                //{"index", no_argument, 0, 'I'},
                 {"genomic", required_argument, 0, 'g'},
                 {"annotation", required_argument, 0, 'a'},
                 {"sample",  required_argument, 0, 's'},
@@ -118,9 +121,6 @@ int main(int argc, char* argv[]) {
         }
 
         switch(c) {
-        // case 'I':
-        //     index_only = true;
-        //     break;
         case 'g':
             genomic = optarg;
             break;
@@ -151,7 +151,7 @@ int main(int argc, char* argv[]) {
         }
     }
     if(L == 0) {
-        L=15;
+        L = 15;
     }
     if(eps < 0 || eps > 100) {
         eps = 3;
@@ -159,62 +159,40 @@ int main(int argc, char* argv[]) {
 
     // - Building splicing graph
     // --------------------------
-    SplicingGraph sg (genomic, annotation);
-    if(verbose) sg.print();
-    if(index_only) return 0;
+    gzFile fastain = gzopen(genomic.c_str(), "r");
+    kseq_t *reference = kseq_init(fastain);
+    kseq_read(reference);
+    
+    SplicingGraph sg (reference->seq.s, annotation);
+
+    // sg.print();
+    kseq_destroy(reference);
+    gzclose(fastain);
+
     int exsN = sg.getExonsNumber();
 
     // - Setting up MEMs Index and out file
     // ---------------------------------------------------
     BackwardMEM bm (sg.getText(), genomic);
+
     std::ofstream outFile;
     outFile.open(out);
 
-    std::ifstream fastaFile (rna_seqs);
+    fastain = gzopen(rna_seqs.c_str(), "r");
     std::pair<char, std::list<std::pair<int, std::list<Mem> > > > paths;
+    
+    kseq_t *seqs = kseq_init(fastain);  
+    int l;
+    std::string head;
+    std::string read;
+    int i = 1;
+    
     // - Main loop: one iteration, one read
     // ---------------------------------------
-    int i = 1;
-    if(fastaFile.is_open()) {
-        std::string line;
-        std::string head;
-        std::string read;
-        while(getline(fastaFile,line)) {
-            if(line.compare("") != 0) {
-                if(line[0] == '>') {
-                    if(read.compare("") != 0) {
-                        paths = analyzeRead(bm, sg, read, L, eps, exsN, verbose);
-                        if(paths.first != '/') {
-                            for(std::pair<int, std::list<Mem> > path : paths.second) {
-                                if(!path.second.empty()) {
-                                    int err = path.first;
-                                    outFile << paths.first << " " << head << " " << err << " ";
-                                    for(std::list<Mem>::iterator m=path.second.begin(); m!=path.second.end(); ++m) {
-                                        outFile << m->toStr() << " ";
-                                    }
-                                    if(paths.first == '+')
-                                        outFile << read;
-                                    else
-                                        outFile << reverseAndComplement(read);
-                                    outFile << "\n";
-                                }
-                            }
-                        }
-                        read = "";
-                        if(i%10000 == 0) {
-                            std::cerr << i << " ";
-                        }
-                        if(i%100000 == 0) {
-                            std::cerr << std::endl;
-                        }
-                        ++i;
-                    }
-                    head = line.substr(1,line.size()-1);
-                } else {
-                    read += line;
-                }
-            }
-        }
+    while ((l = kseq_read(seqs)) >= 0) {
+        head = seqs->name.s;
+        read = seqs->seq.s;
+
         paths = analyzeRead(bm, sg, read, L, eps, exsN, verbose);
         if(paths.first != '/') {
             for(std::pair<int, std::list<Mem> > path : paths.second) {
@@ -232,9 +210,11 @@ int main(int argc, char* argv[]) {
                 }
             }
         }
-    } else {
-        std::cerr << "Reads file not found!" << std::endl;
+        if(i%10000 == 0)
+            std::cout << "Processed " << i << " genes." << std::endl;
+        ++i;
     }
-    outFile.close();
-    std::cout << std::endl;
+    kseq_destroy(seqs);
+    gzclose(fastain);
+    return 0;
 }
