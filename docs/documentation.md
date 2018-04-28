@@ -180,7 +180,7 @@ The correctness of the output can be verified by opening the genome, the
 annotation and the alignments with _IGV_ and by generating a _sashimi plot_:
 
 <p align="center">
-<img src="https://raw.githubusercontent.com/AlgoLab/galig/master/example/sashimi.png" width="775">
+<img src="https://raw.githubusercontent.com/AlgoLab/galig/master/example/sashimi.png">
 </p>
 
 From the picture, we can see that 411 reads support the skipping of the third exon and this event involves the three transcript of the gene.
