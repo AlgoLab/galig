@@ -1,5 +1,4 @@
-[Main Page](index)
-
+[//]: # (Comment)
 # Documentation
 _ASGAL_ is composed of different modules written in _c++_ and
 _python_. It has been developed and tested on Ubuntu Linux, but should
@@ -44,7 +43,7 @@ instead, are in the _scripts_ folder.
 _ASGAL_ takes as input:
 * a reference genome (in _FASTA_ format)
 * a gene annotation (in _GTF_ format)
-* an RNA-Seq sample (in _FASTA_ or _FASTQ_ format)
+* an RNA-Seq sample (in _FASTA_ or _FASTQ_ format, can be gzipped)
 
 ###### Note on Paired-End sample
 At the moment, _ASGAL_ is not able to directly manage paired-end
@@ -82,14 +81,6 @@ sample to it, run the following command:
 
 In this way, the alignments to the splicing graph are computed and
 stored in _output.mem_ file.
-
-###### Observation
-The SpliceAwareAligner takes as input only FASTA samples. If you have
-a FASTQ sample, you can convert it into FASTA format using the
-following command:
-```bash
-python3 ./scripts/fastq2fasta.py -i [FASTQ] -o [FASTA]
-```
 
 #### Step 2 (optional) - SAM Formatter
 The file obtained in the previous step can be converted into a
@@ -185,10 +176,12 @@ ES,287042,289040,411,FBtr0300326/FBtr0070103/FBtr0342963
 ```
 
 ###### Observation
-The correctness of the output can be verified opening the genome, the
-annotation and the alignments with _IGV_ and generating a _sashimi plot_:
+The correctness of the output can be verified by opening the genome, the
+annotation and the alignments with _IGV_ and by generating a _sashimi plot_:
 
-<img src="https://raw.githubusercontent.com/AlgoLab/galig/master/example/sashimi.png" width="630">
+<p align="center">
+<img src="https://raw.githubusercontent.com/AlgoLab/galig/master/example/sashimi.png" width="775">
+</p>
 
 From the picture, we can see that 411 reads support the skipping of the third exon and this event involves the three transcript of the gene.
 
@@ -208,7 +201,7 @@ Required parameters:
 ```bash
 -g,--genome INFILE          FASTA input file containing the reference
 -a,--annotation INFILE      GTF input file containing the gene annotation
--s,--sample INFILE          FASTA/Q input file containing the RNA-Seq reads
+-s,--sample INFILE          FASTA/Q input file containing the RNA-Seq reads (can be a gzipped file)
 -o,--output OUTFILE         output file name (without extension)
 ```
 
@@ -236,7 +229,7 @@ Required parameters:
 ```bash
 -g,--genome INFILE          FASTA input file containing the reference
 -a,--annotation INFILE      GTF input file containing the gene annotation
--s,--sample INFILE          FASTA input file containing the RNA-Seq reads
+-s,--sample INFILE          FASTA/Q input file containing the RNA-Seq reads (can be a gzipped file)
 -o,--output OUTFILE         output file containing the alignments to the
                             splicing graph
 ```
@@ -251,10 +244,6 @@ Optional parameters:
 ```
 
 ###### Observations
-* the SpliceAwareAligner takes as input only FASTA samples. If you have a FASTQ sample, you can convert it into FASTA format using the following command:
-  ```bash
-  python3 ./scripts/fastq2fasta.py -i [FASTQ] -o [FASTA]
-  ```
 * an higher value of _L_ improves the speed but reduces the number of aligned reads
 * the number of allowed errors is computed for each read as the ratio between the error rate and its length
 

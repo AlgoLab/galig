@@ -1,5 +1,4 @@
-[Main Page](index)
-
+[//]: # (Comment)
 # Experiments
 
 This page contains information on how to replicate the experiments described in _ASGAL_ paper. **All the scripts have been tested only on ubuntu 17.10.**

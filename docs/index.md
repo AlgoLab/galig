@@ -1,5 +1,3 @@
-[Documentation](documentation) [Experiments](experiments)
-
 **ASGAL** (**A**lternative **S**plicing **G**raph **AL**igner) is a
 tool for detecting the alternative splicing events expressed in a
 RNA-Seq sample with respect to a gene annotation. The 
