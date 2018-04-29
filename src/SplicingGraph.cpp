@@ -12,6 +12,9 @@ SplicingGraph::SplicingGraph(const char *genomic,
 
     edges.push_back({0});
     edges.push_back({0});
+
+    parents.push_back({});
+    sons.push_back({});
     
     T = "|";
 
@@ -40,6 +43,8 @@ SplicingGraph::SplicingGraph(const char *genomic,
                     std::string currExString(genomic + feat.start-1, feat.end-feat.start+1);
                     T += currExString + "|";
                     ExonsPos.push_back(std::make_pair(feat.start, feat.end));
+                    parents.push_back({});
+                    sons.push_back({});
                     ++exID;
                 }
 

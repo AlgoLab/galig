@@ -5,8 +5,8 @@
 #include <utility>
 #include <list>
 
-#include <zlib.h>  
-#include <stdio.h>  
+#include <zlib.h>
+#include <stdio.h>
 
 #include "kseq.h"
 
@@ -162,7 +162,7 @@ int main(int argc, char* argv[]) {
     gzFile fastain = gzopen(genomic.c_str(), "r");
     kseq_t *reference = kseq_init(fastain);
     kseq_read(reference);
-    
+
     SplicingGraph sg (reference->seq.s, annotation);
 
     // sg.print();
@@ -180,13 +180,13 @@ int main(int argc, char* argv[]) {
 
     fastain = gzopen(rna_seqs.c_str(), "r");
     std::pair<char, std::list<std::pair<int, std::list<Mem> > > > paths;
-    
-    kseq_t *seqs = kseq_init(fastain);  
+
+    kseq_t *seqs = kseq_init(fastain);
     int l;
     std::string head;
     std::string read;
     int i = 1;
-    
+
     // - Main loop: one iteration, one read
     // ---------------------------------------
     while ((l = kseq_read(seqs)) >= 0) {
