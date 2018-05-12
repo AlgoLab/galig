@@ -22,7 +22,7 @@ To compile _ASGAL_ and the 3rd party libraries it uses
 On an ubuntu system, the following commands suffice:
 ```bash
 sudo apt-get update
-sudo apt-get install build-essential cmake python3 python3-pip python3-biopython python3-biopython-sql
+sudo apt-get install build-essential cmake python3 python3-pip python3-biopython python3-biopython-sql zlib1g-dev
 pip3 install --user gffutils
 ```
 

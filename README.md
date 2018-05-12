@@ -17,6 +17,7 @@ The instructions to install and use _ASGAL_ are at
   * [gffutils](http://daler.github.io/gffutils/)
   * [biopython](http://biopython.org)
   * [cmake](https://cmake.org)
+  * [zlib1g-dev](http://zlib.net/)
 
 ### Compiling
 ```bash
