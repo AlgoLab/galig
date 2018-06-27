@@ -15,10 +15,11 @@ To compile ASGAL and the 3rd party libraries it uses
 ([sdsl-lite](https://github.com/simongog/sdsl-lite) and
 [lemon](http://lemon.cs.elte.hu/trac/lemon)), install:
   * [python3](https://www.python.org)
-  * [gffutils](http://daler.github.io/gffutils/)
   * [biopython](http://biopython.org)
+  * [gffutils](http://daler.github.io/gffutils/)
   * [pysam](https://pysam.readthedocs.io/en/latest/index.html)
   * [cmake](https://cmake.org)
+  * [samtools](http://samtools.sourceforge.net/)
 
 To compile [Salmon](https://combine-lab.github.io/salmon/) (used for
 genome-wide analyses), install:
@@ -27,7 +28,7 @@ genome-wide analyses), install:
 On an ubuntu system (18.04), the following commands suffice:
 ```bash
 sudo apt-get update
-sudo apt-get install build-essential cmake python3 python3-pip python3-biopython python3-biopython-sql python3-pysam zlib1g-dev libboost1.65-all-dev
+sudo apt-get install build-essential git python3 python3-pip python3-biopython python3-biopython-sql python3-pysam cmake libboost1.65-all-dev samtools zlib1g-dev curl liblzma-dev libjemalloc-dev libjemalloc1 libghc-bzlib-dev
 pip3 install --user gffutils
 ```
 
@@ -39,7 +40,7 @@ make prerequisites
 make
 ```
 
-This reates the executable in the _bin_ folder. The python scripts,
+This creates the executable in the _bin_ folder. The python scripts,
 instead, are in the _scripts_ folder.
 
 <br />

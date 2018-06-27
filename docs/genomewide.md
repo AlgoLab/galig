@@ -83,6 +83,7 @@ Parameters:
                             (default: only novels)
 ```
 
+<!---
 ## Example
 We built a simple example using 19 genes from two human chromosomes, namely chromosome 13 and chromosome Y. To run the example:
 
@@ -97,3 +98,4 @@ cd example
 ```bash
 /path/to/ASGAL_GW -g genome.fa -a annotations.gtf -s1 sample1.fa.gz -t transcripts.fa.gz -o ./outFold
 ```
+-->
