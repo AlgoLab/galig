@@ -1,18 +1,26 @@
-FROM ubuntu:17.10
+FROM ubuntu:18.04
 RUN apt-get update && apt-get install -y \
+    build-essential \
     cmake \
-    g++ \
-    git-core \
-    graphviz \
+    git \
+    python3 \
+    python3-pip \
     python3-biopython \
     python3-biopython-sql \
-    python3-gffutils \
-    python3-graphviz \
-    python3
+    python3-pysam \
+    zlib1g-dev \
+    libboost1.65-all-dev \
+    curl \
+    liblzma-dev \
+    libjemalloc-dev \
+    libjemalloc1 \
+    libghc-bzlib-dev \
+    samtools ; \
+    pip3 install gffutils
 
 VOLUME ["/data"]
 
-RUN git clone https://github.com/AlgoLab/galig.git && \
+RUN git clone --recursive https://github.com/AlgoLab/galig.git && \
     cd galig && \
     make prerequisites && \
     make
