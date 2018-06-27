@@ -100,6 +100,8 @@ def getCIGAR(mems, RefSeq, bv, exPos, read, errRate, err):
     CIGAR = ""
     i = 0
     while i<len(mems):
+        N = 0
+        M = 0
         if i == 0:
             if mems[i][1] != 1:
                 initialClips = mems[i][1]-1
@@ -144,11 +146,23 @@ def getCIGAR(mems, RefSeq, bv, exPos, read, errRate, err):
                         Iseq = RefSeq[I[0]-1:I[1]].seq
                         if Iseq[:2] in ["GT", "GC"] and Iseq[-2:] == "AG":
                             cigarList[-1][0] = cigarList[-1][0] - abs(errors_P)
-                            cigarList.append([abs(errors_P) + errors_T, 'N'])
-                            cigarList.append([mems[i][2], 'M'])
+                            N = abs(errors_P) + errors_T
+                            if N>0:
+                                cigarList.append([N, 'N'])
+                            else:
+                                if cigarList[-1][1] is 'M':
+                                    M = cigarList[-1][0]
+                                    cigarList.pop(-1)
+                            cigarList.append([M + mems[i][2], 'M'])
                         else:
-                            cigarList.append([abs(errors_P) + errors_T, 'N'])
-                            cigarList.append([mems[i][2]-abs(errors_P), 'M'])
+                            N = abs(errors_P) + errors_T
+                            if N>0:
+                                cigarList.append([N, 'N'])
+                            else:
+                                if cigarList[-1][1] is 'M':
+                                    M = cigarList[-1][0]
+                                    cigarList.pop(-1)
+                            cigarList.append([M + mems[i][2]-abs(errors_P), 'M'])
                 #------------------------------------------------
                 elif errors_P > 0:
                     if errors_T == 0:
@@ -180,27 +194,66 @@ def getCIGAR(mems, RefSeq, bv, exPos, read, errRate, err):
                 intron = exPos[id2-1][0] - exPos[id1-1][1] - 1
                 #------------------------------------------------
                 if errors_P == 0:
-                    cigarList.append([intron + errors_T1 + errors_T2, 'N'])
-                    cigarList.append([mems[i][2], 'M'])
+                    N = intron + errors_T1 + errors_T2
+                    if N>0:
+                        cigarList.append([N, 'N'])
+                    else:
+                        if cigarList[-1][1] is 'M':
+                            M = cigarList[-1][0]
+                            cigarList.pop(-1)
+                    cigarList.append([M + mems[i][2], 'M'])
                 #------------------------------------------------
                 elif errors_P < 0:
                     if errors_T1 == 0 and errors_T2 != 0:
-                        cigarList.append([intron + errors_T1 + errors_T2 + abs(errors_P), 'N'])
-                        cigarList.append([mems[i][2]-abs(errors_P), 'M'])
+                        N = intron + errors_T1 + errors_T2 + abs(errors_P)
+                        if N>0:
+                            cigarList.append([N, 'N'])
+                        else:
+                            if cigarList[-1][1] is 'M':
+                                M = cigarList[-1][0]
+                                cigarList.pop(-1)
+                        cigarList.append([M + mems[i][2]-abs(errors_P), 'M'])
                     elif errors_T1 != 0 and errors_T2 == 0:
+                        N = 0
                         cigarList[-1][0] = cigarList[-1][0] - abs(errors_P)
-                        cigarList.append([intron + errors_T1 + errors_T2 + abs(errors_P), 'N'])
-                        cigarList.append([mems[i][2], 'M'])
+                        if cigarList[-1][0]<=0:
+                            M = cigarList[-1][0]
+                            cigarList.pop(-1)
+                            if cigarList[-1][1] is 'N':
+                                cigarList[-2][0] = cigarList[-2][0] + M
+                                M = 0
+                                N = cigarList[-1][0]
+                                cigarList.pop(-1)
+                        N += intron + errors_T1 + errors_T2 + abs(errors_P)
+                        if N>0:
+                            cigarList.append([N, 'N'])
+                        else:
+                            if cigarList[-1][1] is 'M':
+                                M = cigarList[-1][0]
+                                cigarList.pop(-1)
+                        cigarList.append([M + mems[i][2], 'M'])
                     else:
                         I = (exPos[id1-1][0]+mems[i-1][0]+mems[i-1][2]-bv.select(id1)-1 - abs(errors_P), exPos[id1-1][0]+mems[i-1][0]+mems[i-1][2]-bv.select(id1) + intron+errors_T1+errors_T2-2)
                         Iseq = RefSeq[I[0]-1:I[1]].seq
                         if Iseq[:2] in ["GT", "GC"] and Iseq[-2:] == "AG":
                             cigarList[-1][0] = cigarList[-1][0] - abs(errors_P)
-                            cigarList.append([intron + errors_T1 + errors_T2 + abs(errors_P), 'N'])
-                            cigarList.append([mems[i][2], 'M'])
+                            N = intron + errors_T1 + errors_T2 + abs(errors_P)
+                            if N>0:
+                                cigarList.append([N, 'N'])
+                            else:
+                                if cigarList[-1][1] is 'M':
+                                    M = cigarList[-1][0]
+                                    cigarList.pop(-1)
+                            cigarList.append([M + mems[i][2], 'M'])
                         else:
-                            cigarList.append([intron + errors_T1 + errors_T2 + abs(errors_P), 'N'])
-                            cigarList.append([mems[i][2]-abs(errors_P), 'M'])
+                            N = intron + errors_T1 + errors_T2 + abs(errors_P)
+                            if N>0:
+                                cigarList.append([N, 'N'])
+                            else:
+                                if cigarList[-1][1] is 'M':
+                                    M = cigarList[-1][0]
+                                    cigarList.pop(-1)
+                            cigarList.append([M + mems[i][2]-abs(errors_P), 'M'])
                 #------------------------------------------------
                 else:
                     I = (exPos[id1-1][0]+mems[i-1][0]+mems[i-1][2]-bv.select(id1)-1, exPos[id1-1][0]+mems[i-1][0]+mems[i-1][2]-bv.select(id1)-2 + intron+errors_T1+errors_T2)
@@ -215,19 +268,35 @@ def getCIGAR(mems, RefSeq, bv, exPos, read, errRate, err):
                         if N <= 0:
                             cigarList[-1][0] = cigarList[-1][0] + mems[i][2]
                         else:
-                            cigarList.append([N, 'N'])
-                            cigarList.append([mems[i][2], 'M'])
+                            if N>0:
+                                cigarList.append([N, 'N'])
+                            else:
+                                if cigarList[-1][1] is 'M':
+                                    M = cigarList[-1][0]
+                                    cigarList.pop(-1)
+                            cigarList.append([M + mems[i][2], 'M'])
                     elif err2 <= err1 and err2 + err <= maxErr:
                         N = intron + errors_T1 + errors_T2 - len(readGapString)
                         if N <= 0:
                             cigarList[-1][0] = cigarList[-1][0] + len(readGapString) + mems[i][2]
                         else:
-                            cigarList.append([N, 'N'])
-                            cigarList.append([len(readGapString)+mems[i][2], 'M'])
+                            if N>0:
+                                cigarList.append([N, 'N'])
+                            else:
+                                if cigarList[-1][1] is 'M':
+                                    M = cigarList[-1][0]
+                                    cigarList.pop(-1)
+                            cigarList.append([M + len(readGapString)+mems[i][2], 'M'])
                     else:
                         cigarList.append([abs(errors_P), 'I'])
-                        cigarList.append([intron + errors_T1 + errors_T2, 'N'])
-                        cigarList.append([mems[i][2], 'M'])
+                        N = intron + errors_T1 + errors_T2
+                        if N>0:
+                            cigarList.append([N, 'N'])
+                        else:
+                            if cigarList[-1][1] is 'M':
+                                M = cigarList[-1][0]
+                                cigarList.pop(-1)
+                        cigarList.append([M + mems[i][2], 'M'])
         i+=1
     finalDels = m - mems[-1][1] - mems[-1][2] + 1
     if  finalDels != 0:
