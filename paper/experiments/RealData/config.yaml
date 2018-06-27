@@ -1,0 +1,21 @@
+resources:
+  directories:
+    root: /data/BMC-exp-real
+    reference: reference
+    data: samples
+    progs: Tools
+    results: results
+    salmon_index: salmon_index
+    salmon_quant: salmon_quant
+    suppa_generate: suppa_generate
+    suppa_psi: suppa_psi
+    suppa_dpsi: suppa_dpsi
+  genome: hg19_EnsenmblGenes_sequence_ensenmbl
+  GRCh37gen: Homo_sapiens.GRCh37.75.dna.primary_assembly
+  annotation: Homo_sapiens.GRCh37.75
+  suppaDEgenes: RT-PCR-events.genes.list
+  conditions:
+    - CTRL: SRR1513329,SRR1513330,SRR1513331
+    - KD: SRR1513332,SRR1513333,SRR1513334
+read1_mask: "{sample}_1.fastq.gz"
+read2_mask: "{sample}_2.fastq.gz"

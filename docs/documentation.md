@@ -1,6 +1,6 @@
 [//]: # (Comment)
 # Documentation
-_ASGAL_ is composed of different modules written in _c++_ and
+ASGAL is composed of different modules written in _c++_ and
 _python_. It has been developed and tested on Ubuntu Linux, but should
 work on any *nix-based system.
 
@@ -11,7 +11,7 @@ work on any *nix-based system.
 -->
 
 ## Installation
-To compile _ASGAL_ and the 3rd party libraries it uses
+To compile ASGAL and the 3rd party libraries it uses
 ([sdsl-lite](https://github.com/simongog/sdsl-lite) and
 [lemon](http://lemon.cs.elte.hu/trac/lemon)), install:
   * [python3](https://www.python.org)
@@ -26,7 +26,7 @@ sudo apt-get install build-essential cmake python3 python3-pip python3-biopython
 pip3 install --user gffutils
 ```
 
-Then, to download and compile _sdsl-lite_, _lemon_ and _ASGAL_:
+Then, to download and compile _sdsl-lite_, _lemon_ and ASGAL:
 ```bash
 git clone https://github.com/AlgoLab/galig.git
 cd galig
@@ -40,27 +40,33 @@ instead, are in the _scripts_ folder.
 <br />
 
 ## Input
-_ASGAL_ takes as input:
+ASGAL takes as input:
 * a reference genome (in _FASTA_ format)
 * a gene annotation (in _GTF_ format)
 * an RNA-Seq sample (in _FASTA_ or _FASTQ_ format, can be gzipped)
 
+###### Note
+ASGAL tool takes as input the annotation of a single gene and the
+relative chromosome: if you want to use the tool in a genome-wide
+analysis, you can use the [pipeline](genomewide) we implemented to use
+ASGAL on a set of genes of interest.
+
 ###### Note on Paired-End sample
-At the moment, _ASGAL_ is not able to directly manage paired-end
+At the moment, ASGAL is not able to directly manage paired-end
 samples: the only way to use both the fastq files (the reverse and the
 forward one) consists in merging them into a unique fastq file and
-then using this file as input for _ASGAL_. In this way, _ASGAL_ will align
+then using this file as input for ASGAL. In this way, ASGAL will align
 each read independently and then it will use the alignments to detect
 the AS events.
 
 <br />
 
 ## Usage
-_ASGAL_ is composed of three different modules, each one performing a
+ASGAL is composed of three different modules, each one performing a
 different task. However, we make available a script that run the full pipeline.
 
 ### Full Pipeline Script
-To run _ASGAL_ pipeline, run the following command:
+To run ASGAL pipeline, run the following command:
 ```bash
 ./asgal -g [genome] -a [annotation] -s [sample] -o output
 ```
@@ -69,7 +75,7 @@ This command will produce three files:
   * _output.sam_, containing the alignments to the splicing graph mapped to the reference genome
   * _output.events.csv_, containing the alternative splicing events detected in the RNA-Seq sample
 
-We will now specify in more detail the three steps of _ASGAL_ pipeline.
+We will now specify in more detail the three steps of ASGAL pipeline.
 
 #### Step 1 - Splice-Aware Aligner
 
@@ -93,7 +99,7 @@ python3 ./scripts/formatSAM.py -m output.mem -g [reference] -a [anotation] -o ou
 ```
 
 ###### Observation
-The SAM file produce by _ASGAL_ (_output.sam_) contains the alignments
+The SAM file produce by ASGAL (_output.sam_) contains the alignments
 to the splicing graph mapped to the reference genome. These alignments
 must not be confused with the spliced alignments to the reference
 genome computed by any spliced aligner (such as
@@ -163,7 +169,7 @@ gunzip Drosophila_melanogaster.BDGP6.91.chr.gtf.gz
 grep "CG13375" Drosophila_melanogaster.BDGP6.91.chr.gtf > input/annotation.gtf
 rm Drosophila_melanogaster.BDGP6.91.chr.gtf
 
-# Run _ASGAL_
+# Run ASGAL
 ../bin/SpliceAwareAligner -g input/genome.fa -a input/annotation.gtf -s input/reads.fasta -o CG13375.mem
 python3 ../scripts/formatSAM.py -m CG13375.mem -g input/genome.fa -a input/annotation.gtf -o CG13375.sam
 python3 ../scripts/detectEvents.py -g input/genome.fa -a input/annotation.gtf -m CG13375.mem -o CG13375.events
@@ -294,6 +300,6 @@ Optional parameters:
 
 ###### Observation
 * the error rate should be the same used to compute the alignments
-* by default, _ASGAL_ outputs only the alternative splicing events that
+* by default, ASGAL outputs only the alternative splicing events that
 are **novel** with respect to the given annotation, that are the the
 events induced by an intron not contained in the annotation
