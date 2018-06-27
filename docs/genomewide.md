@@ -31,7 +31,7 @@ script assumes that you have installed Salmon systemwide.
 ./ASGAL_GW -g [genome.fasta] \
            -a [annotation.gtf] \
            -s1 [sample.fa] \
-           -t [transcripts.fasta]
+           -t [transcripts.fasta] \
            -o [output_folder]
 
 # Paired-end sample 
@@ -39,7 +39,7 @@ script assumes that you have installed Salmon systemwide.
            -a [annotation.gtf] \
            -s1 [sample1.fa] \
            -s2 [sample2.fa] \
-           -t [transcripts.fasta]
+           -t [transcripts.fasta] \
            -o [output_folder]
 ```
 

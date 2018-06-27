@@ -284,7 +284,6 @@ def runASGAL(args, genes, chr_genes_dict):
         subprocess.run(asgal_CMDs,
                        stdout=open(log, 'w'),
                        stderr=open(log, 'w'))
-        sys.exit(0)
     eprint("Done.")
 
 #####################################################################################################################
