@@ -15,15 +15,13 @@ else
 
 VPATH = $(SRC_DIR)
 
-INCLUDE_FLAGS:= -I$(LOC_DIR)/include/ \
-                -I$(LOC_DIR)/include/snap-core/ \
-                -I$(LOC_DIR)/include/glib-core/	\
-				-I$(LOC_DIR)/lemon/include/ \
-		-I$(BASE_DIR)/include
+INCLUDE_FLAGS:= -I$(BASE_DIR)/lemon/compiled/include/ \
+                -I$(BASE_DIR)/sdsl-lite/compiled/include
+#-I$(LOC_DIR)/include/ \
+#-I$(LOC_DIR)/include/glib-core/	\
 
 # Pre-processor flags
 CPPFLAGS= $(INCLUDE_FLAGS)
-
 # Common C and C++ flags
 CCXXFLAGS:=-std=c++11 -Wall -O3 -DNDEBUG -march=native -Wno-deprecated -ffunction-sections -fdata-sections -fopenmp
 # C-only flags
@@ -32,11 +30,9 @@ CFLAGS+= $(CCXXFLAGS)
 CXXFLAGS+= $(CCXXFLAGS)
 # Linker flags
 LDFLAGS+=-Wl,--gc-sections -fopenmp
-
 # Define libraries
-LIBS:= \
-        -L${LOC_DIR}/lib \
-		-L${LOC_DIR}/lemon/lib \
+LIBS:= -L$(BASE_DIR)/lemon/compiled/lib/ \
+       -L$(BASE_DIR)/sdsl-lite/compiled/lib
 
 ######
 #
@@ -46,16 +42,12 @@ LIBS:= \
 # - LIBS_xxx = the libraries which must be linked
 #
 PROGRAMS:=SpliceAwareAligner
-
-# analyzegraph SNAP library
 OBJS_SpliceAwareAligner = \
 	utils.o \
 	bMEM.o \
 	SplicingGraph.o \
 	MEMsGraph.o \
 	SpliceAwareAligner.o
-
-#LIBS_main= $(LIBS) $(LOC_DIR)/include/snap-core/Snap.o -lrt -lsdsl -ldivsufsort -ldivsufsort64 -lemon
 LIBS_SpliceAwareAligner= $(LIBS) -lrt -lsdsl -ldivsufsort -ldivsufsort64 -lemon -lz
 
 #
@@ -65,20 +57,90 @@ LIBS_SpliceAwareAligner= $(LIBS) -lrt -lsdsl -ldivsufsort -ldivsufsort64 -lemon 
 .PHONY: all
 all: $(addprefix $(BIN_DIR)/, $(PROGRAMS))
 
-######
-#
-# Additional dependencies
-#$(BIN_DIR)/analyzeseqs: $(BIN_DIR)/_clustalw2
-
-#
-# END Additional dependencies
-######
-
-# Build the pre-requisites
+##########################
+# 3RD PART PREREQUISITES #
+##########################
 .PHONY: prerequisites
-prerequisites:
-	@echo '* Building pre-requisites...' ; \
-	$(MAKE) -C $(3RD_DIR) prerequisites
+prerequisites: lemon sdsl salmon
+
+.PHONY: clean-prerequisites
+clean-prerequisites: clean-lemon clean-sdsl clean-salmon
+
+# LEMON ################################################################
+
+.PHONY: lemon
+lemon: $(BASE_DIR)/lemon/
+
+LEMON_NAME:=lemon-1.3.1
+$(BASE_DIR)/lemon/:
+	@echo "* Lemon Library" ; \
+	cd $(BASE_DIR) ; \
+	wget http://lemon.cs.elte.hu/pub/sources/$(LEMON_NAME).tar.gz ; \
+	tar -xvf $(LEMON_NAME).tar.gz ; \
+	rm $(LEMON_NAME).tar.gz ; \
+	mv $(LEMON_NAME) lemon ; \
+	if [ -d lemon/ ] ; then \
+	 	cd lemon/ && mkdir build && cd build ; \
+		sed '3d' ../CMakeLists.txt > tmp ; \
+		mv tmp ../CMakeLists.txt ; \
+		cmake -DCMAKE_INSTALL_PREFIX=../compiled/ .. ; \
+		make ; \
+		make install ; \
+	else \
+		echo "! lemon folder not found !" ; \
+		exit 1 ; \
+	fi
+
+.PHONY: clean-lemon
+clean-lemon:
+	@echo "* Cleaning lemon library..." ; \
+	rm -rf $(BASE_DIR)/lemon/
+
+########################################################################
+
+# SDSL-LITE ############################################################
+
+.PHONY: sdsl
+sdsl: $(BASE_DIR)/sdsl-lite/compiled
+
+$(BASE_DIR)/sdsl-lite/compiled:
+	@echo "* SDSL-lite Library" ; \
+	cd $(BASE_DIR)/sdsl-lite ; \
+	mkdir compiled ; \
+	./install.sh ./compiled
+
+.PHONY: clean-sdsl
+clean-sdsl:
+	@echo "* Cleaning SDSL library..." ; \
+	rm -rf $(BASE_DIR)/sdsl-lite/compiled
+
+########################################################################
+
+# SALMON ###############################################################
+
+.PHONY: salmon
+salmon: $(BASE_DIR)/salmon/bin/salmon
+
+SALMON_NAME:=salmon
+$(BASE_DIR)/salmon/bin/salmon:
+	@echo "* Salmon" ; \
+	cd $(BASE_DIR)/salmon ; \
+	mkdir -p build ; \
+	cd build ; \
+	cmake .. ; \
+	make ; \
+	make install
+
+.PHONY: clean-salmon
+clean-salmon:
+	@echo "* Cleaning salmon binary..." ; \
+	rm -f $(BASE_DIR)/salmon/bin/salmon ; \
+    rm -rf $(BASE_DIR)/salmon/build ; \
+    rm -rf $(BASE_DIR)/salmon/external ; \
+    rm -rf $(BASE_DIR)/salmon/lib ; \
+    rm -rf $(BASE_DIR)/salmon/tests/unitTests
+
+########################################################################
 
 ######
 #
