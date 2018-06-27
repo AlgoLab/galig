@@ -13,8 +13,7 @@ from Bio.SeqRecord import SeqRecord
 import gffutils
 import pysam
 
-#####################################################################################################################
-
+# CONST #############################################################################################################
 refsFold = "refs"
 annosFold = "annos"
 samplesFold = "samples"
@@ -22,17 +21,35 @@ asgalFold = "ASGAL"
 salmonIndexFold = "salmon/salmon_index"
 salmonOutFold = "salmon/salmon_out"
 logsFold = "logs"
+bar_length = 50
 
-#####################################################################################################################
-
+# UTILITIES #########################################################################################################
+'''
+Functions to:
+ - get current time
+ - print to stderr with current time
+ - print error and exit
+ - print progress bar
+'''
 def getTime():
     return time.strftime('[ %b %d, %Y - %l:%M:%S%p ]')
 
 def eprint(*args, **kwargs):
     print(getTime(), *args, file=sys.stderr, **kwargs)
 
-#####################################################################################################################
+def eprint_error(*args, **kwargs):
+    print(*args, file=sys.stderr, **kwargs)
+    sys.exit(1)
 
+def print_bar(BAR, i, n):
+    sys.stderr.write("[{}] {}/{}\r".format(''.join(BAR), i, n))
+    sys.stderr.flush()
+
+# REFERENCE #########################################################################################################
+'''
+Function to split input reference in more references,
+one for each chromosome.
+'''
 def splitReference(args):
     eprint("Splitting input reference...")
     outFold = os.path.join(args.outputPath, refsFold)
@@ -44,8 +61,10 @@ def splitReference(args):
         outFasta.close()
     eprint("Done.")
 
-#####################################################################################################################
-
+# GTF ###############################################################################################################
+'''
+Function to open a GTF file
+'''
 def openGTF(gtfPath, verbose=True):
     try:
         gtf = gffutils.FeatureDB("{}.db".format(gtfPath),
@@ -62,7 +81,11 @@ def openGTF(gtfPath, verbose=True):
                                  sort_attribute_values=True)
         gtf = gffutils.FeatureDB("{}.db".format(gtfPath), keep_order=True)
     return gtf
-    
+'''
+Function to:
+ 1. split input GTF in smaller GTFs, one for each gene
+ 2. build dictionary chr->genes and transcript->gene
+''' 
 def splitAnnotation(args):
     eprint("Opening input annotation...")
     gtf = openGTF(args.annoPath)
@@ -78,6 +101,8 @@ def splitAnnotation(args):
 
     nGenes = len(list(gtf.features_of_type('gene')))
     i = 0
+    BAR = [' ' for i in range(0,bar_length)]
+    print_bar(BAR, 0, nGenes)
     for gene in gtf.features_of_type('gene'):
         chrom = gene.seqid
         geneID = gene.id.split('.')[0]
@@ -93,13 +118,21 @@ def splitAnnotation(args):
                 for exon in gtf.children(transcript, featuretype='exon', order_by='start'):
                     out.write(str(exon) + "\n")
         i+=1
-        if i%100 == 0:
-            eprint("Analyzed {} genes out of {}...".format(i, nGenes))
+        if i >= nGenes-1:
+            BAR = ['#' for i in range(0,bar_length)]
+            i = nGenes - 1
+        else:
+            index = int(i*bar_length/nGenes)
+            BAR = ['#' for i in range(0, index+1)] + [' ' for i in range(index+1,bar_length)]
+        print_bar(BAR, i+1, nGenes)
+    print("", file=sys.stderr)
     eprint("Done.")
     return genes, chr_genes_dict, tr_gene_dict
 
-#####################################################################################################################
-
+# SALMON ############################################################################################################
+'''
+Function to run Salmon and SAMtools.
+'''
 def runSalmon(args):
     if not os.path.isdir(os.path.join(args.outputPath, logsFold)):
         os.makedirs(os.path.join(args.outputPath, logsFold))
@@ -110,7 +143,7 @@ def runSalmon(args):
     salmonTmpBam = os.path.join(args.outputPath, "salmon", "salmon.sort.bam")
     salmonBam = os.path.join(args.outputPath, "salmon", "salmon.bam")
 
-    salmon="salmon"
+    salmon = os.path.join(WP, "salmon", "bin", "salmon")
     
     salmonIndex = os.path.join(args.outputPath, salmonIndexFold)
     if not os.path.isdir(salmonIndex):
@@ -124,7 +157,7 @@ def runSalmon(args):
                     "-i", salmonIndex],
                    stdout=open(salmonIndexLog, 'w'), stderr=open(salmonIndexLog, 'w'))
     eprint("Done.")
-    if args.sample2Path == '.':
+    if args.sample2Path == '-':
         eprint("Running Salmon quasi-mapping on single-end sample...")
         subprocess.run([salmon, "quant",
                         "-i", salmonIndex,
@@ -166,8 +199,7 @@ def runSalmon(args):
     os.remove(salmonTmpBam)
     eprint("Done.")
 
-#####################################################################################################################
-    
+# Salmon Post-Processing ############################################################################################
 '''
 Function to parse the unmapped_names.txt file produced by Salmon
 when run with paired-end sample.
@@ -185,14 +217,30 @@ def parse_unmapped_file(unmapped_filename, sample_filenames):
         eprint("Parsing {} to retrieve reads...".format(sample_fn))
         file_name = os.path.basename(sample_fn)
         file_suff = file_name[file_name.find('_')+1:-len('.fastq.gz')]
-        '''
-        !!!
-        TODO: sample can be gzipped, sample can be fasta or fastq
-        file_handle = gzip.open(sample_fn, "rt")
-        !!!
-        '''
-        file_handle = open(sample_fn, "r")
-        for record in SeqIO.parse(file_handle, "fasta"):
+
+        
+        isZipped = True
+        isFastq = True
+        fnames = sample_fn.split('.')
+        if fnames[-1] == 'gz':
+            isZipped = True
+            if fnames[-2] in ['fastq', 'fq']:
+                isFastq = True
+            elif fnames[-2] in ['fasta', 'fa']:
+                isFastq = False
+            else:
+                pass
+        else:
+            if fnames[-1] in ['fastq', 'fq']:
+                isFastq = True
+            elif fnames[-1] in ['fasta', 'fa']:
+                isFastq = False
+            else:
+                pass
+        
+        file_handle = gzip.open(sample_fn, "rt") if isZipped else open(sample_fn, "r")
+        fType = "fastq" if isFastq else "fasta"
+        for record in SeqIO.parse(file_handle, fType):
             test_elem = (record.id, file_suff)
             if test_elem in unmapped_tags:
                 record_copy = copy.deepcopy(record)
@@ -234,7 +282,7 @@ def splitSalmon(args, genes, tr_gene_dict):
         os.makedirs(outFold)
 
     unmapped_reads = {}
-    if args.sample2Path != '.':
+    if args.sample2Path != '-':
         # Paired-end
         eprint("Retrieving unmapped reads...")
         unmapped_reads = parse_unmapped_file(os.path.join(salmonOut, "aux_info", "unmapped_names.txt"),
@@ -245,8 +293,10 @@ def splitSalmon(args, genes, tr_gene_dict):
     split_bam(salmonBam, genes, tr_gene_dict, outFold, unmapped_reads)
     eprint("Done.")
 
-#####################################################################################################################
-
+# ASGAL #############################################################################################################
+'''
+Function to run ASGAL on the considered genes.
+'''
 def runASGAL(args, genes, chr_genes_dict):
     refs = os.path.join(args.outputPath, refsFold)
     annos = os.path.join(args.outputPath, annosFold)
@@ -260,6 +310,9 @@ def runASGAL(args, genes, chr_genes_dict):
         os.makedirs(logFold)
 
     eprint("Running ASGAL on {} genes...".format(len(genes)))
+    BAR = [' ' for i in range(0,bar_length)]
+    print_bar(BAR, 0, len(genes))
+    i = 0
     for sample in glob.glob(os.path.join(samples, '*.fa.gz')):
         gene = os.path.basename(sample)[:-6]
         anno = os.path.join(annos, "{}.gtf".format(gene))
@@ -284,10 +337,90 @@ def runASGAL(args, genes, chr_genes_dict):
         subprocess.run(asgal_CMDs,
                        stdout=open(log, 'w'),
                        stderr=open(log, 'w'))
+        i+=1
+        index = int(i*bar_length/len(genes))
+        if i == len(genes)-1:
+            BAR = ['#' for i in range(0,bar_length)]
+        else:
+            BAR = ['#' for i in range(0, index+1)] + [' ' for i in range(index+1,bar_length)]
+        print_bar(BAR, i+1, len(genes))
+    print("", file=sys.stderr)
     eprint("Done.")
 
-#####################################################################################################################
+# INPUTS CHECK ######################################################################################################
+'''
+Function to check all inputs (if files exist, file extensions...).
+'''
+def checkInputs(args):
+    # Reference
+    if os.path.isfile(args.refPath):
+        if args.refPath.split('.')[-1] not in ['fa', 'fasta']:
+            eprint_error("\nUnknown extension for reference genome, is it a .fa or .fasta file? Halting...\n")
+    else:
+        eprint_error("\nReference genome {} not found. Halting...\n".format(args.refPath))
 
+    # Annotation
+    if os.path.isfile(args.annoPath):
+        if args.annoPath[-3:] != 'gtf':
+            eprint_error("\nUnknown extension for annotation, is it a .gtf file? Halting...\n")
+    else:
+        eprint_error("\nAnnotation {} not found. Halting...\n".format(args.annoPath))
+
+    # Transcripts
+    if args.transPath != '-':
+        if os.path.isfile(args.transPath):
+            if args.transPath.split('.')[-1] == 'gz':
+                if args.transPath.split('.')[-2] not in ['fa', 'fasta']:
+                    eprint_error("\nUnknown extension for transcripts file, is it a .fa.gz or .fasta.gz file? Halting...\n")
+            else:
+                if args.transPath.split('.')[-1] not in ['fa', 'fasta']:
+                    eprint_error("\nUnknown extension for transcripts file, is it a .fa or .fasta file? Halting...\n")
+        else:
+            eprint_error("\nTranscripts file {} not found. Halting...\n".format(args.annoPath))
+
+    # Samples
+    sample = args.sample1Path
+    if os.path.isfile(sample):
+        if sample.split('.')[-1] == 'gz':
+            if sample.split('.')[-2] not in ['fa', 'fasta', 'fq', 'fastq']:
+                eprint_error("\nUnknown extension for sample 1, is it a .fa.gz/.fasta.gz/.fq.gz/.fastq.gz file? Halting...\n")
+        else:
+            if sample.split('.')[-1] not in ['fa', 'fasta', 'fq', 'fastq']:
+                eprint_error("\nUnknown extension for sample 1, is it a .fa/.fasta/.fq/.fastq file? Halting...\n")
+    else:
+        eprint_error("\nSample 1 {} not found. Halting...\n".format(sample))
+
+    sample = args.sample2Path
+    if sample != '-':
+        if os.path.isfile(sample):
+            if sample.split('.')[-1] == 'gz':
+                if sample.split('.')[-2] not in ['fa', 'fasta', 'fq', 'fastq']:
+                    eprint_error("\nUnknown extension for sample 2, is it a .fa.gz/.fasta.gz/.fq.gz/.fastq.gz file? Halting...\n")
+            else:
+                if sample.split('.')[-1] not in ['fa', 'fasta', 'fq', 'fastq']:
+                    eprint_error("\nUnknown extension for sample 2, is it a .fa/.fasta/.fq/.fastq file? Halting...\n")
+        else:
+            eprint_error("\nSample 2 {} not found. Halting...\n".format(sample))
+
+    # L, e, w
+    try:
+        args.l = str(int(args.l))
+    except ValueError:
+        eprint_error("\n l value must be an integer. Halting...\n")
+    try:
+        args.e = str(int(args.e))
+    except ValueError:
+        eprint_error("\n e value must be an integer. Halting...\n")
+    try:
+        args.w = str(int(args.w))
+    except ValueError:
+        eprint_error("\n w value must be an integer. Halting...\n")
+
+    # Other checks
+    if args.sample2Path != '-' and args.transPath == '-':
+        eprint_error("ERROR! If you pass two samples, you have to pass also the transcripts of the genes!")
+
+# main ##############################################################################################################
 def main():
     global WP
     WP = '/'.join(sys.argv[0].split('/')[:-1])
@@ -301,8 +434,8 @@ def main():
     parser.add_argument('-s1', '--sample1', dest='sample1Path', help='Path to sample (1)', required=True)
     parser.add_argument('-o', '--output', dest='outputPath', help='Path to output folder', required=True)
 
-    parser.add_argument('-s2', '--sample2', dest='sample2Path', help='Path to sample (2)', required=False, default='.')
-    parser.add_argument('-t', '--transcripts', dest='transPath', help='Path to transcripts', required=False, default='.')
+    parser.add_argument('-s2', '--sample2', dest='sample2Path', help='Path to sample (2)', required=False, default='-')
+    parser.add_argument('-t', '--transcripts', dest='transPath', help='Path to transcripts', required=False, default='-')
 
     parser.add_argument('-l', '--L', dest='l', help='MEMs length', required=False, default="10")
     parser.add_argument('-e', '--erate', dest='e', help='Error rate', required=False, default="3")
@@ -310,9 +443,9 @@ def main():
     parser.add_argument('-f', '--allevents', dest='allevents', help='Use this if ou want to detect all events, also annotated ones', required=False, action='store_true')
 
     args = parser.parse_args()
-    if args.sample2Path != '.' and args.transPath == '.':
-        eprint("ERROR! If you pass two samples, you have to pass also the transcripts of the genes!")
-        sys.exit(1)
+
+    checkInputs(args)
+
     if not os.path.isdir(args.outputPath):
         os.makedirs(args.outputPath)
 
@@ -320,10 +453,10 @@ def main():
     genes, chr_genes_dict, tr_gene_dict = splitAnnotation(args)
     '''
     !!!
-    TODO: allow to run only ASGAL on single gene
+    TODO: allow to run only ASGAL on single gene, without salmon
     !!!
     '''
-    if args.transPath != '.':
+    if args.transPath != '-':
         runSalmon(args)
         splitSalmon(args, genes, tr_gene_dict)
 

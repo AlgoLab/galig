@@ -23,9 +23,7 @@ smaller samples, one for each considered gene
 
 4. it runs ASGAL on each gene 
 
-This pipeline can be run using the _ASGAL_GW_ script. Currently, this
-script assumes that you have installed Salmon systemwide.
-
+This pipeline can be run using the _ASGAL_GW_ script:
 ```bash
 # Single-end sample
 ./ASGAL_GW -g [genome.fasta] \
@@ -83,4 +81,19 @@ Parameters:
                             (default: 3)
 -f,--allevents              output all events, not only the novel ones
                             (default: only novels)
+```
+
+## Example
+We built a simple example using 19 genes from two human chromosomes, namely chromosome 13 and chromosome Y. To run the example:
+
+1 download the example data from [here]()
+
+2 unzip the archive:
+```bash
+tar xvfz example.tar.gz
+cd example
+```
+3 run the ASGAL pipeline:
+```bash
+/path/to/ASGAL_GW -g genome.fa -a annotations.gtf -s1 sample1.fa.gz -t transcripts.fa.gz -o ./outFold
 ```

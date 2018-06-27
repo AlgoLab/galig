@@ -21,7 +21,7 @@ The instructions to install and use _ASGAL_ are at
 
 ### Compiling
 ```bash
-git clone https://github.com/AlgoLab/galig.git
+git clone --recursive https://github.com/AlgoLab/galig.git
 cd galig
 make prerequisites
 make

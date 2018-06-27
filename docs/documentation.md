@@ -17,39 +17,43 @@ To compile ASGAL and the 3rd party libraries it uses
   * [python3](https://www.python.org)
   * [gffutils](http://daler.github.io/gffutils/)
   * [biopython](http://biopython.org)
+  * [pysam](https://pysam.readthedocs.io/en/latest/index.html)
   * [cmake](https://cmake.org)
 
-On an ubuntu system, the following commands suffice:
+To compile [Salmon](https://combine-lab.github.io/salmon/) (used for
+genome-wide analyses), install:
+  * [boost](https://www.boost.org/)
+
+On an ubuntu system (18.04), the following commands suffice:
 ```bash
 sudo apt-get update
-sudo apt-get install build-essential cmake python3 python3-pip python3-biopython python3-biopython-sql zlib1g-dev
+sudo apt-get install build-essential cmake python3 python3-pip python3-biopython python3-biopython-sql python3-pysam zlib1g-dev libboost1.65-all-dev
 pip3 install --user gffutils
 ```
 
-Then, to download and compile _sdsl-lite_, _lemon_ and ASGAL:
+Then, to download and compile sdsl-lite, lemon, Salmon and ASGAL:
 ```bash
-git clone https://github.com/AlgoLab/galig.git
+git clone --recursive https://github.com/AlgoLab/galig.git
 cd galig
 make prerequisites
 make
 ```
 
-This creates the executable in the _bin_ folder. The python scripts,
+This reates the executable in the _bin_ folder. The python scripts,
 instead, are in the _scripts_ folder.
 
 <br />
 
 ## Input
 ASGAL takes as input:
-* a reference genome (in _FASTA_ format)
+* a reference chromosome (in _FASTA_ format)
 * a gene annotation (in _GTF_ format)
-* an RNA-Seq sample (in _FASTA_ or _FASTQ_ format, can be gzipped)
+* an RNA-Seq sample (in _FASTA_ or _FASTQ_ format, it can be gzipped)
 
 ###### Note
 ASGAL tool takes as input the annotation of a single gene and the
 relative chromosome: if you want to use the tool in a genome-wide
-analysis, you can use the [pipeline](genomewide) we implemented to use
-ASGAL on a set of genes of interest.
+analysis, you can use the [pipeline](genomewide) we implemented.
 
 ###### Note on Paired-End sample
 At the moment, ASGAL is not able to directly manage paired-end
@@ -63,7 +67,7 @@ the AS events.
 
 ## Usage
 ASGAL is composed of three different modules, each one performing a
-different task. However, we make available a script that run the full pipeline.
+different task. We made available a script that run the full pipeline.
 
 ### Full Pipeline Script
 To run ASGAL pipeline, run the following command:
@@ -78,15 +82,14 @@ This command will produce three files:
 We will now specify in more detail the three steps of ASGAL pipeline.
 
 #### Step 1 - Splice-Aware Aligner
-
-To build the splicing graph and align the input
+To build the splicing graph of the input gene and to align the input
 sample to it, run the following command:
 ```bash
 ./bin/SpliceAwareAligner -g [reference] -a [annotation] -s [sample] -o output.mem
 ```
 
 In this way, the alignments to the splicing graph are computed and
-stored in _output.mem_ file.
+stored in the _output.mem_ file.
 
 #### Step 2 (optional) - SAM Formatter
 The file obtained in the previous step can be converted into a
@@ -120,7 +123,7 @@ python3 ./scripts/detectEvents.py -g [reference] -a [annotation] -m output.mem -
 
 ###### Output Format
 The alternative splicing events are stored in the file
-_output.events_, a _space-separated value_ file where each line
+_output.events.csv_, a _space-separated value_ file where each line
 represents an event. Each alternative splicing event is associated to
 the intron inducing it and it is described by:
  1. type of event:
