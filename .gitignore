@@ -1,16 +1,11 @@
 bin/
 obj/
-*.mem
 *~
-*.idx
-*.db
 lemon/
 
 docs/Gemfile
 docs/Gemfile.lock
 docs/_site/
-
-*.sg
 
 # Compiled Object files
 *.slo
