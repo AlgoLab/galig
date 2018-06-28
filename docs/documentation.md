@@ -28,7 +28,7 @@ genome-wide analyses), install:
 On an ubuntu system (18.04), the following commands suffice:
 ```bash
 sudo apt-get update
-sudo apt-get install build-essential git python3 python3-pip python3-biopython python3-biopython-sql python3-pysam cmake libboost1.65-all-dev samtools zlib1g-dev curl liblzma-dev libjemalloc-dev libjemalloc1 libghc-bzlib-dev
+sudo apt-get install build-essential git python3 python3-pip python3-biopython python3-biopython-sql python3-pysam cmake libboost1.65-all-dev samtools unzip wget curl zlib1g-dev liblzma-dev libjemalloc-dev libjemalloc1 libghc-bzlib-dev
 pip3 install --user gffutils
 ```
 

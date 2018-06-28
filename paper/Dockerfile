@@ -2,6 +2,8 @@ FROM ubuntu:18.04
 RUN apt-get update && apt-get install -y \
     build-essential \
     cmake \
+    wget \
+    unzip \
     git \
     python3 \
     python3-pip \
@@ -20,9 +22,9 @@ RUN apt-get update && apt-get install -y \
 
 VOLUME ["/data"]
 
-RUN git clone --recursive https://github.com/AlgoLab/galig.git && \
-    cd galig && \
-    make prerequisites && \
+RUN git clone --recursive https://github.com/AlgoLab/galig.git ; \
+    cd galig ; \
+    make prerequisites ; \
     make
 
 ENTRYPOINT ["/galig/asgal"]
