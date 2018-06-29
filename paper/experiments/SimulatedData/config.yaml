@@ -1,12 +1,12 @@
 resources:
   directories:
-    root: /data/BMC-exp-sim
+    root: /home/luca/tmp/asgal_exp/Sim
     reference: Refs
     annotations: RealAnnotations
-    newannotations: NewAnnos
+    newannotations: ReducedAnnotations
     data: Samples
     progs: Tools
-    results: ResultsNew
+    results: Results
   aln: star-aln
   asgal: asgal
   spladder: spladder
@@ -41,5 +41,3 @@ resources:
   samplesizes:
     - 5M
     - 10M
-  
-

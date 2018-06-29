@@ -77,15 +77,14 @@ for g in newsamples.keys():
             samples_asgal.append(g + "/" + asgal_dir + "/" + gene + "/" + e + "/" + e)
             samples_spladder.append(g + "/" + spladder_dir + "/" + gene + "/" + e)
             samples_rmats.append(g + "/" + rmats_dir + "/" + gene + "/" + e)
-            #samples_majiq.append(g + "/majiq/" + gene + "/" + e + "/voila_psi/" + e)
 	    samples_suppa.append(g + "/" + suppa_dir + "/" + gene + "/" + e)
 	    samples_comparison.append(g + "/" + comp_dir + "/" + gene + "/" + e)
-        samples_suppa_annot.append(g + "/" + suppa_annot_dir + "/" + gene)
-        samples_spladder_annot.append(g + "/" + spladder_annot_dir + "/" + gene)
-        samples_asgal_annot.append(g + "/" + asgal_annot_dir + "/" + gene + "/" + gene)
-        samples_rmats_annot.append(g + "/" + rmats_annot_dir + "/" + gene)
-	samples_comparison_annot.append(g + "/" + comp_annot_dir + "/" + gene)
-        samples_salmon_annot.append(g + "/" + gene)
+            samples_suppa_annot.append(g + "/" + suppa_annot_dir + "/" + gene)
+            samples_spladder_annot.append(g + "/" + spladder_annot_dir + "/" + gene)
+            samples_asgal_annot.append(g + "/" + asgal_annot_dir + "/" + gene + "/" + gene)
+            samples_rmats_annot.append(g + "/" + rmats_annot_dir + "/" + gene)
+	    samples_comparison_annot.append(g + "/" + comp_annot_dir + "/" + gene)
+            samples_salmon_annot.append(g + "/" + gene)
 
 ########################################################
 
@@ -140,13 +139,6 @@ rule rmats_annot:
 	       size = sampsize,
 	       rmats_s = samples_rmats_annot)
 
-# # MAJIQ
-# rule majiq:
-#     input:
-#         expand(pjoin(res_dir, "{size}", "{majiq_s}.psi.tsv"),
-# 	       size = sampsize,
-# 	       majiq_s = samples_majiq)
-
 # SALMON
 rule salmon_annot:
     input:
@@ -175,6 +167,12 @@ rule compare_annot:
     input:
         pjoin(res_dir, "full-annot-comparisons.csv")
 
+# ALIGNMENTS ANALYSIS
+rule alignments_annot:
+    input:
+        pjoin(res_dir, "alignmentsAccuracy_annot.csv"),
+        pjoin(res_dir, "alignmentsStatistics_annot.csv")
+
 # ANNOT EXEC
 rule all_annot:
     input:
@@ -182,20 +180,24 @@ rule all_annot:
         rules.asgal_annot.input,
         rules.spladder_annot.input,
         rules.suppa_annot.input,
-        rules.rmats_annot.input
-	#rules.compare_annot.input
+        rules.rmats_annot.input,
+	rules.compare_annot.input,
+        rules.alignments_annot.input
 
-# ALL
-rule all:
+# NOVEL EXEC
+rule all_novel:
     input:
         rules.star.input,
         rules.asgal.input,
         rules.spladder.input,
         rules.rmats.input,
-        #rules.majiq.input,
         rules.suppa.input,
         rules.compare.input
 
+rule all:
+     input:
+        rules.all_annot.input,
+        rules.all_novel.input
 
 ############################################################
 
@@ -228,7 +230,7 @@ rule run_starindex:
         "mkdir -p {params.star_index_dir}" +
         " && " +
 	"/usr/bin/time -v -o {log.time} " +
-        "{progs_dir}/Star/bin/Linux_x86_64_static/STAR " +
+        "{progs_dir}/STAR-2.5.4b/bin/Linux_x86_64_static/STAR " +
 	"--runMode genomeGenerate " +
 	"--genomeDir {params.star_index_dir} " +
 	"--genomeFastaFiles {input.genome} " +
@@ -245,7 +247,7 @@ rule run_star:
         bam = pjoin(res_dir, "{size}", "{genome}", aln_dir, "{genome}_Aligned.sortedByCoord.out.bam")
     params:
         bam_dir = pjoin(res_dir, "{size}", "{genome}", aln_dir),
-    	star_index_dir = pjoin(ref_dir, "{genome}-star-index"),
+        star_index_dir = pjoin(ref_dir, "{genome}-star-index"),
         bam_prefix = pjoin(res_dir, "{size}", "{genome}", aln_dir, "{genome}_")
     log:
         time = pjoin(res_dir, "{size}", "{genome}", aln_dir, "star.time")
@@ -257,7 +259,7 @@ rule run_star:
 	"cd {params.bam_dir} " +
 	"&& " +
 	"/usr/bin/time -v -o {log.time} " +
-        "{progs_dir}/Star/bin/Linux_x86_64_static/STAR " +
+        "{progs_dir}/STAR-2.5.4b/bin/Linux_x86_64_static/STAR " +
 	"--genomeDir {params.star_index_dir} " +
 	"--genomeLoad NoSharedMemory " +
 	"--readFilesIn {input.reads} " +
@@ -413,7 +415,7 @@ rule run_spladder:
 	"rm -rf {params.ev_dir} " +
 	"&& " +
 	"/usr/bin/time -v -o {log.time} " +
-	"/usr/bin/python {progs_dir}/Spladder/python/spladder.py " +
+	"/usr/bin/python {progs_dir}/spladder/python/spladder.py " +
 	"-b {input.bam} " +
 	"-o {params.ev_dir} " +
 	"-a {input.newgtf} " +
@@ -436,7 +438,7 @@ rule run_spladder_annot:
 	"rm -rf {params.ev_dir} " +
 	"&& " +
 	"/usr/bin/time -v -o {log.time} " +
-	"/usr/bin/python {progs_dir}/Spladder/python/spladder.py " +
+	"/usr/bin/python {progs_dir}/spladder/python/spladder.py " +
 	"-b {input.bam} " +
 	"-o {params.ev_dir} " +
 	"-a {input.gtf} " +
@@ -499,112 +501,6 @@ rule run_rmats_annot:
 	"-t single " +
 	"&> {log.log} " +
 	")"
-	
-# # MAJIQ
-# rule gtf2gff:
-#     input:
-#         newgtf = pjoin(new_annot_dir, "{genome}", "{gene}", "{event}.gtf")
-#     output:
-#         newgff = pjoin(new_annot_dir, "{genome}", "{gene}", "{event}.gff3")
-#     shell:
-#         "( " +
-# 	"{progs_dir}/gffread-0.9.12.Linux_x86_64/gffread " +
-# 	"-E {input.newgtf} " +
-# 	"-O -F -o- > {output.newgff}; " +
-# 	")"
-
-# rule prepare_majiq_config:
-#     input:
-#         bam = pjoin(res_dir, "{size}", "{genome}", aln_dir, "{genome}_Aligned.sortedByCoord.out.bam"),
-#         config_orig = pjoin(progs_dir, "majiq_config_file.txt")
-#     output:
-#         config = pjoin(res_dir, "{size}", "{genome}", "majiq", "{gene}", "{event}", "config_file.txt")
-#     params:
-#         bam_dir = pjoin(res_dir, "{size}", "{genome}", aln_dir),
-#         genome = "{genome}",
-# 	bam_prefix = "{genome}_Aligned.sortedByCoord.out",
-#         exp_name = "{event}"
-#     shell:
-#         "( " +
-# 	"cp {input.config_orig} {output.config} " +
-# 	"&& " +
-# 	"sed -i -e 's#XXSAMDIRXX#{params.bam_dir}#' {output.config} " +
-# 	"&& " +
-# 	"sed -i -e 's#XXGENOMEXX#{params.genome}#' {output.config} " +
-# 	"&& " +
-# 	"sed -i -e 's#XXBAMPREFIXXX#{params.bam_prefix}#' {output.config} " +
-# 	"&& " +
-# 	"sed -i -e 's#XXEXPNAMEXX#{params.exp_name}#' {output.config} " +
-# 	")"
-
-# rule run_majiq_build:
-#     input:
-#         bam = pjoin(res_dir, "{size}", "{genome}", aln_dir, "{genome}_Aligned.sortedByCoord.out.bam"),
-#         newgff = pjoin(new_annot_dir, "{genome}", "{gene}", "{event}.gff3"),
-#         config = pjoin(res_dir, "{size}", "{genome}", "majiq", "{gene}", "{event}", "config_file.txt")
-#     output:
-#         majiq = pjoin(res_dir, "{size}", "{genome}", "majiq", "{gene}", "{event}", "majiq_build", "{genome}_Aligned.sortedByCoord.out.majiq"),
-# 	spl_graph = pjoin(res_dir, "{size}", "{genome}", "majiq", "{gene}", "{event}", "majiq_build", "splicegraph.sql")
-#     params:
-#         build_dir = pjoin(res_dir, "{size}", "{genome}", "majiq", "{gene}", "{event}", "majiq_build")
-#     log:
-#         log = pjoin(res_dir, "{size}", "{genome}", "majiq", "{gene}", "{event}-majiq_build.log"),
-#         time = pjoin(res_dir, "{size}", "{genome}", "majiq", "{gene}", "{event}-majiq_build.time")
-#     shell:
-#         "( " +
-# 	"mkdir -p {params.build_dir} " +
-# 	"&& " +
-# 	"/usr/bin/time -v -o {log.time} " +
-# 	"majiq build " +
-# 	"--conf {input.config} " +
-#         "--output {params.build_dir} " +
-# 	"{input.newgff} " +
-# 	"&> {log.log}; " +
-# 	")"
-
-# rule run_majiq_psi:
-#     input:
-#         majiq = pjoin(res_dir, "{size}", "{genome}", "majiq", "{gene}", "{event}", "majiq_build", "{genome}_Aligned.sortedByCoord.out.majiq")
-#     output:
-#         psi = pjoin(res_dir, "{size}", "{genome}", "majiq", "{gene}", "{event}", "majiq_psi", "{event}.psi.voila")
-#     params:
-#         psi_dir = pjoin(res_dir, "{size}", "{genome}", "majiq", "{gene}", "{event}", "majiq_psi"),
-#         exp_name = "{event}"
-#     log:
-#         log = pjoin(res_dir, "{size}", "{genome}", "majiq", "{gene}", "{event}-majiq_psi.log"),
-#         time = pjoin(res_dir, "{size}", "{genome}", "majiq", "{gene}", "{event}-majiq_psi.time")
-#     shell:
-#         "( " +
-#         "mkdir -p {params.psi_dir} " +
-# 	"&& " +
-# 	"/usr/bin/time -v -o {log.time} " +
-# 	"majiq psi " +
-# 	"{input.majiq} " +
-#         "-o {params.psi_dir} " +
-# 	"-n {params.exp_name} " +
-# 	"&> {log.log}; " +
-# 	")"
-
-# rule run_voila_psi:
-#     input:
-#     	spl_graph = pjoin(res_dir, "{size}", "{genome}", "majiq", "{gene}", "{event}", "majiq_build", "splicegraph.sql"),
-# 	psi = pjoin(res_dir, "{size}", "{genome}", "majiq", "{gene}", "{event}", "majiq_psi", "{event}.psi.voila")
-#     output:
-#         voila_psi = pjoin(res_dir, "{size}", "{genome}", "majiq", "{gene}", "{event}", "voila_psi", "{event}.psi.tsv")
-#     params:
-#         voila_psi_dir = pjoin(res_dir, "{size}", "{genome}", "majiq", "{gene}", "{event}", "voila_psi")
-#     log:
-#         log = pjoin(res_dir, "{size}", "{genome}", "majiq", "{gene}", "{event}-voila_psi.log"),
-#         time = pjoin(res_dir, "{size}", "{genome}", "majiq", "{gene}", "{event}-voila_psi.time")
-#     shell:
-#         "( " +
-#         "/usr/bin/time -v -o {log.time} " +
-#         "voila psi " +
-#         "{input.psi} " +
-#         "-s {input.spl_graph} " +
-#         "-o {params.voila_psi_dir} " +
-#         "&> {log.log}; " +
-#         ")"
 
 # Create FASTA sequence of transcipts from GTF + Genome
 rule create_annot_fasta_transcripts:
@@ -637,7 +533,7 @@ rule salmon_annot_index:
         "mkdir -p {params.index_dir} " +
         "&& " +
         "/usr/bin/time -v -o {log.time} " +
-        "{progs_dir}/Salmon-latest_linux_x86_64/bin/salmon index " +
+        "{progs_dir}/salmon/bin/salmon index " +
         "-t {input.tr_fasta} " +
         "-i {params.index_dir} " +
         "&> {log.log}; " +
@@ -661,7 +557,7 @@ rule salmon_annot_quant:
         "mkdir -p {params.suppa_dir} " +
         "&& " +
         "/usr/bin/time -v -o {log.time} " +
-        "{progs_dir}/Salmon-latest_linux_x86_64/bin/salmon quant " +
+        "{progs_dir}/salmon/bin/salmon quant " +
         "-i {params.index_dir} " +
         "-l U " +
         "-r {input.reads} " +
@@ -701,7 +597,7 @@ rule suppa_annot_generate:
 	"&& " +
         "/usr/bin/time -v -o {log.time} " +
         "/usr/bin/python3 " +
-	"/usr/local/lib/python3.4/dist-packages/SUPPA/suppa.py generateEvents " +
+	"~/.local/lib/python3.6/site-packages/SUPPA/suppa.py generateEvents " +
         "-i {input.gtf} " +
         "-o {params.out_prefix} " +
         "-e SE SS MX RI FL " +
@@ -725,7 +621,7 @@ rule suppa_annot_psi:
         "( " +
         "/usr/bin/time -v -o {log.time} " +
         "/usr/bin/python3 " +
-	"/usr/local/lib/python3.4/dist-packages/SUPPA/suppa.py psiPerEvent " +
+	"~/.local/lib/python3.6/site-packages/SUPPA/suppa.py psiPerEvent " +
 	"-i {input.ioe_all_events} " +
 	"-e {input.tpm_file} " +
 	"-o {params.psi_prefix} " +
@@ -763,7 +659,7 @@ rule salmon_index:
         "mkdir -p {params.index_dir} " +
         "&& " +
         "/usr/bin/time -v -o {log.time} " +
-        "{progs_dir}/Salmon-latest_linux_x86_64/bin/salmon index " +
+        "{progs_dir}/salmon/bin/salmon index " +
         "-t {input.tr_fasta} " +
         "-i {params.index_dir} " +
         "&> {log.log}; " +
@@ -787,7 +683,7 @@ rule salmon_quant:
         "mkdir -p {params.suppa_dir} " +
         "&& " +
         "/usr/bin/time -v -o {log.time} " +
-        "{progs_dir}/Salmon-latest_linux_x86_64/bin/salmon quant " +
+        "{progs_dir}/salmon/bin/salmon quant " +
         "-i {params.index_dir} " +
         "-l U " +
         "-r {input.reads} " +
@@ -827,7 +723,7 @@ rule suppa_generate:
 	"&& " +
         "/usr/bin/time -v -o {log.time} " +
         "/usr/bin/python3 " +
-	"/usr/local/lib/python3.4/dist-packages/SUPPA/suppa.py generateEvents " +
+	"~/.local/lib/python3.6/site-packages/SUPPA/suppa.py generateEvents " +
         "-i {input.newgtf} " +
         "-o {params.out_prefix} " +
         "-e SE SS MX RI FL " +
@@ -851,7 +747,7 @@ rule suppa_psi:
         "( " +
         "/usr/bin/time -v -o {log.time} " +
         "/usr/bin/python3 " +
-	"/usr/local/lib/python3.4/dist-packages/SUPPA/suppa.py psiPerEvent " +
+	"~/.local/lib/python3.6/site-packages/SUPPA/suppa.py psiPerEvent " +
 	"-i {input.ioe_all_events} " +
 	"-e {input.tpm_file} " +
 	"-o {params.psi_prefix} " +
@@ -862,11 +758,9 @@ rule suppa_psi:
 rule compare_results:
     input:
         asgal = pjoin(res_dir, "{size}", "{genome}", asgal_dir, "{gene}", "{event}", "{event}.events.csv"),
-	spladder = pjoin(res_dir, "{size}", "{genome}", spladder_dir, "{gene}", "{event}"),
+        spladder = pjoin(res_dir, "{size}", "{genome}", spladder_dir, "{gene}", "{event}", "merge_graphs_exon_skip_C3.confirmed.pickle"),
 	rmats = pjoin(res_dir, "{size}", "{genome}", rmats_dir, "{gene}", "{event}", "fromGTF.SE.txt"),
-	#majiq = pjoin(res_dir, "{size}", "{genome}", "majiq", "{gene}", "{event}", "voila_psi", "{event}.psi.tsv"),
-	#suppa_annot = pjoin(res_dir, "{size}", "{genome}", "suppa", "{gene}", "Annot", "iso_tpm.psi"),
-	suppa_novel = pjoin(res_dir, "{size}", "{genome}", suppa_dir, "{gene}", "{event}", "iso_tpm.psi")
+        suppa_novel = pjoin(res_dir, "{size}", "{genome}", suppa_dir, "{gene}", "{event}", "iso_tpm.psi")
     output:
         csv = pjoin(res_dir, "{size}", "{genome}", comp_dir, "{gene}", "{event}", "results.csv")
     params:
@@ -880,6 +774,7 @@ rule compare_results:
 	"mkdir -p {params.csv_dir} " +
 	"&& " +
         "{progs_dir}/comparaTHOR/comparaTHOR.py " +
+        "-f {root_dir} " +
         "-c {params.genome} " +
         "-g {params.gene} " +
         "-e {params.event} " +
@@ -919,15 +814,13 @@ rule merge_comparisons:
 	"python {progs_dir}/concat_comparisons.py {input.full_csv} " +
 	">> {output.final_csv} " +
 	")"
-    
 
 rule compare_annot_results:
     input:
         asgal = pjoin(res_dir, "{size}", "{genome}", asgal_annot_dir, "{gene}", "{gene}.events.csv"),
-	spladder = pjoin(res_dir, "{size}", "{genome}", spladder_annot_dir, "{gene}"),
-	rmats = pjoin(res_dir, "{size}", "{genome}", rmats_annot_dir, "{gene}", "fromGTF.SE.txt"),
-	#majiq = pjoin(res_dir, "{size}", "{genome}", "majiq", "{gene}", "{event}", "voila_psi", "{event}.psi.tsv"),
-	suppa_annot = pjoin(res_dir, "{size}", "{genome}", suppa_annot_dir, "{gene}", "iso_tpm.psi")
+        spladder = pjoin(res_dir, "{size}", "{genome}", spladder_annot_dir, "{gene}", "merge_graphs_exon_skip_C3.confirmed.pickle"),
+        rmats = pjoin(res_dir, "{size}", "{genome}", rmats_annot_dir, "{gene}", "fromGTF.SE.txt"),
+        suppa_annot = pjoin(res_dir, "{size}", "{genome}", suppa_annot_dir, "{gene}", "iso_tpm.psi")
     output:
         csv = pjoin(res_dir, "{size}", "{genome}", comp_annot_dir, "{gene}", "annot-results.csv")
     params:
@@ -940,6 +833,7 @@ rule compare_annot_results:
 	"mkdir -p {params.csv_dir} " +
 	"&& " +
         "{progs_dir}/comparaTHOR/comparANNOT.py " +
+        "-f {root_dir} " +
         "-c {params.genome} " +
         "-g {params.gene} " +
         "-s {params.size} "
@@ -978,3 +872,38 @@ rule merge_annot_comparisons:
 	"python {progs_dir}/concat_comparisons.py {input.full_csv} " +
 	">> {output.final_csv} " +
 	")"
+
+# ALIGNMENTS ANALYSIS ON ANNOT RESULTS
+rule run_alignments_analysis_annot:
+    input:
+        asgal = expand(pjoin(res_dir, "{{size}}", "{asgal_s}.mem"),
+                       asgal_s = samples_asgal_annot),
+        bam = pjoin(res_dir, "{size}", "{genome}", aln_dir, "{genome}_Aligned.sortedByCoord.out.bam")
+    output:
+        pjoin(res_dir, "{size}", "{genome}", "alignments_analysis", "alignmentsAccuracy.csv"),
+        pjoin(res_dir, "{size}", "{genome}", "alignments_analysis", "alignmentsStatistics.csv")
+    params:
+        size = "{size}",
+        genome = "{genome}"
+    shell:
+        "python3 {progs_dir}/alnsAnalysis/checkAlignments.py "
+        "-f {root_dir} "
+        "-c {params.genome} "
+        "-s {params.size}"
+
+rule merge_alignments_analysis_annot:
+    input:
+        inAcc = expand(pjoin(res_dir, "{size}", "{genome}", "alignments_analysis", "alignmentsAccuracy.csv"),
+                       size = sampsize,
+                       genome = genomes),
+        inStat = expand(pjoin(res_dir, "{size}", "{genome}", "alignments_analysis", "alignmentsStatistics.csv"),
+                        size = sampsize,
+                        genome = genomes)
+    output:
+        full_acc = pjoin(res_dir, "alignmentsAccuracy_annot.csv"),
+        full_stat = pjoin(res_dir, "alignmentsStatistics_annot.csv")
+    shell:
+        "echo 'Sample,Chrom,Tool,TotalReads,GoodAlns,PartAlns,BadAlns,TotalAlns' > {output.full_acc} ; "
+        "python3 {progs_dir}/concat_comparisons.py {input.inAcc} >> {output.full_acc} ; "
+        "echo 'Sample,Chrom,Tool,Type,TotalReads,NumberOfType,NumberAlignments' > {output.full_stat} ; "
+        "python3 {progs_dir}/concat_comparisons.py {input.inStat} >> {output.full_stat} ; "
