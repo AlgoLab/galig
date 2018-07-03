@@ -1,6 +1,6 @@
 resources:
   directories:
-    root: /home/luca/tmp/asgal_exp/Sim
+    root: /home/luca/tmp/asgal_exp/SimData
     reference: Refs
     annotations: RealAnnotations
     newannotations: ReducedAnnotations

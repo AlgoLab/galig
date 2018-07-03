@@ -31,68 +31,68 @@ suppa_dpsi = directories["suppa_dpsi"]
 # Reference
 genome = resources["genome"]
 annotation = resources["annotation"]
-suppaDEgenes = resources["suppaDEgenes"]
+suppaDEgenes = pjoin(root_dir, resources["suppaDEgenes"])
 GRCh37gen = resources["GRCh37gen"]
 
-aln_dir = "STAR-aln"
-rmats_dir = "rMATS"
+allgenes_file = pjoin(root_dir, "genes.list")
+rtpcrgenes_file = pjoin(root_dir, "RT-PCR-events.genes.list")
+truth_file = pjoin(root_dir, "RT-PCR-events.tsv")
+
 asgal_dir = "asgal"
-asgal_novel_dir = "asgal_novel"
-asgal_RTPCR_dir = "asgal_RTPCR"
-asgal_RTPCR_NOVEL_dir = "asgal_RTPCR_NOVEL"
+asgal_RTPCR_dir = "asgal_novel_RTPCR"
+aln_dir = "STAR-aln"
 spladder_dir = "spladder"
+rmats_dir = "rMATS"
 
 # Samples
 samples = set()
 for s in glob.glob(data_dir + "/*.fastq.gz"):
     vals = s.split("/")[-1].split("_")
     samples.add(vals[0])
-print(samples)
+# print(samples)
 
 # Conditions
 conds = {}
 for c in resources["conditions"]:
     for cname in c.keys():
         conds[str(cname)] = str(c[cname])
-print(conds)
+# print(conds)
 
 degenes = set()
 with open(suppaDEgenes, "r") as suppagenes:
     for deg in suppagenes.readlines():
         degenes.add(deg.rstrip())
 
+fullgenes = set()
+with open(allgenes_file, "r") as gf:
+    for g in gf.readlines():
+        fullgenes.add(g.rstrip())
+
+rtpcr_genes = set()
+with open(rtpcrgenes_file, "r") as gf:
+    for g in gf.readlines():
+        rtpcr_genes.add(g.rstrip())
+
 ########################################################
 
 rule all:
     input:
-        #pjoin(res_dir, sal_quant, "iso_tpm.txt"),
-        #pjoin(res_dir, "suppa_generate", "hg19_ensembl_events_all.ioe"),
-        #pjoin(res_dir, suppa_psi, "events.psi"),
-        #pjoin(res_dir, suppa_dpsi, "CTRL_KD.dpsi"),
-        #expand(pjoin(res_dir, sal_quant, "{sample}", "salmon_aln.sorted.bam"),
-        #       sample = samples),
-        # expand(pjoin(res_dir, asgal_dir, "{sample}", "{gene}","{gene}.events.csv"),
-        #        sample = conds["KD"].split(","),
-        #        gene = degenes),
-        # expand(pjoin(res_dir, aln_dir, "{sample}", "{sample}_Aligned.sortedByCoord.out.bam"),
-        #        sample = samples),
-        # pjoin(res_dir, rmats_dir, "fromGTF.SE.txt"),
-        # expand(pjoin(res_dir, rmats_dir, "{sample}", "fromGTF.SE.txt"),
-        #        sample = conds["KD"].split(","))
-        # expand(pjoin(res_dir, spladder_dir, "{sample}", "merge_graphs_exon_skip_C3.confirmed.pickle"),
-        #        sample = conds["KD"].split(","))
-        # expand(pjoin(res_dir, asgal_novel_dir, "{sample}", "{gene}","{gene}.events.csv"),
-        #        sample = conds["KD"].split(","),
-        #        gene = degenes),
-        expand(pjoin(res_dir, asgal_RTPCR_dir, "{sample}", "{gene}","{gene}.events.csv"),
+        # ASGAL
+        expand(pjoin(res_dir, asgal_dir, "{sample}", "{gene}", "{gene}.events.csv"),
                sample = conds["KD"].split(","),
-               gene = degenes),
-        expand(pjoin(res_dir, asgal_RTPCR_NOVEL_dir, "{sample}", "{gene}","{gene}.events.csv"),
+               gene = fullgenes),
+        # ASGAL novel on RTPCR
+        expand(pjoin(res_dir, asgal_RTPCR_dir, "{sample}", "{gene}", "{gene}.events.csv"),
                sample = conds["KD"].split(","),
-               gene = degenes),
-
-
-########################################################
+               gene = rtpcr_genes),
+        # SplAdder
+        expand(pjoin(res_dir, spladder_dir, "{sample}", "merge_graphs_exon_skip_C3.confirmed.pickle"),
+               sample = conds["KD"].split(",")),
+        # rMATS
+        expand(pjoin(res_dir, rmats_dir, "{sample}", "fromGTF.SE.txt"),
+               sample = conds["KD"].split(",")),
+        # SUPPA
+        pjoin(res_dir, suppa_dpsi, "CTRL_KD.dpsi"),
 
 # CORRECT FASTA HEADERS
 rule correct_tr_fasta:
@@ -121,7 +121,7 @@ rule salmon_index:
         "( " +
         "mkdir -p {params.index_dir} " +
         "&& " +
-        "{progs_dir}/Salmon-latest_linux_x86_64/bin/salmon index " +
+        "{progs_dir}/salmon-0.10.2/bin/salmon index " +
         "-t {input.tr_fasta} " +
         "-i {params.index_dir} " +
         "&> {log.log}; " +
@@ -147,10 +147,9 @@ rule salmon_quant:
         time = pjoin(res_dir, sal_quant, "{sample}", "salmon_quant.time")
     shell:
         "( " +
-        "mkdir -p {params.quant_dir} " +
-        "&& " +
+        "mkdir -p {params.quant_dir} ; " +
         "/usr/bin/time -v -o {log.time} " +
-        "{progs_dir}/Salmon-latest_linux_x86_64/bin/salmon quant " +
+        "{progs_dir}/salmon-0.10.2/bin/salmon quant " +
         "-i {params.index_dir} " +
         "-l ISF " +
         "-1 {input.r1} " +
@@ -159,17 +158,59 @@ rule salmon_quant:
         "-o {params.quant_dir} " +
         "--writeMappings={params.tmp_sam} " +
         "--writeUnmappedNames " +
-        "&> {log.log} " +
-        "&& " +
-        "samtools view -Sb {params.tmp_sam} > {params.tmp_bam} " +
-        "&& " +
-        "samtools sort -@ {threads} {params.tmp_bam} {params.bam_prefix} " +
-        "&& " +
-        "rm {params.tmp_sam} " +
-        "&& " +
-        "rm {params.tmp_bam} " +
+        "&> {log.log} ; " +
+        "samtools view -Sb {params.tmp_sam} > {params.tmp_bam} ; " +
+        "samtools sort -@ {threads} {params.tmp_bam} -o {params.bam_prefix}.bam ; " +
+        "rm -f {params.tmp_sam} ; " +
+        "rm -f {params.tmp_bam} " +
         ")"
 
+rule bigBAM_to_smallFASTAs:
+    input:
+        big_bam = pjoin(res_dir, sal_quant, "{sample}", "salmon_aln.sorted.bam"),
+        r1 = pjoin(data_dir, "{sample}_1.fastq.gz"),
+        r2 = pjoin(data_dir, "{sample}_2.fastq.gz")
+    output:
+        fas = pjoin(res_dir, "Splitted", "{sample}", "Samples")
+    params:
+        sample = "{sample}"
+    shell:
+        "mkdir {output.fas} ; "
+        "/usr/bin/python3 {progs_dir}/splitSalmonBAM.py " +
+        "-g {root_dir}/genes.list " +
+        "-o {output.fas} " +
+        "{input.big_bam} " +
+        "{ref_dir}/{annotation}.gtf " +
+        pjoin(pjoin(res_dir, sal_quant, "{params.sample}"), "aux_info", "unmapped_names.txt") + " " +
+        "{input.r1} " +
+        "{input.r2}"
+
+rule splitGTF:
+    input:
+        gtf = pjoin(ref_dir, annotation + ".gtf"),
+    output:
+        genefold = pjoin(res_dir, "Splitted", "Annotations"),
+        geneannot = pjoin(res_dir, "Splitted", "Annotations", "{gene}.gtf")
+    params:
+        gene = "{gene}"
+    shell:
+        "mkdir -p {output.genefold} ; " +
+        "grep {params.gene} {input.gtf} > {output.geneannot} "
+
+rule prepareGenome:
+    input:
+        genome_dir = pjoin(ref_dir, "Genomes"),
+        gtf = pjoin(res_dir, "Splitted", "Annotations", "{gene}.gtf")
+    output:
+        genome = pjoin(res_dir, "Splitted", "References", "{gene}-genome.fa")
+    shell:
+        "( " +
+        "CHR=`cut -f 1 {input.gtf} | sort -u | sed -e 's/chr//'` " +
+        "&& " +
+        "ln -s {input.genome_dir}/Homo_sapiens.GRCh37.75.dna.chromosome.$CHR.fa " +
+        "{output.genome}; " +
+        ")"
+        
 # SUPPA
 rule compute_tpm:
     input:
@@ -179,16 +220,16 @@ rule compute_tpm:
         tpm_file = pjoin(res_dir, sal_quant, "iso_tpm.txt")
     shell:
         "( " +
-	"multipleFieldSelection.py " +
+	"/usr/bin/python3 {progs_dir}/multipleFieldSelection.py " +
 	"-i {input.quant_files} " +
 	"-k 1 " +
 	"-f 4 " +
 	"-o {output.tpm_file} " +
 	")"
-    
+
 rule suppa_generate:
     input:
-        gtf = pjoin(ref_dir, annotation + "formatted.gtf")
+        gtf = pjoin(ref_dir, annotation + ".formatted.gtf")
     output:
         ioe_all_events = pjoin(res_dir, suppa_gen, "hg19_ensembl_events_all.ioe")
     params:
@@ -202,11 +243,11 @@ rule suppa_generate:
 	"mkdir -p {params.ioe_dir} " +
 	"&& " +
         "/usr/bin/time -v -o {log.time} " +
-	"suppa.py generateEvents " +
+	"python3 ~/.local/lib/python3.6/site-packages/SUPPA/suppa.py generateEvents " +
         "-i {input.gtf} " +
         "-o {params.out_prefix} " +
         "-e SE SS MX RI FL " +
-        "-f ioe " +
+        # "-f ioe " +
         "&> {log.log} " +
 	"&& " +
 	"awk 'FNR==1 && NR==1 {{print}} /^seqname/ {{next}} 1 {{print}}' {params.ioe_dir}/*ioe > {output.ioe_all_events}; " +
@@ -226,13 +267,12 @@ rule suppa_psi:
     shell:
         "( " +
         "/usr/bin/time -v -o {log.time} " +
-	"suppa.py psiPerEvent " +
+	"python3 ~/.local/lib/python3.6/site-packages/SUPPA/suppa.py psiPerEvent " +
 	"-i {input.ioe_all_events} " +
 	"-e {input.tpm_file} " +
 	"-o {params.psi_prefix} " +
 	"&> {log.log} " +
         ")"
-
 
 rule split_tpm:
     input:
@@ -289,7 +329,7 @@ rule suppa_dpsi:
     shell:
         "( " +
         "/usr/bin/time -v -o {log.time} " +
-	"suppa.py diffSplice " +
+	"python3 ~/.local/lib/python3.6/site-packages/SUPPA/suppa.py diffSplice " +
         "-m empirical " +
 	"-i {input.ioe_all_events} " +
 	"-e {input.tpm_ctrl} {input.tpm_kd} " +
@@ -298,53 +338,12 @@ rule suppa_dpsi:
 	"&> {log.log} " +
 	")"
 
-
-# rule bam2fa:
-#     input:
-#         bam = pjoin(res_dir, sal_quant, "{sample}_split", "{gene}.bam")
-#     output:
-#         fa = pjoin(res_dir, sal_quant, "{sample}_split", "{gene}.fa")
-#     shell:
-#         "( " +
-#         "samtools bam2fq {input.bam} " +
-#         "| seqtk seq -A - " +
-#         "> {output.fa} " +
-#         ")"
-
-rule splitGTF:
-    input:
-        gtf = pjoin(ref_dir, annotation + ".gtf"),
-        fa = pjoin(res_dir, sal_quant, "{sample}_split", "{gene}.fa")
-    output:
-        geneannot = pjoin(res_dir, sal_quant, "{sample}_split", "{gene}.gtf")
-    params:
-        gene = "{gene}"
-    shell:
-        "( " +
-        "grep '{params.gene}' {input.gtf} " +
-        "> {output.geneannot} " +
-        ")"
-
-rule prepareGenome:
-    input:
-        genome_dir = pjoin(ref_dir, "genome"),
-        gtf = pjoin(res_dir, sal_quant, "{sample}_split", "{gene}.gtf")
-    output:
-        genome = pjoin(res_dir, sal_quant, "{sample}_split", "{gene}-genome.fa")
-    shell:
-        "( " +
-        "CHR=`cut -f 1 {input.gtf} | sort -u | sed -e 's/chr//'` " +
-        "&& " +
-        "ln -s {input.genome_dir}/Homo_sapiens.GRCh37.75.dna.chromosome.$CHR.fa " +
-        "{output.genome}; " +
-        ")"
-
 # ASGAL
 rule run_asgal_annot_aln:
     input:
-        reads = pjoin(res_dir, sal_quant, "{sample}_split", "{gene}.fa"),
-        gtf = pjoin(res_dir, sal_quant, "{sample}_split", "{gene}.gtf"),
-        genome = pjoin(res_dir, sal_quant, "{sample}_split", "{gene}-genome.fa")
+        reads = pjoin(res_dir, "Splitted", "{sample}", "Samples"),
+        gtf = pjoin(res_dir, "Splitted", "Annotations", "{gene}.gtf"),
+        genome = pjoin(res_dir, "Splitted", "References", "{gene}-genome.fa")
     output:
         mem = pjoin(res_dir, asgal_dir, "{sample}", "{gene}", "{gene}.mem")
     params:
@@ -378,8 +377,8 @@ rule run_asgal_annot_aln:
 rule run_asgal_annot_event:
     input:
         mem = pjoin(res_dir, asgal_dir, "{sample}", "{gene}", "{gene}.mem"),
-        gtf = pjoin(res_dir, sal_quant, "{sample}_split", "{gene}.gtf"),
-        genome = pjoin(res_dir, sal_quant, "{sample}_split", "{gene}-genome.fa")
+        gtf = pjoin(res_dir, "Splitted", "Annotations", "{gene}.gtf"),
+        genome = pjoin(res_dir, "Splitted", "References", "{gene}-genome.fa")
     output:
         ev = pjoin(res_dir, asgal_dir, "{sample}", "{gene}", "{gene}.events.csv")
     log:
@@ -399,71 +398,23 @@ rule run_asgal_annot_event:
         "&> {log.log}; " +
         ")"
 
-# ASGAL NOVEL
+# ASGAL novel (RT-PCR)
+rule reduceAnnotations:
+    input:
+        inFold = pjoin(res_dir, "Splitted", "Annotations")
+    output:
+        outFold = pjoin(res_dir, "Splitted", "ReducedAnnotations")
+    shell:
+        "python3 {progs_dir}/cutAnnotations.py " +
+        "{truth_file} " +
+        "{input.inFold} " +
+        "{output.outFold}"
+
 rule run_asgal_novel_aln:
     input:
-        reads = pjoin(res_dir, sal_quant, "{sample}_split", "{gene}.fa"),
-        gtf = pjoin(res_dir, sal_quant, "{sample}_split", "{gene}.gtf"),
-        genome = pjoin(res_dir, sal_quant, "{sample}_split", "{gene}-genome.fa")
-    output:
-        mem = pjoin(res_dir, asgal_novel_dir, "{sample}", "{gene}", "{gene}.mem")
-    params:
-        mem_dir = pjoin(res_dir, asgal_novel_dir, "{sample}", "{gene}"),
-        mem_prefix = pjoin(res_dir, asgal_novel_dir, "{sample}", "{gene}", "{gene}")
-    log:
-        log = pjoin(res_dir, asgal_novel_dir, "{sample}", "{gene}", "{gene}.aln.log"),
-        time = pjoin(res_dir, asgal_novel_dir, "{sample}", "{gene}", "{gene}.aln.time")
-    shell:
-        "( " +
-        "mkdir -p {params.mem_dir} " +
-        "&& " +
-        "/usr/bin/time -v -o {log.time} " +
-        "{progs_dir}/galig/bin/SpliceAwareAligner " +
-        "-g {input.genome} " +
-        "-a {input.gtf} " +
-        "-s {input.reads} " +
-        "-l 15 " +
-        "-e 3 " +
-        "-o {output.mem} " +
-        "&> {log.log} " +
-        "&& " +
-        "/usr/bin/python3 {progs_dir}/galig/scripts/formatSAM.py " +
-        "-m {output.mem} " +
-        "-g {input.genome} " +
-        "-a {input.gtf} " +
-        "-e 3 " +
-        "-o {params.mem_prefix}.sam; " +
-        ")"
-
-rule run_asgal_novel_event:
-    input:
-        mem = pjoin(res_dir, asgal_novel_dir, "{sample}", "{gene}", "{gene}.mem"),
-        gtf = pjoin(res_dir, sal_quant, "{sample}_split", "{gene}.gtf"),
-        genome = pjoin(res_dir, sal_quant, "{sample}_split", "{gene}-genome.fa")
-    output:
-        ev = pjoin(res_dir, asgal_novel_dir, "{sample}", "{gene}", "{gene}.events.csv")
-    log:
-        log = pjoin(res_dir, asgal_novel_dir, "{sample}", "{gene}", "{gene}.event.log"),
-        time = pjoin(res_dir, asgal_novel_dir, "{sample}", "{gene}", "{gene}.event.time")
-    shell:
-        "( " +
-        "/usr/bin/time -v -o {log.time} " +
-        "/usr/bin/python3 {progs_dir}/galig/scripts/detectEvents.py " +
-        "-g {input.genome} " +
-        "-a {input.gtf} " +
-        "-m {input.mem} " +
-        "-o {output.ev} " +
-        "-e 3 " +
-        "-w 3 " +
-        "&> {log.log}; " +
-        ")"
-
-# ASGAL RTPCR
-rule run_asgal_RTPCR_aln:
-    input:
-        reads = pjoin(res_dir, sal_quant, "NEW-{sample}_split", "{gene}.fa"),
-        gtf = pjoin(res_dir, sal_quant, "NEW-{sample}_split", "{gene}.gtf"),
-        genome = pjoin(res_dir, sal_quant, "NEW-{sample}_split", "{gene}-genome.fa")
+        reads = pjoin(res_dir, "Splitted", "{sample}", "Samples"),
+        gtf = pjoin(res_dir, "Splitted", "ReducedAnnotations"),
+        genome = pjoin(res_dir, "Splitted", "References", "{gene}-genome.fa")
     output:
         mem = pjoin(res_dir, asgal_RTPCR_dir, "{sample}", "{gene}", "{gene}.mem")
     params:
@@ -494,11 +445,11 @@ rule run_asgal_RTPCR_aln:
         "-o {params.mem_prefix}.sam; " +
         ")"
 
-rule run_asgal_RTPCR_event:
+rule run_asgal_novel_event:
     input:
         mem = pjoin(res_dir, asgal_RTPCR_dir, "{sample}", "{gene}", "{gene}.mem"),
-        gtf = pjoin(res_dir, sal_quant, "NEW-{sample}_split", "{gene}.gtf"),
-        genome = pjoin(res_dir, sal_quant, "NEW-{sample}_split", "{gene}-genome.fa")
+        gtf = pjoin(res_dir, "Splitted", "Annotations", "{gene}.gtf"),
+        genome = pjoin(res_dir, "Splitted", "References", "{gene}-genome.fa")
     output:
         ev = pjoin(res_dir, asgal_RTPCR_dir, "{sample}", "{gene}", "{gene}.events.csv")
     log:
@@ -514,88 +465,28 @@ rule run_asgal_RTPCR_event:
         "-o {output.ev} " +
         "-e 3 " +
         "-w 3 " +
-        "--allevents " +
         "&> {log.log}; " +
         ")"
-
-# ASGAL RTPCR NOVEL
-rule run_asgal_RTPCR_NOVEL_aln:
-    input:
-        reads = pjoin(res_dir, sal_quant, "NEW-{sample}_split", "{gene}.fa"),
-        gtf = pjoin(res_dir, sal_quant, "NEW-{sample}_split", "{gene}.gtf"),
-        genome = pjoin(res_dir, sal_quant, "NEW-{sample}_split", "{gene}-genome.fa")
-    output:
-        mem = pjoin(res_dir, asgal_RTPCR_NOVEL_dir, "{sample}", "{gene}", "{gene}.mem")
-    params:
-        mem_dir = pjoin(res_dir, asgal_RTPCR_NOVEL_dir, "{sample}", "{gene}"),
-        mem_prefix = pjoin(res_dir, asgal_RTPCR_NOVEL_dir, "{sample}", "{gene}", "{gene}")
-    log:
-        log = pjoin(res_dir, asgal_RTPCR_NOVEL_dir, "{sample}", "{gene}", "{gene}.aln.log"),
-        time = pjoin(res_dir, asgal_RTPCR_NOVEL_dir, "{sample}", "{gene}", "{gene}.aln.time")
-    shell:
-        "( " +
-        "mkdir -p {params.mem_dir} " +
-        "&& " +
-        "/usr/bin/time -v -o {log.time} " +
-        "{progs_dir}/galig/bin/SpliceAwareAligner " +
-        "-g {input.genome} " +
-        "-a {input.gtf} " +
-        "-s {input.reads} " +
-        "-l 15 " +
-        "-e 3 " +
-        "-o {output.mem} " +
-        "&> {log.log} " +
-        "&& " +
-        "/usr/bin/python3 {progs_dir}/galig/scripts/formatSAM.py " +
-        "-m {output.mem} " +
-        "-g {input.genome} " +
-        "-a {input.gtf} " +
-        "-e 3 " +
-        "-o {params.mem_prefix}.sam; " +
-        ")"
-
-rule run_asgal_RTPCR_NOVEL_event:
-    input:
-        mem = pjoin(res_dir, asgal_RTPCR_NOVEL_dir, "{sample}", "{gene}", "{gene}.mem"),
-        gtf = pjoin(res_dir, sal_quant, "NEW-{sample}_split", "{gene}.gtf"),
-        genome = pjoin(res_dir, sal_quant, "NEW-{sample}_split", "{gene}-genome.fa")
-    output:
-        ev = pjoin(res_dir, asgal_RTPCR_NOVEL_dir, "{sample}", "{gene}", "{gene}.events.csv")
-    log:
-        log = pjoin(res_dir, asgal_RTPCR_NOVEL_dir, "{sample}", "{gene}", "{gene}.event.log"),
-        time = pjoin(res_dir, asgal_RTPCR_NOVEL_dir, "{sample}", "{gene}", "{gene}.event.time")
-    shell:
-        "( " +
-        "/usr/bin/time -v -o {log.time} " +
-        "/usr/bin/python3 {progs_dir}/galig/scripts/detectEvents.py " +
-        "-g {input.genome} " +
-        "-a {input.gtf} " +
-        "-m {input.mem} " +
-        "-o {output.ev} " +
-        "-e 3 " +
-        "-w 3 " +
-        "&> {log.log}; " +
-        ")"
-
+        
 # STAR Index
 rule run_starindex:
     input:
-        genome = pjoin(ref_dir, "genome", GRCh37gen + ".fa"),
+        genome = pjoin(ref_dir, "Genomes", GRCh37gen + ".fa"),
         annot = pjoin(ref_dir, annotation + ".gtf")
     output:
-        star_index = pjoin(ref_dir, "genome", "Homo_sapiens-GRCh37-75-star-index", "SA")
+        star_index = pjoin(ref_dir, "Genomes", "Homo_sapiens-GRCh37-75-star-index", "SA")
     params:
-        star_index_dir = pjoin(ref_dir, "genome", "Homo_sapiens-GRCh37-75-star-index")
+        star_index_dir = pjoin(ref_dir, "Genomes", "Homo_sapiens-GRCh37-75-star-index")
     log:
-        log = pjoin(ref_dir, "genome", "Homo_sapiens-GRCh37-75-star-index", "star-index.log"),
-        time = pjoin(ref_dir, "genome", "Homo_sapiens-GRCh37-75-star-index", "star-index.time")
+        log = pjoin(ref_dir, "Genomes", "Homo_sapiens-GRCh37-75-star-index", "star-index.log"),
+        time = pjoin(ref_dir, "Genomes", "Homo_sapiens-GRCh37-75-star-index", "star-index.time")
     threads: 1
     shell:
         "( " +
         "mkdir -p {params.star_index_dir}" +
         " && " +
         "/usr/bin/time -v -o {log.time} " +
-        "{progs_dir}/Star/bin/Linux_x86_64_static/STAR " +
+        "{progs_dir}/STAR-2.5.4b/bin/Linux_x86_64_static/STAR " +
         "--runMode genomeGenerate " +
         "--genomeDir {params.star_index_dir} " +
         "--genomeFastaFiles {input.genome} " +
@@ -608,24 +499,23 @@ rule run_star:
     input:
         r1 = pjoin(data_dir, config["read1_mask"]),
         r2 = pjoin(data_dir, config["read2_mask"]),
-        star_index = pjoin(ref_dir, "genome", "Homo_sapiens-GRCh37-75-star-index", "SA")
+        star_index = pjoin(ref_dir, "Genomes", "Homo_sapiens-GRCh37-75-star-index", "SA")
     output:
         bam = pjoin(res_dir, aln_dir, "{sample}", "{sample}_Aligned.sortedByCoord.out.bam")
     params:
         bam_dir = pjoin(res_dir, aln_dir, "{sample}"),
-        star_index_dir = pjoin(ref_dir, "genome", "Homo_sapiens-GRCh37-75-star-index"),
+        star_index_dir = pjoin(ref_dir, "Genomes", "Homo_sapiens-GRCh37-75-star-index"),
         bam_prefix = pjoin(res_dir, aln_dir, "{sample}", "{sample}_")
     log:
         time = pjoin(res_dir, aln_dir, "{sample}", "star.time")
     threads: 1
     shell:
         "( " +
-        "mkdir -p {params.bam_dir} " +
-        "&& " +
+        "mkdir -p {params.bam_dir} ; " +
         "cd {params.bam_dir} " +
         "&& " +
         "/usr/bin/time -v -o {log.time} " +
-        "{progs_dir}/Star/bin/Linux_x86_64_static/STAR " +
+        "{progs_dir}/STAR-2.5.4b/bin/Linux_x86_64_static/STAR " +
         "--genomeDir {params.star_index_dir} " +
         "--genomeLoad NoSharedMemory " +
         "--readFilesIn {input.r1} {input.r2} " +
@@ -644,52 +534,13 @@ rule run_star:
         "--twopassMode Basic " +
         "--runThreadN {threads} " +
         "&& " +
-        "samtools index {output.bam}; " +
+        "samtools index {output.bam} ; " +
+        "echo '@HD\tVN:1.4\tSO:coordinate' > {output.bam} ; "
+        "echo '@SQ\tSN:20\tLN:63025520' >> {output.bam} ; "
+        "echo '@SQ\tSN:21\tLN:48129895' >> {output.bam} ; "
         ")"
 
-# rMATS
-rule run_rmats_annot:
-    input:
-        kd_bam = expand(pjoin(res_dir, aln_dir, "{sample}", "{sample}_Aligned.sortedByCoord.out.bam"),
-                        sample = conds["KD"].split(",")),
-        ctrl_bam = expand(pjoin(res_dir, aln_dir, "{sample}", "{sample}_Aligned.sortedByCoord.out.bam"),
-                        sample = conds["CTRL"].split(",")),
-        gtf = pjoin(ref_dir, annotation + ".gtf")
-    output:
-        ev = pjoin(res_dir, rmats_dir, "fromGTF.SE.txt")
-    params:
-        ev_dir = pjoin(res_dir, rmats_dir),
-        kd_bam_list = ",".join(expand(pjoin(res_dir, aln_dir, "{sample}", "{sample}_Aligned.sortedByCoord.out.bam"),
-                        sample = conds["KD"].split(","))),
-        kd_bam_list_file = pjoin(res_dir, rmats_dir, "KD-aln.list"),
-        ctrl_bam_list = ",".join(expand(pjoin(res_dir, aln_dir, "{sample}", "{sample}_Aligned.sortedByCoord.out.bam"),
-                        sample = conds["CTRL"].split(","))),
-        ctrl_bam_list_file = pjoin(res_dir, rmats_dir, "CTRL-aln.list"),
-    log:
-        log = pjoin(res_dir, rmats_dir, "rMATS.log"),
-        time = pjoin(res_dir, rmats_dir, "rMATS.time")
-    threads: 16
-    shell:
-        "( " +
-        "mkdir -p {params.ev_dir} " +
-        "&& " +
-        "echo {params.kd_bam_list} > {params.kd_bam_list_file} " +
-        "&& " +
-        "echo {params.ctrl_bam_list} > {params.ctrl_bam_list_file} " +
-        "&& " +
-        "/usr/bin/time -v -o {log.time} " +
-        "/usr/bin/python {progs_dir}/rMATS.4.0.2/rMATS-turbo-Linux-UCS4/rmats.py " +
-        "--b1 {params.ctrl_bam_list_file} " +
-        "--b2 {params.kd_bam_list_file} " +
-        "--gtf {input.gtf} " +
-        "--od {params.ev_dir} " +
-        "-t paired " +
-        "--cstat 0.01 " +
-        "--nthread {threads} " +
-        "&> {log.log} " +
-        ")"
-
-rule run_rmats_fake:
+rule run_rmats:
     input:
         bam = pjoin(res_dir, aln_dir, "{sample}", "{sample}_Aligned.sortedByCoord.out.bam"),
         gtf = pjoin(ref_dir, annotation + ".gtf")
@@ -701,7 +552,7 @@ rule run_rmats_fake:
     log:
         log = pjoin(res_dir, rmats_dir, "{sample}", "rMATS.log"),
         time = pjoin(res_dir, rmats_dir, "{sample}", "rMATS.time")
-    threads: 4
+    threads: 1
     shell:
         "( " +
         "mkdir -p {params.ev_dir} " +
@@ -721,7 +572,7 @@ rule run_rmats_fake:
         ")"
 
 # Spladder
-rule run_spladder_annot:
+rule run_spladder:
     input:
         bam = pjoin(res_dir, aln_dir, "{sample}", "{sample}_Aligned.sortedByCoord.out.bam"),
         gtf = pjoin(ref_dir, annotation + ".gtf")
@@ -737,7 +588,7 @@ rule run_spladder_annot:
         "rm -rf {params.ev_dir} " +
         "&& " +
         "/usr/bin/time -v -o {log.time} " +
-        "/usr/bin/python {progs_dir}/Spladder/python/spladder.py " +
+        "/usr/bin/python {progs_dir}/spladder/python/spladder.py " +
         "-b {input.bam} " +
         "-o {params.ev_dir} " +
         "-a {input.gtf} " +

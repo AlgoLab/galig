@@ -1,10 +1,10 @@
 resources:
   directories:
-    root: /data/BMC-exp-real
-    reference: reference
-    data: samples
+    root: /home/luca/tmp/asgal_exp/RealData
+    reference: Reference
+    data: Samples
     progs: Tools
-    results: results
+    results: Results
     salmon_index: salmon_index
     salmon_quant: salmon_quant
     suppa_generate: suppa_generate

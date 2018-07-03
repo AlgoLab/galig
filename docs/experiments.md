@@ -24,6 +24,7 @@ pip3 install --user gffutils
 Let us download the data and run the experiments in the following folder:
 ```bash
 SimFold='~/asgal_exp/SimData'
+mkdir -p ${SimFold}
 ```
 
 1. move to the folder containing the snakefile
@@ -43,9 +44,9 @@ bash getTools.sh ${SimFold}
 bash setupData.sh ${SimFold}
 ```
 
-5. change the _root_ folder in the _config.yaml_ file with the desired folder (i.e. _SimFold_)
+5. change the _root_ folder in the ```config.yaml``` file with the desired folder (i.e. ```${SimFold}```)
 
-6. run experiments using snakemake
+6. run the experiments using snakemake
 ```
 # check if everything is okay
 snakemake -n all
@@ -53,9 +54,7 @@ snakemake -n all
 snakemake all
 ```
 
-The outputs of the tools are stored in the folder:
-
-```bash $SimFold/Results ```
+The outputs of the tools are stored in the folder: ``` ${SimFold}/Results ```.
 
 In the same folder, you can find 4 _csv_ which summarize the results:
    * _alignmentsAccuracy.csv_ contains the results on the basewise accuracy of ASGAL aligner and STAR
@@ -66,28 +65,37 @@ In the same folder, you can find 4 _csv_ which summarize the results:
 
 ## Real Data
 
-We are currently cleaning our real data directory. Once done, we will
-upload it and you will be able to fully replicate the experiments we
-performed.
-
-At the moment,
-[here](https://github.com/AlgoLab/galig/tree/master/paper/experiments/RealData)
-you can find the _snakefile_ used to perform the experiments. From
-this file, you can inspect how we ran each tool and which parameters
-we used.
-
-<!-- Let us download the data and run the experiments in the following folder:
+Let us download the data and run the experiments in the following folder:
 ```bash
 RealFold='~/asgal_exp/RealData'
+mkdir -p ${RealFold}
 ```
 
-1. download and setup the input data:
+1. move to the folder containing the snakefile
 ```bash
-bash paper/experiments/RealData/setupData.sh ${SimFold}
+cd paper/experiments/RealData
 ```
 
-2. setup the tools folder (we will create a symbolic link of the _Tools_ folder used before):
+2. setup the tools folder (we will create a symbolic link to the _Tools_ folder used before):
 ```bash
 ln -s ${SimFold}/Tools/ ${RealFold}/Tools/
 ```
--->
+
+3. download the files from [here](https://drive.google.com/open?id=1N5zg3z9XQiOuzpEZUW0HxfKxTGrf5Vtz) and move them to _RealFold_ *(currently, we are uploading the new files)*
+
+4. download the other required data and setup all the data:
+```bash
+bash setupData.sh ${RealFold}
+```
+
+5. change the _root_ folder in the _config.yaml_ file with the desired folder (i.e. ```${RealFold}```)
+
+6. run the experiments using snakemake <!-- ~22779 jobs -->
+```
+# check if everything is okay
+snakemake -n all
+# run the experiments
+snakemake all
+```
+
+The outputs of the tools are stored in the folder: ```${RealFold}/Results ```.
