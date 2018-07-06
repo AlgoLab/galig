@@ -9,7 +9,7 @@ for genome-wide analysis we have implemented a pre-processing step
 that aims to speed up the process of filtering reads that map to genes
 under investigation.
 
-The genome-wide pipeline of ASGAL is mainly based on the **quasi-mapping**
+The genome-wide mode of ASGAL is mainly based on the **quasi-mapping**
 algorithm of [Salmon](https://combine-lab.github.io/salmon/) and it
 can be summarized as follows:
 
@@ -23,22 +23,25 @@ smaller samples, one for each considered gene
 
 4. it runs ASGAL on each gene 
 
-This pipeline can be run using the _ASGAL_GW_ script:
+ASGAL can be run in genome-wide mode by passing to the _asgal_ script (the same used to
+run ASGAL on a single gene) the "--multi" flag:
 ```bash
 # Single-end sample
-./ASGAL_GW -g [genome.fasta] \
-           -a [annotation.gtf] \
-           -s1 [sample.fa] \
-           -t [transcripts.fasta] \
-           -o [output_folder]
+./asgal --multi \
+        -g [genome.fasta] \
+        -a [annotation.gtf] \
+        -s [sample.fa] \
+        -t [transcripts.fasta] \
+        -o [output_folder]
 
 # Paired-end sample 
-./ASGAL_GW -g [genome.fasta] \
-           -a [annotation.gtf] \
-           -s1 [sample1.fa] \
-           -s2 [sample2.fa] \
-           -t [transcripts.fasta] \
-           -o [output_folder]
+./asgal --multi \
+        -g [genome.fasta] \
+        -a [annotation.gtf] \
+        -s [sample1.fa] \
+        -s2 [sample2.fa] \
+        -t [transcripts.fasta] \
+        -o [output_folder]
 ```
 
 This script takes as input:
@@ -61,16 +64,17 @@ and it produces in the output folder:
 
 File:
 ```bash
-./ASGAL_GW
+./asgal
 ```
 Parameters:
 ```bash
+--multi                     use this to run ASGAL in genome-wide mode
 -g,--genome INFILE          FASTA input file containing the chromosome sequences
 -a,--annotation INFILE      GTF input file containing the annotations of considered genes
--s1,--sample1 INFILE        FASTA input file containing the RNA-Seq reads (sample 1)
--s2,--sample2 INFILE        FASTA input file containing the RNA-Seq reads (sample 2)
--t,--transcripts INFILE     FASTA input file containing the transcript sequences
-                            of the considered genes
+-s,--sample INFILE          FASTA input file containing the first RNA-Seq sample (can be gzipped)
+-s2,--sample2 INFILE        FASTA input file containing the second RNA-Seq sample (can be gzipped)
+-t,--transcripts INFILE     FASTA input file containing the transcript sequences of the
+                            considered genes (can be gzipped)
 -o,--output OUTFOLD         output name folder
 -l,--L <int>                minimum lenght of MEMs used to build the
                             alignments (default: 15)
@@ -79,23 +83,21 @@ Parameters:
                             (default: 3)
 -w,--support <int>          minimum number of reads needed to confirm an event
                             (default: 3)
--f,--allevents              output all events, not only the novel ones
+--allevents                 output all events, not only the novel ones
                             (default: only novels)
 ```
 
-<!---
 ## Example
-We built a simple example using 19 genes from two human chromosomes, namely chromosome 13 and chromosome Y. To run the example:
+We built a simple example using 19 genes from human chromosomes 13 and Y. To run the example:
 
-1 download the example data from [here]()
+1 download the example data from [here](https://drive.google.com/open?id=1CX_9-a0-vUa2pImRePHQhFqEywO9DzTu)
 
 2 unzip the archive:
 ```bash
-tar xvfz example.tar.gz
-cd example
+tar xfz GW_ASGAL_example.tar.gz
+cd GW_ASGAL_example
 ```
 3 run the ASGAL pipeline:
 ```bash
-/path/to/ASGAL_GW -g genome.fa -a annotations.gtf -s1 sample1.fa.gz -t transcripts.fa.gz -o ./outFold
+/path/to/asgal --multi -g genome.fa -a annotations.gtf -s sample1.fa.gz -t transcripts.fa.gz -o outFold
 ```
--->

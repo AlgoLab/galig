@@ -16,10 +16,11 @@ To compile ASGAL and the 3rd party libraries it uses
 [lemon](http://lemon.cs.elte.hu/trac/lemon)), install:
   * [python3](https://www.python.org)
   * [biopython](http://biopython.org)
-  * [gffutils](http://daler.github.io/gffutils/)
   * [pysam](https://pysam.readthedocs.io/en/latest/index.html)
+  * [gffutils](http://daler.github.io/gffutils/)
   * [cmake](https://cmake.org)
   * [samtools](http://samtools.sourceforge.net/)
+  * [zlib1g-dev](http://zlib.net/)
 
 To compile [Salmon](https://combine-lab.github.io/salmon/) (used for
 genome-wide analyses), install:
@@ -51,34 +52,39 @@ ASGAL takes as input:
 * a gene annotation (in _GTF_ format)
 * an RNA-Seq sample (in _FASTA_ or _FASTQ_ format, it can be gzipped)
 
-###### Note
+<br />
+
+#### Note 1 (genome-wide analysis)
 ASGAL tool takes as input the annotation of a single gene and the
 relative chromosome: if you want to use the tool in a genome-wide
-analysis, you can use the [pipeline](genomewide) we implemented.
+analysis, please refer to this [page](genomewide).
 
-###### Note on Paired-End sample
+#### Note 2 (paired-end sample)
 At the moment, ASGAL is not able to directly manage paired-end
 samples: the only way to use both the fastq files (the reverse and the
 forward one) consists in merging them into a unique fastq file and
 then using this file as input for ASGAL. In this way, ASGAL will align
 each read independently and then it will use the alignments to detect
-the AS events.
+the AS events. *Note that this is needed only if you run ASGAL on a
+single gene: if you use the genome-wide pipeline, the merge is done
+automatically.*
 
 <br />
 
 ## Usage
 ASGAL is composed of three different modules, each one performing a
-different task. We made available a script that run the full pipeline.
+different task. We made available a script that runs the full pipeline.
 
 ### Full Pipeline Script
-To run ASGAL pipeline, run the following command:
+To run ASGAL pipeline on a single gene, run the following command:
 ```bash
-./asgal -g [genome] -a [annotation] -s [sample] -o output
+./asgal -g [genome] -a [annotation] -s [sample] -o outputFolder
 ```
-This command will produce three files:
-  * _output.mem_, containing the alignments to the splicing graph
-  * _output.sam_, containing the alignments to the splicing graph mapped to the reference genome
-  * _output.events.csv_, containing the alternative splicing events detected in the RNA-Seq sample
+This command will produce four files in the output folder:
+  * a _.mem_ file containing the alignments to the splicing graph
+  * a _.sam_ file, containing the alignments to the splicing graph mapped to the reference genome
+  * a _.events.csv_ file, containing the alternative splicing events detected in the RNA-Seq sample
+  * a _.log_ file, containing the log of the execution
 
 We will now specify in more detail the three steps of ASGAL pipeline.
 
@@ -86,7 +92,7 @@ We will now specify in more detail the three steps of ASGAL pipeline.
 To build the splicing graph of the input gene and to align the input
 sample to it, run the following command:
 ```bash
-./bin/SpliceAwareAligner -g [reference] -a [annotation] -s [sample] -o output.mem
+./bin/SpliceAwareAligner -g [reference] -a [annotation] -s [sample] -o outputFolder/output.mem
 ```
 
 In this way, the alignments to the splicing graph are computed and
@@ -99,7 +105,7 @@ be open, for example, with
 [IGV](http://software.broadinstitute.org/software/igv/)) using:
 
 ```bash
-python3 ./scripts/formatSAM.py -m output.mem -g [reference] -a [anotation] -o output.sam
+python3 ./scripts/formatSAM.py -m output.mem -g [reference] -a [anotation] -o outputFolder/output.sam
 ```
 
 ###### Observation
@@ -119,7 +125,7 @@ To analyze the alignments and detect the possible presence of
 alternative splicing events, run:
 
 ```bash
-python3 ./scripts/detectEvents.py -g [reference] -a [annotation] -m output.mem -o output.events.csv
+python3 ./scripts/detectEvents.py -g [reference] -a [annotation] -m output.mem -o outputFolder/output.events.csv
 ```
 
 ###### Output Format
@@ -174,9 +180,7 @@ grep "CG13375" Drosophila_melanogaster.BDGP6.91.chr.gtf > input/annotation.gtf
 rm Drosophila_melanogaster.BDGP6.91.chr.gtf
 
 # Run ASGAL
-../bin/SpliceAwareAligner -g input/genome.fa -a input/annotation.gtf -s input/reads.fasta -o CG13375.mem
-python3 ../scripts/formatSAM.py -m CG13375.mem -g input/genome.fa -a input/annotation.gtf -o CG13375.sam
-python3 ../scripts/detectEvents.py -g input/genome.fa -a input/annotation.gtf -m CG13375.mem -o CG13375.events
+../asgal -g input/genome.fa -a input/annotation.gtf -s input/reads.fasta -o CG13375
 ```
 
 We should obtain a novel _exon skipping_ events:
@@ -199,9 +203,8 @@ From the picture, we can see that 411 reads support the skipping of the third ex
 
 ## Command Line Arguments
 * all programs show usage information with **-h** (**\-\-help**)
-* all programs write to a specific output file, defined with **-o**
 
-### Full Pipeline script
+### Full Pipeline Script
 
 File:
 ```bash
@@ -212,7 +215,7 @@ Required parameters:
 -g,--genome INFILE          FASTA input file containing the reference
 -a,--annotation INFILE      GTF input file containing the gene annotation
 -s,--sample INFILE          FASTA/Q input file containing the RNA-Seq reads (can be a gzipped file)
--o,--output OUTFILE         output file name (without extension)
+-o,--output OUTFOLD         output folder
 ```
 
 Optional parameters:
@@ -257,6 +260,8 @@ Optional parameters:
 * an higher value of _L_ improves the speed but reduces the number of aligned reads
 * the number of allowed errors is computed for each read as the ratio between the error rate and its length
 
+<br />
+
 ### SAM Formatter
 File:
 ```bash
@@ -279,6 +284,8 @@ Optional paramter:
 ###### Observations
 * the error rate should be the same used to compute the alignments
 
+<br />
+
 ### Events Detector
 File:
 ```bash
@@ -300,6 +307,7 @@ Optional parameters:
 -w,--support <int>          minimum number of reads needed to confirm an event
                             (default: 3)
 --allevents                 output all events, not only the novel ones
+                            (default: only novels)
 ```
 
 ###### Observation

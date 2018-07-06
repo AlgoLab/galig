@@ -9,6 +9,8 @@ manager.
 
 **All the scripts have been tested on ubuntu 18.04.**
 
+<br />
+
 ## Prerequisites
 ```bash
 sudo apt update
@@ -18,6 +20,8 @@ sudo apt-get install build-essential cmake git curl wget unzip samtools python p
                      libjemalloc1 libjemalloc-dev libghc-bzlib-dev snakemake
 pip3 install --user gffutils
 ```
+
+<br />
 
 ## Simulated Data
 
@@ -38,6 +42,13 @@ bash getTools.sh ${SimFold}
 ```
 
 3. download the files from [here](https://drive.google.com/open?id=1mbEYLIn9193WdSEBp3rsEpiqC9mS2Vi2) and move them to _SimFold_
+```bash
+$ ls ${SimFold}
+  5000000_reads.fastq.gz
+  10000000_reads.fastq.gz
+  gencode.v19.annotation.mult_iso_subsample_1000_genes.gtf
+  GRCh37.p13.genome.fa.gz
+```
 
 4. setup the input files (this script will split the input files and create the reduced annotations):
 ```bash
@@ -62,6 +73,7 @@ In the same folder, you can find 4 _csv_ which summarize the results:
    * _full-annot-comparisons.csv_ contains the number of true positives, false positives, and false negatives reported by each tool (ASGAL, SplAdder, rMATS, and SUPPA) when considering the original gene annotations
    * _full-novel-comparisons.csv_ contains the number of true positives, false positives, and false negatives reported by each tool (ASGAL, SplAdder, rMATS, and SUPPA) when considering the reduced annotations
 
+<br />
 
 ## Real Data
 
@@ -81,7 +93,12 @@ cd paper/experiments/RealData
 ln -s ${SimFold}/Tools/ ${RealFold}/Tools/
 ```
 
-3. download the files from [here](https://drive.google.com/open?id=1N5zg3z9XQiOuzpEZUW0HxfKxTGrf5Vtz) and move them to _RealFold_ *(currently, we are uploading the new files)*
+3. download the files from [here](https://drive.google.com/open?id=12Vc9HqVD7FWHYKKjjlf22UadOxwQyWJ7) and move them to _RealFold_
+```bash
+$ ls ${RealFold}
+  genes_information.tar.gz
+  RealSamples.tar.gz
+```
 
 4. download the other required data and setup all the data:
 ```bash
