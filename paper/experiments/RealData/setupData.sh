@@ -8,6 +8,7 @@ mkdir -p $WF
 cd $WF
 
 tar xfz genes_information.tar.gz
+rm genes_information.tar.gz
 
 # Reference
 mkdir -p Reference/Genomes

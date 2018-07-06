@@ -535,9 +535,6 @@ rule run_star:
         "--runThreadN {threads} " +
         "&& " +
         "samtools index {output.bam} ; " +
-        "echo '@HD\tVN:1.4\tSO:coordinate' > {output.bam} ; "
-        "echo '@SQ\tSN:20\tLN:63025520' >> {output.bam} ; "
-        "echo '@SQ\tSN:21\tLN:48129895' >> {output.bam} ; "
         ")"
 
 rule run_rmats:
