@@ -34,7 +34,7 @@ tar xfz rMATS.4.0.2.tgz
 rm rMATS.4.0.2.tgz
 
 # SUPPA2
-pip3 install --user SUPPA==2.2.1
+pip3 install --user SUPPA==2.3
 
 # Salmon
 wget https://github.com/COMBINE-lab/salmon/archive/v0.10.2.tar.gz
