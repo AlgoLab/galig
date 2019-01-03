@@ -172,10 +172,10 @@ def runSalmon(args):
         eprint("Running Salmon quasi-mapping on single-end sample...")
         subprocess.run([salmon, "quant",
                         "-i", salmonIndex,
-                        "-l", "U",
+                        "-l", "A",
                         "-r", args.sample1Path,
                         "-o", salmonOut,
-                        "--writeMappings", salmonSam],
+                        ("--writeMappings="+salmonSam)],
                        stdout=open(salmonQuantLog, 'w'),
                        stderr=open(salmonQuantLog, 'w'))
         eprint("Done.")
@@ -183,11 +183,12 @@ def runSalmon(args):
         eprint("Running Salmon quasi-mapping on paired-end sample...")
         subprocess.run([salmon, "quant",
                         "-i", salmonIndex,
-                        "-l", "ISF",
+                        "-l", "A",
                         "-1", args.sample1Path,
                         "-2", args.sample2Path,
                         "-o", salmonOut,
-                        "--writeMappings", salmonSam,
+			"--validateMappings",
+                        ("--writeMappings="+salmonSam),
                         "--writeUnmappedNames"],
                        stdout=open(salmonQuantLog, 'w'),
                        stderr=open(salmonQuantLog, 'w'))
@@ -230,8 +231,8 @@ def parse_unmapped_file(unmapped_filename, sample_filenames):
         file_suff = file_name[file_name.find('_')+1:-len('.fastq.gz')]
 
         
-        isZipped = True
-        isFastq = True
+        isZipped = False
+        isFastq = False
         fnames = sample_fn.split('.')
         if fnames[-1] == 'gz':
             isZipped = True
