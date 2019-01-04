@@ -59,14 +59,18 @@ and it produces in the output folder:
 * the _ASGAL_ folder which contains the outputs of ASGAL
 * the _logs_ folder containing the logs file for the different steps of the pipeline
 
-## Command Line Arguments
-* the script shows usage information with **-h** (**\-\-help**)
-
-#### Warning
+#### Warning 1
 The transcript IDs contained in the input annotation and in the input
 transcripts fasta file should match. If not, the script won't split
 the input sample in smaller samples and ASGAL won't produce any
 output.
+
+#### Warning 2
+When using a paired-end sample, read headers must have explicit mate
+pairing information.
+
+## Command Line Arguments
+* the script shows usage information with **-h** (**\-\-help**)
 
 File:
 ```bash
