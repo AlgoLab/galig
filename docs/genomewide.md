@@ -21,7 +21,7 @@ smaller samples, one for each considered gene
 
 3. it splits the input references and annotations in multiple references and annotations
 
-4. it runs ASGAL on each gene 
+4. it runs ASGAL on each gene
 
 ASGAL can be run in genome-wide mode by passing to the _asgal_ script (the same used to
 run ASGAL on a single gene) the "--multi" flag:
@@ -34,7 +34,7 @@ run ASGAL on a single gene) the "--multi" flag:
         -t [transcripts.fasta] \
         -o [output_folder]
 
-# Paired-end sample 
+# Paired-end sample
 ./asgal --multi \
         -g [genome.fasta] \
         -a [annotation.gtf] \
@@ -61,6 +61,12 @@ and it produces in the output folder:
 
 ## Command Line Arguments
 * the script shows usage information with **-h** (**\-\-help**)
+
+#### Warning
+The transcript IDs contained in the input annotation and in the input
+transcripts fasta file should match. If not, the script won't split
+the input sample in smaller samples and ASGAL won't produce any
+output.
 
 File:
 ```bash
