@@ -85,7 +85,7 @@ def openGTF(gtfPath, verbose=True):
 Function to:
  1. split input GTF in smaller GTFs, one for each gene (only if multi mode)
  2. build dictionary chr->genes and transcript->gene
-''' 
+'''
 def splitAnnotation(args):
     eprint("Opening input annotation...")
     gtf = openGTF(args.annoPath)
@@ -223,14 +223,11 @@ def parse_unmapped_file(unmapped_filename, sample_filenames):
             tag, unmap_type = line.strip('\n').split(' ')
             if unmap_type in ['m1', 'm2']:
                 file_suff = "2" if unmap_type == 'm1' else "1"
-                unmapped_tags.add((tag, file_suff))
+                unmapped_tags.add(tag[:-1] + file_suff)
+
     unmapped_reads = {}
     for sample_fn in sample_filenames:
         eprint("Parsing {} to retrieve reads...".format(sample_fn))
-        file_name = os.path.basename(sample_fn)
-        file_suff = file_name[file_name.find('_')+1:-len('.fastq.gz')]
-
-        
         isZipped = False
         isFastq = False
         fnames = sample_fn.split('.')
@@ -249,41 +246,70 @@ def parse_unmapped_file(unmapped_filename, sample_filenames):
                 isFastq = False
             else:
                 pass
-        
+
         file_handle = gzip.open(sample_fn, "rt") if isZipped else open(sample_fn, "r")
         fType = "fastq" if isFastq else "fasta"
         for record in SeqIO.parse(file_handle, fType):
-            test_elem = (record.id, file_suff)
-            if test_elem in unmapped_tags:
-                record_copy = copy.deepcopy(record)
-                record_copy.id="{}/{}".format(record_copy.id, file_suff)
-                unmapped_reads[record.id] = record_copy
+            if record.id in unmapped_tags:
+                unmapped_reads[record.id[:-2]] = record.seq
     eprint("Done.")
     return unmapped_reads
 
 '''
-Function to split Salmon BAM into smaller bams,
-one for each gene in the input annotation
+Given a dict {gene_idx : [read_idxs]} and a dict {read_idx : fasta_record},
+save a fasta file for each gene_idx containing the corresponding reads
+'''
+def save_to_fasta(gene_reads_dict, reads, out_dir):
+    for gene_idx, read_idxs in gene_reads_dict.items():
+        file_handle = open(os.path.join(out_dir, "{}.fa".format(gene_idx)), 'a')
+        records = []
+        for read_idx in read_idxs:
+            records.append(reads[read_idx])
+        SeqIO.write(records, file_handle, "fasta")
+        file_handle.close()
+
+'''
+Function to split Salmon BAM into smaller fastas,
+one for each gene covered by at least one read
 '''
 def split_bam(aln_filename, genes, tr_gene_dict, out_dir, unmapped_reads):
-    out_files = {}
+    chunk_size = 250000
+    gene_reads_dict = {}
+    reads = {}
+    all_reads = {}
     with pysam.AlignmentFile(aln_filename, 'rb') as aln_file:
         for aln in aln_file:
-            if aln.is_secondary:
+            if aln.is_secondary or aln.is_unmapped:
                 continue
-            tr_name = aln_file.get_reference_name(aln.reference_id)
+            tr_name = aln_file.get_reference_name(aln.reference_id).split('.')[0]
             if tr_name not in tr_gene_dict:
                 continue
             if tr_gene_dict[tr_name] in genes:
-                outf = tr_gene_dict[tr_name]
-                if tr_gene_dict[tr_name] not in out_files:
-                    output_filename = "{}/{}.fa.gz".format(out_dir, outf)
-                    file_handle = gzip.open(output_filename, "wt")
-                    out_files[outf] = file_handle
-                fasta_seq = SeqRecord(Seq(aln.query_sequence), id=aln.query_name, name=aln.query_name, description="From Salmon alignment file")
-                SeqIO.write(fasta_seq, out_files[outf], "fasta")
-                if fasta_seq.id in unmapped_reads:
-                    SeqIO.write(unmapped_reads[fasta_seq.id], out_files[outf], "fasta")
+                gene_idx = tr_gene_dict[tr_name]
+                possibly_not_uniq_read_idx = aln.query_name
+                if possibly_not_uniq_read_idx not in all_reads:
+                    all_reads[possibly_not_uniq_read_idx] = 1
+                else:
+                    all_reads[possibly_not_uniq_read_idx] += 1
+                read_idx = possibly_not_uniq_read_idx + "." + str(all_reads[possibly_not_uniq_read_idx])
+                seq = SeqRecord(Seq(aln.query_sequence), id=read_idx, name=read_idx, description="From Salmon alignment file")
+                if read_idx not in reads:
+                    reads[read_idx] = seq
+                gene_reads_dict[gene_idx] = gene_reads_dict[gene_idx] | set([read_idx]) if gene_idx in gene_reads_dict else set([read_idx])
+                if possibly_not_uniq_read_idx in unmapped_reads:
+                    # Mate is unmapped
+                    all_reads[possibly_not_uniq_read_idx] += 1
+                    read_idx = possibly_not_uniq_read_idx + "." + str(all_reads[possibly_not_uniq_read_idx])
+                    seq = SeqRecord(unmapped_reads[possibly_not_uniq_read_idx], id=read_idx, name=read_idx, description="From Salmon alignment file")
+                    if read_idx not in reads:
+                        reads[read_idx] = seq
+                    gene_reads_dict[gene_idx] = gene_reads_dict[gene_idx] | set([read_idx])
+            if len(reads) == chunk_size:
+                save_to_fasta(gene_reads_dict, reads, out_dir)
+                reads = {}
+                gene_reads_dict = {}
+    if len(reads) != 0:
+        save_to_fasta(gene_reads_dict, reads, out_dir)
 
 def splitSalmon(args, genes, tr_gene_dict):
     salmonBam = os.path.join(args.outputPath, "salmon", "salmon.bam")
@@ -313,7 +339,7 @@ def runASGAL(args, genes, chr_genes_dict):
     if args.multiMode:
         refs = os.path.join(args.outputPath, refsFold)
         annos = os.path.join(args.outputPath, annosFold)
-        samples = glob.glob(os.path.join(os.path.join(args.outputPath, samplesFold), '*.fa.gz'))
+        samples = glob.glob(os.path.join(os.path.join(args.outputPath, samplesFold), '*.fa'))
         outFold = os.path.join(args.outputPath, asgalFold)
         if not os.path.isdir(outFold):
             os.makedirs(outFold)
@@ -329,24 +355,24 @@ def runASGAL(args, genes, chr_genes_dict):
         out = os.path.join(outFold, "{}-{}".format(os.path.basename(samples[0]).split('.')[0], gene))
         logFold = os.path.join(args.outputPath)
         log = os.path.join(logFold, "{}-{}.log".format(os.path.basename(samples[0]).split('.')[0], gene))
-        
-    eprint("Running ASGAL on {} {}...".format(len(genes), 'gene' if len(genes) == 1 else 'genes'))
+
+    eprint("Running ASGAL on {} {}...".format(len(samples), 'gene' if len(samples) == 1 else 'genes'))
     BAR = [' ' for i in range(0,bar_length)]
-    print_bar(BAR, 0, len(genes))
+    print_bar(BAR, 0, len(samples))
     i = 0
 
     for sample in samples:
         if args.multiMode:
-            gene = os.path.basename(sample)[:-6]
+            gene = os.path.basename(sample)[:-3]
             anno = os.path.join(annos, "{}.gtf".format(gene))
             gtf = openGTF(anno, verbose=False)
             chrom = list(gtf.features_of_type('gene'))[0].seqid
             ref = os.path.join(refs, "{}.fa".format(chrom))
             out = os.path.join(outFold, "{}".format(gene))
             log = os.path.join(logFold, "{}".format(gene))
-        
+
         allevents_flag = "--allevents" if args.allevents else ""
-        
+
         asgal_CMDs = {'align': ["{}/bin/SpliceAwareAligner".format(WP),
                                 "-g", ref,
                                 "-a", anno,
@@ -382,12 +408,12 @@ def runASGAL(args, genes, chr_genes_dict):
                        stdout=open(log, 'w'),
                        stderr=open(log, 'w'))
         i+=1
-        index = int(i*bar_length/len(genes))
+        index = int(i*bar_length/len(samples))
         if i == len(genes)-1:
             BAR = ['#' for i in range(0,bar_length)]
         else:
             BAR = ['#' for i in range(0, index+1)] + [' ' for i in range(index+1,bar_length)]
-        print_bar(BAR, i+1, len(genes))
+        print_bar(BAR, i+1, len(samples))
     print("", file=sys.stderr)
     eprint("Done.")
 
@@ -465,7 +491,6 @@ def checkInputs(args):
         eprint_error("\nIf you pass two samples, you have to pass also the transcripts of the genes. Halting...\n")
     if args.multiMode and args.transPath == '-':
         eprint_error("\nIn multi mode, you have to pass the transcripts of the genes. Halting...\n")
-        
 
 # main ##############################################################################################################
 def main():
