@@ -351,69 +351,80 @@ def runASGAL(args, genes, chr_genes_dict):
         ref = args.refPath
         anno = args.annoPath
         samples = [args.sample1Path]
+
+        # paired-end read
+        if args.sample2Path != '-' and not args.multiMode:
+            samples += [args.sample2Path] # samples has length 2 [read1.fa, read2.fa]
+
         outFold = os.path.join(args.outputPath)
         out = os.path.join(outFold, "{}-{}".format(os.path.basename(samples[0]).split('.')[0], gene))
         logFold = os.path.join(args.outputPath)
         log = os.path.join(logFold, "{}-{}.log".format(os.path.basename(samples[0]).split('.')[0], gene))
 
-    eprint("Running ASGAL on {} {}...".format(len(samples), 'gene' if len(samples) == 1 else 'genes'))
+    eprint("Running ASGAL on {} {}...".format(1 if not args.multiMode else len(samples), 'gene' if not args.multiMode else 'genes'))
     BAR = [' ' for i in range(0,bar_length)]
     print_bar(BAR, 0, len(samples))
     i = 0
 
-    for sample in samples:
-        if args.multiMode:
-            gene = os.path.basename(sample)[:-3]
-            anno = os.path.join(annos, "{}.gtf".format(gene))
-            gtf = openGTF(anno, verbose=False)
-            chrom = list(gtf.features_of_type('gene'))[0].seqid
-            ref = os.path.join(refs, "{}.fa".format(chrom))
-            out = os.path.join(outFold, "{}".format(gene))
-            log = os.path.join(logFold, "{}".format(gene))
+    if args.multiMode or len(samples) == 1:
+        # how asgal previously worked ...
+        for sample in samples:
+            if args.multiMode:
+                gene = os.path.basename(sample)[:-3]
+                anno = os.path.join(annos, "{}.gtf".format(gene))
+                gtf = openGTF(anno, verbose=False)
+                chrom = list(gtf.features_of_type('gene'))[0].seqid
+                ref = os.path.join(refs, "{}.fa".format(chrom))
+                out = os.path.join(outFold, "{}".format(gene))
+                log = os.path.join(logFold, "{}".format(gene))
 
-        allevents_flag = "--allevents" if args.allevents else ""
+            allevents_flag = "--allevents" if args.allevents else ""
 
-        asgal_CMDs = {'align': ["{}/bin/SpliceAwareAligner".format(WP),
-                                "-g", ref,
-                                "-a", anno,
-                                "-s", sample,
-                                "-l", args.l,
-                                "-e", args.e,
-                                "-o", "{}.mem".format(out)],
-                      'sam' : ["python3",
-                               "{}/scripts/formatSAM.py".format(WP),
-                               "-m", "{}.mem".format(out),
-                               "-g", ref,
-                               "-a", anno,
-                               "-e", args.e,
-                               "-o", "{}.sam".format(out)],
-                      'events' : ["python3",
-                                  "{}/scripts/detectEvents.py".format(WP),
-                                  "-g", ref,
-                                  "-a", anno,
-                                  "-m", "{}.mem".format(out),
-                                  "-o", "{}.events.csv".format(out),
-                                  "-e", args.e,
-                                  "-w", args.w]}
-        if args.allevents:
-            asgal_CMDs['events'].append("--allevents")
+            asgal_CMDs = {'align': ["{}/bin/SpliceAwareAligner".format(WP),
+                                    "-g", ref,
+                                    "-a", anno,
+                                    "-s", sample,
+                                    "-l", args.l,
+                                    "-e", args.e,
+                                    "-o", "{}.mem".format(out)],
+                          'sam' : ["python3",
+                                   "{}/scripts/formatSAM.py".format(WP),
+                                   "-m", "{}.mem".format(out),
+                                   "-g", ref,
+                                   "-a", anno,
+                                   "-e", args.e,
+                                   "-o", "{}.sam".format(out)],
+                          'events' : ["python3",
+                                      "{}/scripts/detectEvents.py".format(WP),
+                                      "-g", ref,
+                                      "-a", anno,
+                                      "-m", "{}.mem".format(out),
+                                      "-o", "{}.events.csv".format(out),
+                                      "-e", args.e,
+                                      "-w", args.w]}
+            if args.allevents:
+                asgal_CMDs['events'].append("--allevents")
 
-        subprocess.run(asgal_CMDs['align'],
-                       stdout=open(log, 'w'),
-                       stderr=open(log, 'w'))
-        subprocess.run(asgal_CMDs['sam'],
-                       stdout=open(log, 'w'),
-                       stderr=open(log, 'w'))
-        subprocess.run(asgal_CMDs['events'],
-                       stdout=open(log, 'w'),
-                       stderr=open(log, 'w'))
-        i+=1
-        index = int(i*bar_length/len(samples))
-        if i == len(genes)-1:
-            BAR = ['#' for i in range(0,bar_length)]
-        else:
-            BAR = ['#' for i in range(0, index+1)] + [' ' for i in range(index+1,bar_length)]
-        print_bar(BAR, i+1, len(samples))
+            subprocess.run(asgal_CMDs['align'],
+                           stdout=open(log, 'w'),
+                           stderr=open(log, 'w'))
+            subprocess.run(asgal_CMDs['sam'],
+                           stdout=open(log, 'w'),
+                           stderr=open(log, 'w'))
+            subprocess.run(asgal_CMDs['events'],
+                           stdout=open(log, 'w'),
+                           stderr=open(log, 'w'))
+            i+=1
+            index = int(i*bar_length/len(samples))
+            if i == len(genes)-1:
+                BAR = ['#' for i in range(0,bar_length)]
+            else:
+                BAR = ['#' for i in range(0, index+1)] + [' ' for i in range(index+1,bar_length)]
+            print_bar(BAR, i+1, len(samples))
+    else:
+        # paired-end read
+        # do some stuff ...
+        pass
     print("", file=sys.stderr)
     eprint("Done.")
 
