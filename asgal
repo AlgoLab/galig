@@ -487,8 +487,8 @@ def checkInputs(args):
         eprint_error("\n w value must be an integer. Halting...\n")
 
     # Other checks
-    if args.sample2Path != '-' and args.transPath == '-':
-        eprint_error("\nIf you pass two samples, you have to pass also the transcripts of the genes. Halting...\n")
+    if args.sample2Path != '-' and args.transPath == '-' and args.multiMode:
+      eprint_error("\nIf you pass two samples, you have to pass also the transcripts of the genes. Halting...\n")
     if args.multiMode and args.transPath == '-':
         eprint_error("\nIn multi mode, you have to pass the transcripts of the genes. Halting...\n")
 
@@ -504,9 +504,9 @@ def main():
     parser.add_argument('-g', '--genome', dest='refPath', help='Path to genome', required=True)
     parser.add_argument('-a', '--annotation', dest='annoPath', help='Path to annotation', required=True)
     parser.add_argument('-s', '--sample', dest='sample1Path', help='Path to sample (1)', required=True)
+    parser.add_argument('-s2', '--sample2', dest='sample2Path', help='Path to sample (2)', required=False, default='-')
     parser.add_argument('-o', '--output', dest='outputPath', help='Path to output folder', required=True)
 
-    parser.add_argument('-s2', '--sample2', dest='sample2Path', help='Path to sample (2)', required=False, default='-')
     parser.add_argument('-t', '--transcripts', dest='transPath', help='Path to transcripts', required=False, default='-')
 
     parser.add_argument('-l', '--L', dest='l', help='MEMs length', required=False, default="15")
@@ -516,6 +516,9 @@ def main():
     parser.add_argument('--multi', dest='multiMode', help='Use this to run ASGAL in genome-wide mode', required=False, action='store_true')
 
     args = parser.parse_args()
+
+    #if len(args.sample1Path) == 1:
+    #    args.sample1Path = args.sample1Path[0]
 
     checkInputs(args)
 
