@@ -422,9 +422,61 @@ def runASGAL(args, genes, chr_genes_dict):
                 BAR = ['#' for i in range(0, index+1)] + [' ' for i in range(index+1,bar_length)]
             print_bar(BAR, i+1, len(samples))
     else:
-        # paired-end read
-        # do some stuff ...
-        pass
+        # paired-end read -- no multimode and len(samples) == 2
+
+        # idmp = inner distance (between) mate pairs
+        idmp = 100  # hard-coded for now
+        # TODO: use STAR to align reads to genome, use SAMTOOLS to estimate the actual distance
+
+        # same as if branch, the only difference is that a new SpliceAwareAlignerPaired, which takes
+        # in 2 files containing reads, has to be created. Also DetectEvents had to support idmp.
+        asgal_CMDs = {'align': ["{}/bin/SpliceAwareAlignerPaired".format(WP),
+                                    "-g", ref,
+                                    "-a", anno,
+                                    "-s0", sample[0],
+                                    "-s1", sample[1],
+                                    "-l", args.l,
+                                    "-e", args.e,
+                                    "-o", "{}.mem".format(out)],
+                        'sam' : ["python3",
+                                   "{}/scripts/formatSAM.py".format(WP),
+                                   "-m", "{}.mem".format(out),
+                                   "-g", ref,
+                                   "-a", anno,
+                                   "-e", args.e,
+                                   "-o", "{}.sam".format(out)],
+                        'events' : ["python3",
+                                      "{}/scripts/detectEvents.py".format(WP),
+                                      "-g", ref,
+                                      "-a", anno,
+                                      "-m", "{}.mem".format(out),
+                                      "-o", "{}.events.csv".format(out),
+                                      "-i", idmp, # idmp has to be used to make event dection more accurate
+                                      "-e", args.e,
+                                      "-w", args.w]}
+        if args.allevents:
+            asgal_CMDs['events'].append("--allevents")
+
+        subprocess.run(asgal_CMDs['align'],
+                       stdout=open(log, 'w'),
+                       stderr=open(log, 'w'))
+        subprocess.run(asgal_CMDs['sam'],
+                       stdout=open(log, 'w'),
+                       stderr=open(log, 'w'))
+        subprocess.run(asgal_CMDs['events'],
+                       stdout=open(log, 'w'),
+                       stderr=open(log, 'w'))
+        i+=1
+        index = int(i*bar_length/len(samples))
+        if i == len(genes)-1:
+            BAR = ['#' for i in range(0,bar_length)]
+        else:
+            BAR = ['#' for i in range(0, index+1)] + [' ' for i in range(index+1,bar_length)]
+        print_bar(BAR, i+1, len(samples))
+
+        # could probably be refactored ... the for loop in the if branch does not
+        # work properly for paired-end reads
+
     print("", file=sys.stderr)
     eprint("Done.")
 
