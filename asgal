@@ -428,6 +428,37 @@ def runASGAL(args, genes, chr_genes_dict):
         idmp = 100  # hard-coded for now
         # TODO: use STAR to align reads to genome, use SAMTOOLS to estimate the actual distance
 
+
+        #Probably wrong!!!
+'''
+        prep_CMDs = {'generate': ["STAR",
+                                  "--runMode", "genomeGenerate",
+                                  "--genomeDir", "./",
+                                  "--genomeFastaFile", ref,
+                                  "--runThreadsN", 8
+                                 ]
+                     'align': ["STAR"
+                               "--genomeDir", "./",
+                               "--readFilesIn", sample[0], sample[1],
+                               "--runThreadsN", 8
+                               ] # should produce Aligned.out.sam
+                     'analyze': [ "samtools", "stats",
+                                  "--insert-size", "Aligned.out.sam"
+                                ]
+                    }
+
+        subprocess.run(prep_CMDs['generate'],
+                       stdout=open(log, 'w'),
+                       stderr=open(log, 'w'))
+        subprocess.run(prep_CMDs['align'],
+                       stdout=open(log, 'w'),
+                       stderr=open(log, 'w'))
+        subprocess.run(prep_CMDs['analyze'],
+                       stdout=open(log, 'w'),
+                       stderr=open(log, 'w'))
+'''
+
+
         # same as if branch, the only difference is that a new SpliceAwareAlignerPaired, which takes
         # in 2 files containing reads, has to be created. Also DetectEvents had to support idmp.
         asgal_CMDs = {'align': ["{}/bin/SpliceAwareAlignerPaired".format(WP),
@@ -446,7 +477,7 @@ def runASGAL(args, genes, chr_genes_dict):
                                    "-e", args.e,
                                    "-o", "{}.sam".format(out)],
                         'events' : ["python3",
-                                      "{}/scripts/detectEvents.py".format(WP),
+                                      "{}/scripts/detectEventsPaired.py".format(WP),
                                       "-g", ref,
                                       "-a", anno,
                                       "-m", "{}.mem".format(out),
