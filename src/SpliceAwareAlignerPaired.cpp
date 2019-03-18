@@ -183,19 +183,23 @@ int main(int argc, char* argv[]) {
     std::ofstream outFile;
     outFile.open(out);
 
+    //Declare variable used in for loop
+    std::pair<char, std::list<std::pair<int, std::list<Mem> > > > paths;
+    kseq_t *seqs;
+    int l;
+    std::string head;
+    std::string read;
+    int i;
+
     for (std::string rna_seq : rna_seqs) {
 
         // same as old SpliceAwareAligner, but now in a for loop (for each
         // file containing paired-end reads)
 
         fastain = gzopen(rna_seq.c_str(), "r");
-        std::pair<char, std::list<std::pair<int, std::list<Mem> > > > paths;
+        seqs = kseq_init(fastain);
+        i = 1;
 
-        kseq_t *seqs = kseq_init(fastain);
-        int l;
-        std::string head;
-        std::string read;
-        int i = 1;
 
         // - Main loop: one iteration, one read
         // ---------------------------------------
