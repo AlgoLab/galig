@@ -18,12 +18,12 @@
 KSEQ_INIT(gzFile, gzread)
 
 void printHelp() {
-    std::cout << "Usage: SGAL [options] (required: -g -a -s -o)\n" << std::endl;
+    std::cout << "Usage: SGAL [options] (required: -g -a -s0 -s1 -o)\n" << std::endl;
     std::cout << "Options:" << std::endl;
     std::cout << "  -g, --genome <path>" << std::endl;
     std::cout << "  -a, --annotation <path>" << std::endl;
-    std::cout << "  -s0, --sample 0 <path>" << std::endl;
-    std::cout << "  -s1, --sample 1 <path>" << std::endl;
+    std::cout << "  -1, --sample 1 <path>" << std::endl;
+    std::cout << "  -2, --sample 2 <path>" << std::endl;
     std::cout << "  -o, --output <path>: output file" << std::endl;
     std::cout << "  -l, --L <int>: minimum lenght of MEMs used to build the alignments (default: 15)" << std::endl;
     std::cout << "  -e, --eps <int>: error rate, a value from 0 to 100 (default: 3)" << std::endl;
@@ -89,12 +89,13 @@ std::pair<char, std::list<std::pair<int, std::list<Mem> > > > analyzeRead(Backwa
 }
 
 int main(int argc, char* argv[]) {
+
     std::string genomic;
     std::string annotation;
-    std::vector<std::string> rna_seqs;
+    std::string rna_seq_1, rna_seq_2;
     int L = 0;
     int eps = -1;
-    std::string out;
+    std::string out, out_1, out_2;
     bool verbose = false;
 
     // - Collecting command line parameters
@@ -105,8 +106,8 @@ int main(int argc, char* argv[]) {
             {
                 {"genomic", required_argument, 0, 'g'},
                 {"annotation", required_argument, 0, 'a'},
-                {"sample0",  required_argument, 0, 's0'},
-                {"sample1",  required_argument, 0, 's1'},
+                {"sample1",  required_argument, 0, '1'},
+                {"sample2",  required_argument, 0, '2'},
                 {"L",  required_argument, 0, 'l'},
                 {"erate",    required_argument, 0, 'e'},
                 {"output", required_argument, 0, 'o'},
@@ -116,7 +117,7 @@ int main(int argc, char* argv[]) {
             };
 
         int option_index = 0;
-        c = getopt_long(argc, argv, "g:a:s0:s1:l:e:o:h", long_options, &option_index);
+        c = getopt_long(argc, argv, "g:a:1:2:l:e:o:h", long_options, &option_index);
 
         if (c == -1) {
             break;
@@ -129,11 +130,11 @@ int main(int argc, char* argv[]) {
         case 'a':
             annotation = optarg;
             break;
-        case 's0':
-            rna_seqs.push_back(optarg);
+        case '1':
+            rna_seq_1 = optarg;
             break;
-        case 's1':
-            rna_seqs.push_back(optarg);
+        case '2':
+            rna_seq_2 = optarg;
             break;
         case 'l':
             L = std::stoi(optarg);
@@ -151,6 +152,7 @@ int main(int argc, char* argv[]) {
             printHelp();
             exit(EXIT_SUCCESS);
         default:
+            std::cout <<"DEFAULT" << std::endl;
             printHelp();
             exit(EXIT_FAILURE);
         }
@@ -180,57 +182,88 @@ int main(int argc, char* argv[]) {
     // ---------------------------------------------------
     BackwardMEM bm (sg.getText(), genomic);
 
-    std::ofstream outFile;
-    outFile.open(out);
+    std::ofstream outFile_1, outFile_2;
 
-    //Declare variable used in for loop
+    // Suppose out has no extension
+    out_1 = out + "-1" + ".mem";
+    out_2 = out + "-2" + ".mem";
+
+    outFile_1.open(out_1);
+    outFile_2.open(out_2);
+
+    //Declare variables
     std::pair<char, std::list<std::pair<int, std::list<Mem> > > > paths;
-    kseq_t *seqs;
-    int l;
-    std::string head;
-    std::string read;
-    int i;
+    kseq_t *seqs_1, *seqs_2;
+    int l1, l2;
+    std::string head_1, head_2;
+    std::string read_1, read_2;
+    int i = 1;
+    gzFile fastain_1, fastain_2;
 
-    for (std::string rna_seq : rna_seqs) {
+    fastain_1 = gzopen(rna_seq_1.c_str(), "r");
+    seqs_1 = kseq_init(fastain_1);
+    fastain_2 = gzopen(rna_seq_2.c_str(), "r");
+    seqs_2 = kseq_init(fastain_2);
 
-        // same as old SpliceAwareAligner, but now in a for loop (for each
-        // file containing paired-end reads)
+    // - Main loop: one iteration, one read
+    // ---------------------------------------
+    // l1 and l2 could probably be removed
+    while ( ((l1 = kseq_read(seqs_1)) >= 0) && ((l2 = kseq_read(seqs_2)) >= 0) ) {
 
-        fastain = gzopen(rna_seq.c_str(), "r");
-        seqs = kseq_init(fastain);
-        i = 1;
-
-
-        // - Main loop: one iteration, one read
-        // ---------------------------------------
-        while ((l = kseq_read(seqs)) >= 0) {
-            head = seqs->name.s;
-            read = seqs->seq.s;
-
-            paths = analyzeRead(bm, sg, read, L, eps, exsN, verbose);
-            if(paths.first != '/') {
-                for(std::pair<int, std::list<Mem> > path : paths.second) {
-                    if(!path.second.empty()) {
-                        int err = path.first;
-                        outFile << paths.first << " " << head << " " << err << " ";
-                        for(std::list<Mem>::iterator m=path.second.begin(); m!=path.second.end(); ++m) {
-                            outFile << m->toStr() << " ";
-                        }
-                        if(paths.first == '+')
-                            outFile << read;
-                        else
-                            outFile << reverseAndComplement(read);
-                        outFile << "\n";
+        // - Align first read
+        // --------------------------------------------------------
+        head_1 = seqs_1->name.s;
+        read_1 = seqs_1->seq.s;
+        paths = analyzeRead(bm, sg, read_1, L, eps, exsN, verbose);
+        if(paths.first != '/') {
+            for(std::pair<int, std::list<Mem> > path : paths.second) {
+                if(!path.second.empty()) {
+                    int err = path.first;
+                    outFile_1 << paths.first << " " << head_1 << " " << err << " ";
+                    for(std::list<Mem>::iterator m=path.second.begin(); m!=path.second.end(); ++m) {
+                        outFile_1 << m->toStr() << " ";
                     }
+                    if(paths.first == '+')
+                        outFile_1 << read_1;
+                    else
+                        outFile_1 << reverseAndComplement(read_1);
+                    outFile_1 << "\n";
                 }
             }
-            if(i%10000 == 0)
-                std::cout << "Processed " << i << " genes." << std::endl;
-            ++i;
         }
-        kseq_destroy(seqs);
-        gzclose(fastain);
+        if(i%100 == 0)
+            std::cout << "Processed " << i << " genes." << std::endl;
+        ++i;
 
+        // - Align second read
+        // --------------------------------------------------------
+        head_2 = seqs_2->name.s;
+        read_2 = seqs_2->seq.s;
+        paths = analyzeRead(bm, sg, read_2, L, eps, exsN, verbose);
+        if(paths.first != '/') {
+            for(std::pair<int, std::list<Mem> > path : paths.second) {
+                if(!path.second.empty()) {
+                    int err = path.first;
+                    outFile_2 << paths.first << " " << head_2 << " " << err << " ";
+                    for(std::list<Mem>::iterator m=path.second.begin(); m!=path.second.end(); ++m) {
+                        outFile_2 << m->toStr() << " ";
+                    }
+                    if(paths.first == '+')
+                        outFile_2 << read_2;
+                    else
+                        outFile_2 << reverseAndComplement(read_2);
+                    outFile_2 << "\n";
+                }
+            }
+        }
+        if(i%100 == 0)
+            std::cout << "Processed " << i << " genes." << std::endl;
+        ++i;
     }
+    kseq_destroy(seqs_1);
+    gzclose(fastain_1);
+    kseq_destroy(seqs_1);
+    gzclose(fastain_1);
 
+    return 0;
 }
