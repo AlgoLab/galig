@@ -152,7 +152,6 @@ int main(int argc, char* argv[]) {
             printHelp();
             exit(EXIT_SUCCESS);
         default:
-            std::cout <<"DEFAULT" << std::endl;
             printHelp();
             exit(EXIT_FAILURE);
         }
@@ -262,8 +261,8 @@ int main(int argc, char* argv[]) {
     }
     kseq_destroy(seqs_1);
     gzclose(fastain_1);
-    kseq_destroy(seqs_1);
-    gzclose(fastain_1);
+    kseq_destroy(seqs_2);
+    gzclose(fastain_2);
 
     return 0;
 }
