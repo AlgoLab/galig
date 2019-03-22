@@ -5,6 +5,7 @@ import argparse
 import time
 import subprocess
 import glob
+import re
 
 import gzip
 from Bio import SeqIO
@@ -425,26 +426,22 @@ def runASGAL(args, genes, chr_genes_dict):
         # paired-end read -- no multimode and len(samples) == 2
 
         # idmp = inner distance (between) mate pairs
-        idmp = 100  # hard-coded for now
-        # TODO: use STAR to align reads to genome, use SAMTOOLS to estimate the actual distance
+        idmp = 100
 
-
-        #Probably wrong!!!
-'''
         prep_CMDs = {'generate': ["STAR",
                                   "--runMode", "genomeGenerate",
                                   "--genomeDir", "./",
-                                  "--genomeFastaFile", ref,
-                                  "--runThreadsN", 8
-                                 ]
-                     'align': ["STAR"
+                                  "--genomeFastaFiles", ref,
+                                  "--sjdbGTFfile", anno
+                                 ],
+                     'align': ["STAR",
                                "--genomeDir", "./",
-                               "--readFilesIn", sample[0], sample[1],
-                               "--runThreadsN", 8
-                               ] # should produce Aligned.out.sam
-                     'analyze': [ "samtools", "stats",
-                                  "--insert-size", "Aligned.out.sam"
-                                ]
+                               "--readFilesIn", samples[0], samples[1],
+                               "--runThreadN", "8",
+                               "--outSAMtype BAM Unsorted"
+                               ],
+                     'stats': ["samtools stats Aligned.out.bam"],
+                     'grep': ["grep", "insert size average", "output.txt"]
                     }
 
         subprocess.run(prep_CMDs['generate'],
@@ -453,30 +450,40 @@ def runASGAL(args, genes, chr_genes_dict):
         subprocess.run(prep_CMDs['align'],
                        stdout=open(log, 'w'),
                        stderr=open(log, 'w'))
-        subprocess.run(prep_CMDs['analyze'],
-                       stdout=open(log, 'w'),
+        print(subprocess.list2cmdline(prep_CMDs['grep']))
+        subprocess.run(prep_CMDs['stats'],
+                       stdout=open("output.txt", "w"),
                        stderr=open(log, 'w'))
-'''
+        subprocess.run(prep_CMDs['grep'],
+                       stdout=open("idmp.txt", "w"),
+                       stderr=open(log, 'w'))
 
+        f = open("idmp.txt", "r")
+        line = f.readline()
+        f.close()
+
+        result = re.search("([0-9]+).+([0-9]+)",line)
+        idmp = int(float(result.group(0)))
+        print("idmp:",idmp)
 
         # same as if branch, the only difference is that a new SpliceAwareAlignerPaired, which takes
         # in 2 files containing reads, has to be created. Also DetectEvents had to support idmp.
-        asgal_CMDs = {'align': ["{}/bin/SpliceAwareAlignerPaired".format(WP),
+        asgal_CMDs_paired = {'align': ["{}/bin/SpliceAwareAlignerPaired".format(WP),
                                     "-g", ref,
                                     "-a", anno,
-                                    "-s0", sample[0],
-                                    "-s1", sample[1],
+                                    "-1", samples[0],
+                                    "-2", samples[1],
                                     "-l", args.l,
                                     "-e", args.e,
-                                    "-o", "{}.mem".format(out)],
-                        'sam' : ["python3",
+                                    "-o", "{}-paired.mem".format(out)],
+                       'sam' : ["python3",
                                    "{}/scripts/formatSAM.py".format(WP),
                                    "-m", "{}.mem".format(out),
                                    "-g", ref,
                                    "-a", anno,
                                    "-e", args.e,
                                    "-o", "{}.sam".format(out)],
-                        'events' : ["python3",
+                       'events' : ["python3",
                                       "{}/scripts/detectEventsPaired.py".format(WP),
                                       "-g", ref,
                                       "-a", anno,
@@ -486,9 +493,9 @@ def runASGAL(args, genes, chr_genes_dict):
                                       "-e", args.e,
                                       "-w", args.w]}
         if args.allevents:
-            asgal_CMDs['events'].append("--allevents")
+            asgal_CMDs_paired['events'].append("--allevents")
 
-        subprocess.run(asgal_CMDs['align'],
+        subprocess.run(asgal_CMDs_paired['align'],
                        stdout=open(log, 'w'),
                        stderr=open(log, 'w'))
         subprocess.run(asgal_CMDs['sam'],
@@ -497,6 +504,7 @@ def runASGAL(args, genes, chr_genes_dict):
         subprocess.run(asgal_CMDs['events'],
                        stdout=open(log, 'w'),
                        stderr=open(log, 'w'))
+
         i+=1
         index = int(i*bar_length/len(samples))
         if i == len(genes)-1:
@@ -510,7 +518,6 @@ def runASGAL(args, genes, chr_genes_dict):
 
     print("", file=sys.stderr)
     eprint("Done.")
-
 # INPUTS CHECK ######################################################################################################
 '''
 Function to check all inputs (if files exist, file extensions...).
