@@ -40,18 +40,34 @@ def extractFromInfoFile(infoPath):
 
 # Extracts elements from one line of the spliced graph-alignments file
 def readLine(line):
-    # 0: strand
-    # 1: ID
-    # 2: errors
-    # 3 to -1: mems
-    # -1: read
+    mapped = True
+    readID = ""
+    error = 0
+    mems = []
+    read = ""
+
     line = line.strip("\n").strip(" ").split(" ")
-    strand = line[0]
-    readID = line[1]
-    err = int(line[2])
-    mems = line[3:-1]
-    read = line[-1]
-    return strand, readID, err, mems, read
+    # 0: MAPPED/UNMAPPED
+    mapped = True if line[0] == "MAPPED" else False
+
+    if mapped:
+        # 1: strand
+        # 2: ID
+        # 3: errors
+        # 4 to -1: mems
+        # -1: read
+        strand = line[1]
+        readID = line[2]
+        err = int(line[3])
+        mems = line[4:-1]
+        read = line[-1]
+    else:
+        # 1: ID
+        # 2: read
+        readID = line[1]
+        read = line[-1]
+    return mapped,strand, readID, err, mems, read
+
 
 def extractMEMs(mems):
     MEMs = []
@@ -65,12 +81,12 @@ def getStart(mem, bv, exPos):
     i = bv.rank(mem[0])
     return exPos[i-1][0] + (mem[0] - bv.select(i)) - 1
 
-def getFlagPaired(strand1, readID1, strand2, readID2, read1=True):
+def getFlagPaired(mapped1, strand1, readID1, mapped2, strand2, readID2, read1=True):
     f = 1 #since it's a paired-end read
 
     # SEE: http://seqanswers.com/forums/showthread.php?t=17314
 
-    if readID1 == readID2:  # Both reads mapped
+    if mapped1 and mapped2:  # Both reads mapped
         if read1: # setting flag for read coming from file 1
             if strand1 == "-":
                 if strand2 == "-": # - - read1
@@ -83,7 +99,7 @@ def getFlagPaired(strand1, readID1, strand2, readID2, read1=True):
                 else: # + + read1
                     f = 65
 
-        else:   #setting flag for read coming from file 2
+        else:   # setting flag for read coming from file 2
             if strand2 == "-":
                 if strand1 == "-": # - - read2
                     f = 177
@@ -95,12 +111,21 @@ def getFlagPaired(strand1, readID1, strand2, readID2, read1=True):
                 else: # + + read2
                     f = 129
 
-    else:  #Other read not mapped
+    else if mapped1 and not mapped2:  # only read1 mapped
         if read1:
             f = 73
         else:
+            f = 133
+    else if not mapped1 and mapped2:  # only read2 mapped
+        if read1:
+            f = 69
+        else:
             f = 137
-    # NOTE: There is no "both reads umapped" case since we are starting from mems
+    else:   # not mapped1 and not mapped2
+        if read1:
+            f = 77
+        else:   # read2
+            f = 141
 
     return f
 
@@ -342,11 +367,13 @@ def main(memsPath1, memsPath2, refPath, gtfPath, errRate, outPath):
     out.write("@HD\tVN:1.4\n")
     out.write("@SQ\tSN:{}\tLN:{}\n".format(ref, refLen))
 
+    lastMapped1 = False
     lastID1 = ""
     lastStart1 = -1
     lastCigar1 = ""
     lastStrand1 = ""
 
+    lastMapped2 = False
     lastID2 = ""
     lastStart2 = -1
     lastCigar2 = ""
@@ -362,20 +389,21 @@ def main(memsPath1, memsPath2, refPath, gtfPath, errRate, outPath):
     # NOTE-1: reads in .mem files are sorted!!!
     # NOTE-2: .mems file may NOT have the same length!!!
     while line1!='' and line2!='':
-        strand1, readID1, err1, mems1, read1 = readLine(line1)
-        strand2, readID2, err2, mems2, read2 = readLine(line2)
+        mapped1, strand1, readID1, err1, mems1, read1 = readLine(line1)
+        mapped2, strand2, readID2, err2, mems2, read2 = readLine(line2)
         mems1 = extractMEMs(mems1)
         mems2 = extractMEMs(mems2)
 
-        start1 = getStart(mems1[0], bv, exPos)
-        start2 = getStart(mems2[0], bv, exPos)
-        flag1 = getFlagPaired(strand1, readID1, strand2, readID2, read1=True)
-        flag2 = getFlagPaired(strand1, readID1, strand2, readID2, read1=False)
+        start1 = getStart(mems1[0], bv, exPos) if mapped1 else 0
+        start2 = getStart(mems2[0], bv, exPos) if mapped2 else 0
+        flag1 = getFlagPaired(mapped1, strand1, readID1, mapped2, strand2, readID2, read1=True)
+        flag2 = getFlagPaired(mapped1, strand1, readID1, mapped2, strand2, readID2, read1=False)
         cigar1 = getCIGAR(mems1, RefSeq, bv, exPos, read1, errRate, err1)
         cigar2 = getCIGAR(mems2, RefSeq, bv, exPos, read2, errRate, err2)
 
         #Same alignment is not output twice
         if readID1 != lastID1 or start1 != lastStart1 or cigar1 != lastCigar1:
+            lastMapped1 = mapped1
             lastID1 = readID1
             lastStart1 = start1
             lastCigar1 = cigar1
@@ -383,6 +411,7 @@ def main(memsPath1, memsPath2, refPath, gtfPath, errRate, outPath):
             out.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\tNM:i:{}\n".format(readID1, flag1, ref, start1, 255, cigar1, "*", 0, 0, read1, "*", err1))
         #Same alignment is not output twice
         if readID2 != lastID2 or start2 != lastStart2 or cigar2 != lastCigar2:
+            lastMapped2 = mapped2
             lastID2 = readID2
             lastStart2 = start2
             lastCigar2 = cigar2
@@ -392,14 +421,15 @@ def main(memsPath1, memsPath2, refPath, gtfPath, errRate, outPath):
         # keep looping over the first .mem file until ReadID1 changes
         line1 = file1.readline();
         if line1 != '':
-            strand1, readID1, err1, mems1, read1 = readLine(line1)
+            mapped1, strand1, readID1, err1, mems1, read1 = readLine(line1)
         while line1 != '' and readID1 == lastID1:
             mems1 = extractMEMs(mems1)
-            start1 = getStart(mems1[0], bv, exPos)
-            flag1 = getFlagPaired(strand1, readID1, strand2, readID2, read1=True)
+            start1 = getStart(mems1[0], bv, exPos) if mapped1 else 0
+            flag1 = getFlagPaired(mapped1, strand1, readID1, mapped2, strand2, readID2, read1=True)
             cigar1 = getCIGAR(mems1, RefSeq, bv, exPos, read1, errRate, err1)
 
             if readID1 != lastID1 or start1 != lastStart1 or cigar1 != lastCigar1:
+                lastMapped1 = mapped1
                 lastID1 = readID1
                 lastStart1 = start1
                 lastCigar1 = cigar1
@@ -407,21 +437,22 @@ def main(memsPath1, memsPath2, refPath, gtfPath, errRate, outPath):
                 out.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\tNM:i:{}\n".format(readID1, flag1, ref, start1, 255, cigar1, "*", 0, 0, read1, "*", err1))
 
             line1 = file1.readline()
-            strand1, readID1, err1, mems1, read1 = readLine(line1)
+            mapped1, strand1, readID1, err1, mems1, read1 = readLine(line1)
             # in order to end the while loop, readID1 (and therefore all the other -1 variables) have to change
             # their previous values will be in the last- variables
 
         # keep looping over the second .mem file until ReadID2 changes
         line2 = file2.readline();
         if line2 != '':
-            strand2, readID2, err2, mems2, read2 = readLine(line2)
+            mapped2, strand2, readID2, err2, mems2, read2 = readLine(line2)
         while line2 != '' and readID2 == lastID2:
             mems2 = extractMEMs(mems2)
-            start2 = getStart(mems2[0], bv, exPos)
-            flag2 = getFlagPaired(lastStrand1, lastID1, strand2, readID2, read1=False) #lastStrand1 and lastID1 are needed since strand1 could have changed
+            start2 = getStart(mems2[0], bv, exPos) if mapped2 else 0
+            flag2 = getFlagPaired(lastMapped1, lastStrand1, lastID1, mapped2, strand2, readID2, read1=False) #lastStrand1 and lastID1 are needed since strand1 could have changed
             cigar2 = getCIGAR(mems2, RefSeq, bv, exPos, read2, errRate, err2)
 
             if readID2 != lastID2 or start2 != lastStart2 or cigar2 != lastCigar2:
+                lastMapped2 = mapped2
                 lastID2 = readID2
                 lastStart2 = start2
                 lastCigar2 = cigar2
@@ -429,7 +460,7 @@ def main(memsPath1, memsPath2, refPath, gtfPath, errRate, outPath):
                 out.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\tNM:i:{}\n".format(readID2, flag2, ref, start2, 255, cigar2, "*", 0, 0, read2, "*", err2))
 
             line2 = file2.readline()
-            strand2, readID2, err2, mems2, read2 = readLine(line2)
+            mapped2, strand2, readID2, err2, mems2, read2 = readLine(line2)
             # in order to end the while loop, readID2 (and therefore all the other -2 variables) have to change
             # their previous values will be in the last- variables
 
@@ -440,14 +471,15 @@ def main(memsPath1, memsPath2, refPath, gtfPath, errRate, outPath):
 
     # -1.mem file not yet finished
     while line1!='':
-        strand1, readID1, err1, mems1, read1 = readLine(line1)
+        mapped1, strand1, readID1, err1, mems1, read1 = readLine(line1)
         mems1 = extractMEMs(mems1)
 
-        start1 = getStart(mems1[0], bv, exPos)
-        flag1 = getFlagPaired(strand1, readID1, lastStrand2, lastID2, read1=True) #lastStrand2 and lastID2 are needed since strand1 could have changed
+        start1 = getStart(mems1[0], bv, exPos) if mapped1 else 0
+        flag1 = getFlagPaired(mapped1, strand1, readID1, lastMapped2, lastStrand2, lastID2, read1=True) #lastStrand2 and lastID2 are needed since strand1 could have changed
 
         cigar = getCIGAR(mems1, RefSeq, bv, exPos, read1, errRate, err1)
         if readID1 != lastID1 or start1 != lastStart1 or cigar1 != lastCigar1:
+            lastMapped1 = mapped1
             lastID1 = readID1
             lastStart1 = start1
             lastCigar1 = cigar1
@@ -457,14 +489,15 @@ def main(memsPath1, memsPath2, refPath, gtfPath, errRate, outPath):
 
     # -2.mem file not yet finished
     while line2!='':
-        strand2, readID2, err2, mems2, read2 = readLine(line2)
+        mapped2, strand2, readID2, err2, mems2, read2 = readLine(line2)
         mems2 = extractMEMs(mems2)
 
-        start2 = getStart(mems2[0], bv, exPos)
-        flag2 = getFlagPaired(lastStrand1, lastID1, strand2, readID2, read1=False)
+        start2 = getStart(mems2[0], bv, exPos) if mapped2 else 0
+        flag2 = getFlagPaired(lastMapped1, lastStrand1, lastID1, mapped2, strand2, readID2, read1=False)
 
         cigar = getCIGAR(mems2, RefSeq, bv, exPos, read2, errRate, err2)
         if readID2 != lastID2 or start2 != lastStart2 or cigar2 != lastCigar2:
+            lastMapped2 = mapped2
             lastID2 = readID2
             lastStart2 = start2
             lastCigar2 = cigar2
