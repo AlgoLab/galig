@@ -70,7 +70,6 @@ def getFlagPaired(strand1, readID1, strand2, readID2, read1=True):
 
     # SEE: http://seqanswers.com/forums/showthread.php?t=17314
 
-    # Both reads mapped
     if readID1 == readID2:  # Both reads mapped
         if read1: # setting flag for read coming from file 1
             if strand1 == "-":
@@ -343,9 +342,15 @@ def main(memsPath1, memsPath2, refPath, gtfPath, errRate, outPath):
     out.write("@HD\tVN:1.4\n")
     out.write("@SQ\tSN:{}\tLN:{}\n".format(ref, refLen))
 
-    lastID = ""
-    lastStart = -1
-    lastCigar = ""
+    lastID1 = ""
+    lastStart1 = -1
+    lastCigar1 = ""
+    lastStrand1 = ""
+
+    lastID2 = ""
+    lastStart2 = -1
+    lastCigar2 = ""
+    lastStrand2 = ""
 
     file1 = open(memsPath1)
     file2 = open(memsPath2)
@@ -386,8 +391,9 @@ def main(memsPath1, memsPath2, refPath, gtfPath, errRate, outPath):
 
         # keep looping over the first .mem file until ReadID1 changes
         line1 = file1.readline();
-        strand1, readID1, err1, mems1, read1 = readLine(line1)
-        while readID1 == lastID1:
+        if line1 != '':
+            strand1, readID1, err1, mems1, read1 = readLine(line1)
+        while line1 != '' and readID1 == lastID1:
             mems1 = extractMEMs(mems1)
             start1 = getStart(mems1[0], bv, exPos)
             flag1 = getFlagPaired(strand1, readID1, strand2, readID2, read1=True)
@@ -407,8 +413,9 @@ def main(memsPath1, memsPath2, refPath, gtfPath, errRate, outPath):
 
         # keep looping over the second .mem file until ReadID2 changes
         line2 = file2.readline();
-        strand2, readID2, err2, mems2, read2 = readLine(line2)
-        while readID2 == lastID2:
+        if line2 != '':
+            strand2, readID2, err2, mems2, read2 = readLine(line2)
+        while line2 != '' and readID2 == lastID2:
             mems2 = extractMEMs(mems2)
             start2 = getStart(mems2[0], bv, exPos)
             flag2 = getFlagPaired(lastStrand1, lastID1, strand2, readID2, read1=False) #lastStrand1 and lastID1 are needed since strand1 could have changed
