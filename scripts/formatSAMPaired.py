@@ -41,8 +41,9 @@ def extractFromInfoFile(infoPath):
 # Extracts elements from one line of the spliced graph-alignments file
 def readLine(line):
     mapped = True
+    strand = ""
     readID = ""
-    error = 0
+    err = 0
     mems = []
     read = ""
 
@@ -111,12 +112,12 @@ def getFlagPaired(mapped1, strand1, readID1, mapped2, strand2, readID2, read1=Tr
                 else: # + + read2
                     f = 129
 
-    else if mapped1 and not mapped2:  # only read1 mapped
+    elif mapped1 and not mapped2:  # only read1 mapped
         if read1:
             f = 73
         else:
             f = 133
-    else if not mapped1 and mapped2:  # only read2 mapped
+    elif not mapped1 and mapped2:  # only read2 mapped
         if read1:
             f = 69
         else:
