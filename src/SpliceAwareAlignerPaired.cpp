@@ -218,7 +218,7 @@ int main(int argc, char* argv[]) {
             for(std::pair<int, std::list<Mem> > path : paths.second) {
                 if(!path.second.empty()) {
                     int err = path.first;
-                    outFile_1 << paths.first << " " << head_1 << " " << err << " ";
+                    outFile_1 << "MAPPED" << " " << paths.first << " " << head_1 << " " << err << " ";
                     for(std::list<Mem>::iterator m=path.second.begin(); m!=path.second.end(); ++m) {
                         outFile_1 << m->toStr() << " ";
                     }
@@ -229,6 +229,8 @@ int main(int argc, char* argv[]) {
                     outFile_1 << "\n";
                 }
             }
+        } else {
+            outFile_1 << "UNMAPPED" << " " << head_1 << read_1 << "\n";
         }
         if(i%100 == 0)
             std::cout << "Processed " << i << " genes." << std::endl;
@@ -243,7 +245,7 @@ int main(int argc, char* argv[]) {
             for(std::pair<int, std::list<Mem> > path : paths.second) {
                 if(!path.second.empty()) {
                     int err = path.first;
-                    outFile_2 << paths.first << " " << head_2 << " " << err << " ";
+                    outFile_2 << "MAPPED"<< " " << paths.first << " " << head_2 << " " << err << " ";
                     for(std::list<Mem>::iterator m=path.second.begin(); m!=path.second.end(); ++m) {
                         outFile_2 << m->toStr() << " ";
                     }
@@ -252,8 +254,17 @@ int main(int argc, char* argv[]) {
                     else
                         outFile_2 << reverseAndComplement(read_2);
                     outFile_2 << "\n";
+                } else {
+                    int err = path.first;
+                    outFile_2 << paths.first << " " << head_2 << " " << err << " ";
+                    if(paths.first == '+')
+                        outFile_2 << read_2;
+                    else
+                        outFile_2 << reverseAndComplement(read_2);
                 }
             }
+        } else {
+            outFile_2 << "UNMAPPED" << " " << head_2 << read_2 << "\n";
         }
         if(i%100 == 0)
             std::cout << "Processed " << i << " genes." << std::endl;
