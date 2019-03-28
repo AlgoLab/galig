@@ -486,53 +486,6 @@ def main(memsPath1, memsPath2, refPath, gtfPath, errRate, outPath):
             # in order to end the while loop, readID2 (and therefore all the other -2 variables) have to change
             # their previous values will be in the last- variables
 
-        # by this point, all reads having the same readID in both files have been written in the SAM file
-
-
-    # by this point, either line1 or line2 will be = '' (or both if both .mem files have the same length)
-
-    # -1.mem file not yet finished
-    while line1!='':
-        mapped1, strand1, readID1, err1, mems1, read1 = readLine(line1)
-        mems1 = extractMEMs(mems1)
-
-        start1 = getStart(mems1[0], bv, exPos) if mapped1 else 0
-        flag1 = getFlagPaired(mapped1, strand1, readID1, lastMapped2, lastStrand2, lastID2, read1=True) #lastStrand2 and lastID2 are needed since strand1 could have changed
-        cigar = getCIGAR(mems1, RefSeq, bv, exPos, read1, errRate, err1)
-
-        if flag1 == 69:
-            start1 = start2
-
-        if readID1 != lastID1 or start1 != lastStart1 or cigar1 != lastCigar1:
-            lastMapped1 = mapped1
-            lastID1 = readID1
-            lastStart1 = start1
-            lastCigar1 = cigar1
-            lastStrand1 = strand1
-            out.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\tNM:i:{}\n".format(readID1, flag1, ref, start1, 255, cigar1, "*", 0, 0, read1, "*", err1))
-        line1 = file1.readline()
-
-    # -2.mem file not yet finished
-    while line2!='':
-        mapped2, strand2, readID2, err2, mems2, read2 = readLine(line2)
-        mems2 = extractMEMs(mems2)
-
-        start2 = getStart(mems2[0], bv, exPos) if mapped2 else 0
-        flag2 = getFlagPaired(lastMapped1, lastStrand1, lastID1, mapped2, strand2, readID2, read1=False)
-        cigar = getCIGAR(mems2, RefSeq, bv, exPos, read2, errRate, err2)
-
-        if flag2 == 133:
-            start2 = start1
-
-        if readID2 != lastID2 or start2 != lastStart2 or cigar2 != lastCigar2:
-            lastMapped2 = mapped2
-            lastID2 = readID2
-            lastStart2 = start2
-            lastCigar2 = cigar2
-            lastStrand2 = strand2
-            out.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\tNM:i:{}\n".format(readID2, flag2, ref, start2, 255, cigar2, "*", 0, 0, read2, "*", err2))
-        line2 = file2.readLine()
-
     out.close()
 
 if __name__ == '__main__':
