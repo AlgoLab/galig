@@ -150,7 +150,7 @@ def getCIGAR(mems, RefSeq, bv, exPos, read, errRate, err):
     cigarList = []
     CIGAR = ""
     i = 0
-    while i<len(mems):
+    while i<len(mems): # if mems == [] (unmapped read), len(mems) == 0, therefore the loop will be skipped
         N = 0
         M = 0
         if i == 0:
@@ -349,7 +349,7 @@ def getCIGAR(mems, RefSeq, bv, exPos, read, errRate, err):
                                 cigarList.pop(-1)
                         cigarList.append([M + mems[i][2], 'M'])
         i+=1
-    if mems != []:
+    if mems != []: # same as before
         finalDels = m - mems[-1][1] - mems[-1][2] + 1
         if finalDels != 0:
             cigarList.append([finalDels, 'S'])
@@ -357,8 +357,8 @@ def getCIGAR(mems, RefSeq, bv, exPos, read, errRate, err):
         CIGAR = ""
         for (n,l) in cigarList:
             CIGAR += str(n) + l
-    else:
-        CIGAR = str(len(read)) + "X"
+    else:   # mems == [] (Unmapped slignment)
+        CIGAR = str(len(read)) + "X" # Mismatches only
     return CIGAR
 
 def main(memsPath1, memsPath2, refPath, gtfPath, errRate, outPath):
