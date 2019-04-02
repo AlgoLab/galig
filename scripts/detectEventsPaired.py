@@ -76,18 +76,34 @@ def extractFromInfoFile(infoPath):
 
 # Extracts elements from one line of the spliced graph-alignments file
 def readLine(line):
-    # 0: strand
-    # 1: ID
-    # 2: errors
-    # 3 to -1: mems
-    # -1: read
+    mapped = True
+    strand = ""
+    readID = ""
+    err = 0
+    mems = []
+    read = ""
+
     line = line.strip("\n").strip(" ").split(" ")
-    strand = line[0]
-    readID = line[1]
-    err = int(line[2])
-    mems = line[3:-1]
-    read = line[-1]
-    return strand, readID, err, mems, read
+    # 0: MAPPED/UNMAPPED
+    mapped = True if line[0] == "MAPPED" else False
+
+    if mapped:
+        # 1: strand
+        # 2: ID
+        # 3: errors
+        # 4 to -1: mems
+        # -1: read
+        strand = line[1]
+        readID = line[2]
+        err = int(line[3])
+        mems = line[4:-1]
+        read = line[-1]
+    else:
+        # 1: ID
+        # 2: read
+        readID = line[1]
+        read = line[-1]
+    return mapped,strand, readID, err, mems, read
 
 # Removes annotated introns
 def filterAnnotated(newIntrons, annIntrons):
@@ -357,7 +373,7 @@ def extractIntrons(memsPath, Ref, exons, BitV, errRate, onlyPrimary):
     introns = {}
     lastID = ""
     for line in open(memsPath, 'r').readlines():
-        alStrand, readID, err, mems, read = readLine(line)
+        mapped, alStrand, readID, err, mems, read = readLine(line)
         if onlyPrimary:
             if readID == lastID:
                 continue
@@ -425,7 +441,7 @@ def extractIntrons(memsPath, Ref, exons, BitV, errRate, onlyPrimary):
                                 introns[key] = introns[key]+1 if key in introns else 1
     return introns
 
-def main(memsPath, refPath, gtfPath, errRate, tresh, outPath, allevents, idmp):
+def main(memsPath1, memsPath2, refPath, gtfPath, errRate, tresh, outPath, allevents, idmp):
     #TODO: add this as cmd line parameter
     onlyPrimary = False
 
@@ -441,7 +457,8 @@ def main(memsPath, refPath, gtfPath, errRate, tresh, outPath, allevents, idmp):
     BitV = BitVector(text)
 
     # Extracting introns from spliced graph-alignments
-    introns = extractIntrons(memsPath, Ref, exons, BitV, errRate, onlyPrimary)
+    introns = extractIntrons(memsPath1, Ref, exons, BitV, errRate, onlyPrimary)
+    introns += extractIntrons(memsPath2, Ref, exons, BitV, errRate, onlyPrimary)
 
     # Cleaning introns
     if not(allevents):
@@ -465,7 +482,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description = "Detects alternative splicing events from splice-aware alignments to a splicing graph")
     parser.add_argument('-g', '--genome', required=True, help='FASTA input file containing the reference')
     parser.add_argument('-a', '--annotation', required=True, help='GTF input file containing the gene annotation')
-    parser.add_argument('-m', '--mems', required=True, help='input file containing the alignments to the splicing graph')
+    parser.add_argument('-1', '--mems1', required=True, help='input file containing the alignments to the splicing graph')
+    parser.add_argument('-2', '--mems2', required=True, help='input file containing the alignments to the splicing graph')
     parser.add_argument('-o', '--output', required=True, help='SAM output file')
     parser.add_argument('-i', '--idmp', required=True, help='inner distance between mate-pairs')
     parser.add_argument('-e', '--erate', required=False, default=3, type=int, help='error rate of alignments (from 0 to 100, default: 3)')
@@ -474,7 +492,8 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    memsPath = args.mems
+    memsPath1 = args.mems1
+    memsPath2 = args.mems2
     refPath = args.genome
     gtfPath = args.annotation
     errRate = args.erate
@@ -483,4 +502,4 @@ if __name__ == '__main__':
     allevents = args.allevents
     idmp = args.idmp
 
-    main(memsPath, refPath, gtfPath, errRate, tresh, outPath, allevents, idmp)
+    main(memsPath1, memsPath2, refPath, gtfPath, errRate, tresh, outPath, allevents, idmp)
