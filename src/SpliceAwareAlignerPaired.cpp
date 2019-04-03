@@ -204,10 +204,15 @@ int main(int argc, char* argv[]) {
     fastain_2 = gzopen(rna_seq_2.c_str(), "r");
     seqs_2 = kseq_init(fastain_2);
 
+    int count1, count2;
+
     // - Main loop: one iteration, one read
     // ---------------------------------------
     // l1 and l2 could probably be removed
     while ( ((l1 = kseq_read(seqs_1)) >= 0) && ((l2 = kseq_read(seqs_2)) >= 0) ) {
+
+        count1 = 0;
+        count2 = 0;
 
         // - Align first read
         // --------------------------------------------------------
@@ -216,6 +221,7 @@ int main(int argc, char* argv[]) {
         paths = analyzeRead(bm, sg, read_1, L, eps, exsN, verbose);
         if(paths.first != '/') {
             for(std::pair<int, std::list<Mem> > path : paths.second) {
+                count1++;
                 if(!path.second.empty()) {
                     int err = path.first;
                     outFile_1 << "MAPPED" << " " << paths.first << " " << head_1 << " " << err << " ";
@@ -230,7 +236,8 @@ int main(int argc, char* argv[]) {
                 }
             }
         } else {
-            outFile_1 << "UNMAPPED" << " " << head_1 << read_1 << "\n";
+            count1++;
+            outFile_1 << "UNMAPPED" << " " << head_1 << " " << read_1 << "\n";
         }
         if(i%100 == 0)
             std::cout << "Processed " << i << " genes." << std::endl;
@@ -243,6 +250,7 @@ int main(int argc, char* argv[]) {
         paths = analyzeRead(bm, sg, read_2, L, eps, exsN, verbose);
         if(paths.first != '/') {
             for(std::pair<int, std::list<Mem> > path : paths.second) {
+                count2++;
                 if(!path.second.empty()) {
                     int err = path.first;
                     outFile_2 << "MAPPED"<< " " << paths.first << " " << head_2 << " " << err << " ";
@@ -264,12 +272,26 @@ int main(int argc, char* argv[]) {
                 }
             }
         } else {
-            outFile_2 << "UNMAPPED" << " " << head_2 << read_2 << "\n";
+            count2++;
+            outFile_2 << "UNMAPPED" << " " << head_2 << " " << read_2 << "\n";
         }
         if(i%100 == 0)
             std::cout << "Processed " << i << " genes." << std::endl;
         ++i;
+
+        if (count1 < count2) {
+            while (count1 < count2) {
+                outFile_1 << "PLACEHOLDER" << " " << head_1 << " " << read_1 << "\n";
+                count1++;
+            }
+        } else if (count2 < count1) {
+            while (count2 < count1) {
+                    outFile_2 << "PLACEHOLDER" << " " << head_2 << " " << read_2 << "\n";
+                    count2++;
+            }
+        }
     }
+
     kseq_destroy(seqs_1);
     gzclose(fastain_1);
     kseq_destroy(seqs_2);
