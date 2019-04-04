@@ -50,6 +50,7 @@ def readLine(line):
     line = line.strip("\n").strip(" ").split(" ")
     # 0: MAPPED/UNMAPPED
     mapped = True if line[0] == "MAPPED" else False
+    placeholder = True if line[0] == "PLACEHOLDER" else False
 
     if mapped:
         # 1: strand
@@ -62,12 +63,15 @@ def readLine(line):
         err = int(line[3])
         mems = line[4:-1]
         read = line[-1]
-    else:
+    elif not mapped and not placeholder:
         # 1: ID
         # 2: read
         readID = line[1]
         read = line[-1]
-    return mapped,strand, readID, err, mems, read
+    else: # not mapped and placeholder
+        # 1: ID
+        readID = line[1]
+    return placeholder, mapped, strand, readID, err, mems, read
 
 
 def extractMEMs(mems):
@@ -389,8 +393,8 @@ def main(memsPath1, memsPath2, refPath, gtfPath, errRate, outPath):
     line1 = file1.readline()
     line2 = file2.readline()
 
-    count_reads1 = 1
-    count_reads2 = 1
+    count_reads1 = 0
+    count_reads2 = 0
 
     idmp = 0
     count_mapped_pairs = 0
@@ -398,155 +402,115 @@ def main(memsPath1, memsPath2, refPath, gtfPath, errRate, outPath):
     count_mapped2 = 0
     count_primary_allignments = 0
     count_secondary_allignments = 0
-    count_unmapped_reads = 0
+    count_unmapped_reads1 = 0
+    count_unmapped_reads2 = 0
 
     # 'merge' the 2 files containing mems together
     # NOTE-1: reads in .mem files are sorted!!!
-    # NOTE-2: .mems file may NOT have the same length!!!
+    # NOTE-2: the .mem files have the same length
     while line1!='' and line2!='':
-        mapped1, strand1, readID1, err1, mems1, read1 = readLine(line1)
-        mapped2, strand2, readID2, err2, mems2, read2 = readLine(line2)
-        mems1 = extractMEMs(mems1)
-        mems2 = extractMEMs(mems2)
+        placeholder1, mapped1, strand1, readID1, err1, mems1, read1 = readLine(line1)
+        placeholder2, mapped2, strand2, readID2, err2, mems2, read2 = readLine(line2)
 
-        start1 = getStart(mems1[0], bv, exPos) if mapped1 else 0
-        start2 = getStart(mems2[0], bv, exPos) if mapped2 else 0
-        flag1 = getFlagPaired(mapped1, strand1, readID1, mapped2, strand2, readID2, read1=True)
-        flag2 = getFlagPaired(mapped1, strand1, readID1, mapped2, strand2, readID2, read1=False)
-        cigar1 = getCIGAR(mems1, RefSeq, bv, exPos, read1, errRate, err1)
-        cigar2 = getCIGAR(mems2, RefSeq, bv, exPos, read2, errRate, err2)
+        if not placeholder1:
+            mems1 = extractMEMs(mems1)
+            start1 = getStart(mems1[0], bv, exPos) if mapped1 else 0
+            flag1 = getFlagPaired(mapped1, strand1, readID1, mapped2, strand2, readID2, read1=True)
+            cigar1 = getCIGAR(mems1, RefSeq, bv, exPos, read1, errRate, err1)
+            rnext1 = "*"
+
+        if not placeholder2:
+            mems2 = extractMEMs(mems2)
+            start2 = getStart(mems2[0], bv, exPos) if mapped2 else 0
+            flag2 = getFlagPaired(mapped1, strand1, readID1, mapped2, strand2, readID2, read1=False)
+            cigar2 = getCIGAR(mems2, RefSeq, bv, exPos, read2, errRate, err2)
+            rnext2 = "*"
 
         '''
             SEE: https://samtools.github.io/hts-specs/SAMv1.pdf
             For a unmapped paired-end or mate-pair read whose mate is mapped, the unmapped read should
             have RNAME and ***POS*** identical to its mate.
         '''
+
         if flag1 == 69:
             start1 = start2
         if flag2 == 133:
             start2 = start1
 
+        # calculate rnext, pnext and tlen
+        if mapped1:
+            rnext1 = "="
+        if mapped2:
+            rnext2 = "="
+
+        pnext1 = start2
+        pnext2 = start1
+
+        tlen1 = abs(start2 + len(read2) - start1)
+        tlen2 = -tlen1
+
+        # Calculate stats
+        if not placeholder1:
+            count_reads1 += 1
+        if not placeholder2:
+            count_reads2 += 1
+
+        if mapped1 and mapped2:
+            count_mapped1 += 1
+            count_mapped2 += 1
+            idmp += abs(start2 + len(read2) - start1)
+            count_mapped_pairs += 1
+            if readID1 != lastID1 and readID2 != lastID2:
+                count_primary_allignments += 1
+            else:
+                count_secondary_allignments += 1
+        elif mapped1: # not mapped2
+            count_mapped1 += 1
+            if not placeholder2:
+                count_unmapped_reads2 += 1
+        elif mapped2: # not mapped1
+            count_mapped2 += 1
+            if not placeholder1:
+                count_unmapped_reads1 += 1
+        else: # not mapped1 and not mapped2
+            if not placeholder1:
+                count_unmapped_reads1 += 1
+            if not placeholder2:
+                count_unmapped_reads2 += 1
+
         #Same alignment is not output twice
-        if readID1 != lastID1 or start1 != lastStart1 or cigar1 != lastCigar1:
+        if (readID1 != lastID1 or start1 != lastStart1 or cigar1 != lastCigar1) and not placeholder1:
             lastMapped1 = mapped1
             lastID1 = readID1
             lastStart1 = start1
             lastCigar1 = cigar1
             lastStrand1 = strand1
-            out.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\tNM:i:{}\n".format(readID1, flag1, ref, start1, 255, cigar1, "*", 0, 0, read1, "*", err1))
+            out.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\tNM:i:{}\n".format(readID1, flag1, ref, start1, 255, cigar1, rnext1, pnext1, tlen1, read1, "*", err1))
         #Same alignment is not output twice
-        if readID2 != lastID2 or start2 != lastStart2 or cigar2 != lastCigar2:
+        if (readID2 != lastID2 or start2 != lastStart2 or cigar2 != lastCigar2) and not placeholder2:
+            if flag2 == 133 and len(read2) < 10:
+                print(mapped2, placeholder2)
             lastMapped2 = mapped2
             lastID2 = readID2
             lastStart2 = start2
             lastCigar2 = cigar2
             lastStrand2 = strand2
-            out.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\tNM:i:{}\n".format(readID2, flag2, ref, start2, 255, cigar2, "*", 0, 0, read2, "*", err2))
+            out.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\tNM:i:{}\n".format(readID2, flag2, ref, start2, 255, cigar2, rnext2, pnext2, tlen2, read2, "*", err2))
 
-        if mapped1 and mapped2:
-            count_mapped1 += 1
-            count_mapped2 += 1
-            idmp += abs(start2 - start1)
-            count_mapped_pairs += 1
-            count_primary_allignments += 1
-        elif mapped1: # not mapped2
-            count_mapped1 += 1
-            count_unmapped_reads += 1
-        elif mapped2: # not mapped1
-            count_mapped2 += 1
-            count_unmapped_reads += 1
-        else:
-            count_unmapped_reads += 2
-
-        # keep looping over the first .mem file until ReadID1 changes
-        line1 = file1.readline();
-        if line1 != '':
-            count_reads1 += 1
-            mapped1, strand1, readID1, err1, mems1, read1 = readLine(line1)
-
-        while line1 != '' and readID1 == lastID1:
-            mems1 = extractMEMs(mems1)
-            start1 = getStart(mems1[0], bv, exPos) if mapped1 else 0
-            flag1 = getFlagPaired(mapped1, strand1, readID1, lastMapped2, lastStrand2, lastID2, read1=True)
-            cigar1 = getCIGAR(mems1, RefSeq, bv, exPos, read1, errRate, err1)
-
-            if flag1 == 69:
-                start1 = start2
-
-            if readID1 != lastID1 or start1 != lastStart1 or cigar1 != lastCigar1:
-                lastMapped1 = mapped1
-                lastID1 = readID1
-                lastStart1 = start1
-                lastCigar1 = cigar1
-                lastStrand1 = strand1
-                out.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\tNM:i:{}\n".format(readID1, flag1, ref, start1, 255, cigar1, "*", 0, 0, read1, "*", err1))
-
-            if mapped1:
-                count_mapped1 += 1
-                if lastMapped2:
-                    count_mapped_pairs += 1
-                    idmp += abs(lastStart2 - start1)
-                    count_secondary_allignments += 1
-            else:
-                count_unmapped_reads += 1
-
-            line1 = file1.readline()
-            if line1 != '':
-                count_reads1 += 1
-                mapped1, strand1, readID1, err1, mems1, read1 = readLine(line1)
-            # in order to end the while loop, readID1 (and therefore all the other -1 variables) have to change
-            # their previous values will be in the last- variables
-
-        # keep looping over the second .mem file until ReadID2 changes
-        line2 = file2.readline();
-        if line2 != '':
-            count_reads2 += 1
-            mapped2, strand2, readID2, err2, mems2, read2 = readLine(line2)
-
-        while line2 != '' and readID2 == lastID2:
-            mems2 = extractMEMs(mems2)
-            start2 = getStart(mems2[0], bv, exPos) if mapped2 else 0
-            flag2 = getFlagPaired(lastMapped1, lastStrand1, lastID1, mapped2, strand2, readID2, read1=False) #lastStrand1 and lastID1 are needed since strand1 could have changed
-            cigar2 = getCIGAR(mems2, RefSeq, bv, exPos, read2, errRate, err2)
-
-            if flag2 == 133:
-                start2 = start1
-
-            if readID2 != lastID2 or start2 != lastStart2 or cigar2 != lastCigar2:
-                lastMapped2 = mapped2
-                lastID2 = readID2
-                lastStart2 = start2
-                lastCigar2 = cigar2
-                lastStrand2 = strand2
-                out.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\tNM:i:{}\n".format(readID2, flag2, ref, start2, 255, cigar2, "*", 0, 0, read2, "*", err2))
-
-            if mapped2:
-                count_mapped2 += 1
-                if lastMapped1:
-                    count_mapped_pairs += 1
-                    idmp += abs(start2 - lastStart1)
-                    count_secondary_allignments += 1
-            else:
-                count_unmapped_reads += 1
-
-            line2 = file2.readline()
-            if line2 != '':
-                count_reads2 += 1
-                mapped2, strand2, readID2, err2, mems2, read2 = readLine(line2)
-            # in order to end the while loop, readID2 (and therefore all the other -2 variables) have to change
-            # their previous values will be in the last- variables
+        line1 = file1.readline()
+        line2 = file2.readline()
 
     # all mems have been read
     idmp /= count_mapped_pairs # find the average
 
     print("Count mapped1", count_mapped1, "/", count_reads1)
     print("Count mapped2", count_mapped2, "/", count_reads2)
-    print("Count unmapped reads", count_unmapped_reads)
+    print("Count unmapped reads1", count_unmapped_reads1)
+    print("Count unmapped reads2", count_unmapped_reads2)
     print("Count mapped pairs", count_mapped_pairs)
     print("Count primary allignments", count_primary_allignments)
     print("Count secondary allignments", count_secondary_allignments)
     print("idmp", idmp)
-
     out.close()
 
 if __name__ == '__main__':
