@@ -365,6 +365,40 @@ def getCIGAR(mems, RefSeq, bv, exPos, read, errRate, err):
         CIGAR = str(len(read)) + "X" # Mismatches only
     return CIGAR
 
+def getEnd(start, mem, bv):
+    # get offset from bitvector
+    exonN = bv.rank(mem[0])
+    exonStartingPos = bv.select(exonN)
+    offset = mem[0] - exonStartingPos + 1;
+
+    # find the end
+    end = start + offset
+
+    return end
+
+def getTlen(start1, mems2, bv, exPos):
+    lastMem2 = mems2[-1]
+
+    # get starting position (in the reference)
+    start2 = getStart(lastMem2,bv,exPos)
+
+    # get ending position (in the reference)
+    end2 = getEnd(start2, lastMem2, bv)
+
+    return end2 - start1
+
+def getIdmp(start2, mems1, bv, exPos):
+    lastMem1 = mems1[-1]
+
+    # get starting position (in the reference)
+    start1 = getStart(lastMem1,bv,exPos)
+
+    # get ending position (in the reference)
+    end1 = getEnd(start1, lastMem1, bv)
+
+    return start2 - end1
+
+
 def main(memsPath1, memsPath2, refPath, gtfPath, errRate, outPath):
     RefSeq = list(SeqIO.parse(refPath, "fasta"))[0]
 
@@ -386,7 +420,6 @@ def main(memsPath1, memsPath2, refPath, gtfPath, errRate, outPath):
     lastStart2 = -1
     lastCigar2 = ""
     lastStrand2 = ""
-
     file1 = open(memsPath1)
     file2 = open(memsPath2)
 
@@ -412,19 +445,26 @@ def main(memsPath1, memsPath2, refPath, gtfPath, errRate, outPath):
         placeholder1, mapped1, strand1, readID1, err1, mems1, read1 = readLine(line1)
         placeholder2, mapped2, strand2, readID2, err2, mems2, read2 = readLine(line2)
 
+        rnext1 = "*"
+        pnext1 = 0
+        tlen1 = 0
+        flag1 = 0
         if not placeholder1:
             mems1 = extractMEMs(mems1)
             start1 = getStart(mems1[0], bv, exPos) if mapped1 else 0
             flag1 = getFlagPaired(mapped1, strand1, readID1, mapped2, strand2, readID2, read1=True)
             cigar1 = getCIGAR(mems1, RefSeq, bv, exPos, read1, errRate, err1)
-            rnext1 = "*"
 
+        rnext2 = "*"
+        pnext2 = 0
+        tlen2 = 0
+        flag2 = 0
         if not placeholder2:
             mems2 = extractMEMs(mems2)
             start2 = getStart(mems2[0], bv, exPos) if mapped2 else 0
             flag2 = getFlagPaired(mapped1, strand1, readID1, mapped2, strand2, readID2, read1=False)
             cigar2 = getCIGAR(mems2, RefSeq, bv, exPos, read2, errRate, err2)
-            rnext2 = "*"
+
 
         '''
             SEE: https://samtools.github.io/hts-specs/SAMv1.pdf
@@ -439,15 +479,22 @@ def main(memsPath1, memsPath2, refPath, gtfPath, errRate, outPath):
 
         # calculate rnext, pnext and tlen
         if mapped1:
-            rnext1 = "="
+            pnext1 = start2
+            if mapped2:
+                rnext1 = "="
+                if len(mems2) == 1:
+                    tlen1 = abs(start2 + len(read2) - start1)
+                else:
+                    tlen1 = getTlen(start1, mems2, bv, exPos)
+            else:
+                tlen1 = 0
         if mapped2:
-            rnext2 = "="
-
-        pnext1 = start2
-        pnext2 = start1
-
-        tlen1 = abs(start2 + len(read2) - start1)
-        tlen2 = -tlen1
+            pnext2 = start1
+            if mapped1:
+                rnext2 = "="
+                tlen2 = -tlen1
+            else:
+                tlen2 = 0
 
         # Calculate stats
         if not placeholder1:
@@ -458,7 +505,11 @@ def main(memsPath1, memsPath2, refPath, gtfPath, errRate, outPath):
         if mapped1 and mapped2:
             count_mapped1 += 1
             count_mapped2 += 1
-            idmp += abs(start2 + len(read2) - start1)
+            if len(mems1) == 1:
+                idmp += abs(start2 - start1 + len(read1))
+            else:
+                idmp += getIdmp(start2, mems1, bv, exPos)
+
             count_mapped_pairs += 1
             if readID1 != lastID1 and readID2 != lastID2:
                 count_primary_allignments += 1
@@ -488,8 +539,6 @@ def main(memsPath1, memsPath2, refPath, gtfPath, errRate, outPath):
             out.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\tNM:i:{}\n".format(readID1, flag1, ref, start1, 255, cigar1, rnext1, pnext1, tlen1, read1, "*", err1))
         #Same alignment is not output twice
         if (readID2 != lastID2 or start2 != lastStart2 or cigar2 != lastCigar2) and not placeholder2:
-            if flag2 == 133 and len(read2) < 10:
-                print(mapped2, placeholder2)
             lastMapped2 = mapped2
             lastID2 = readID2
             lastStart2 = start2
