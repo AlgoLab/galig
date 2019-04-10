@@ -365,36 +365,35 @@ def getCIGAR(mems, RefSeq, bv, exPos, read, errRate, err):
         CIGAR = str(len(read)) + "X" # Mismatches only
     return CIGAR
 
-def getEnd(start, mem, bv):
-    # get offset from bitvector
+def getEnd(mem, bv, exPos):
     exonN = bv.rank(mem[0])
-    exonStartingPos = bv.select(exonN)
-    offset = mem[0] - exonStartingPos + 1;
+
+    # get starting position (on reference)
+    exonStartingPos = exPos[exonN-1][0]
+
+    # get offset from bitvector
+    exonStartingPos_onT = bv.select(exonN)
+    offset = mem[0] - exonStartingPos_onT + 1;
 
     # find the end
-    end = start + offset
+    # NOTE: offset is the same on reference and bitvector
+    end = exonStartingPos + offset + mem[2]
 
     return end
 
 def getTlen(start1, mems2, bv, exPos):
     lastMem2 = mems2[-1]
 
-    # get starting position (in the reference)
-    start2 = getStart(lastMem2,bv,exPos)
-
     # get ending position (in the reference)
-    end2 = getEnd(start2, lastMem2, bv)
+    end2 = getEnd(lastMem2, bv, exPos)
 
     return end2 - start1
 
 def getIdmp(start2, mems1, bv, exPos):
     lastMem1 = mems1[-1]
 
-    # get starting position (in the reference)
-    start1 = getStart(lastMem1,bv,exPos)
-
     # get ending position (in the reference)
-    end1 = getEnd(start1, lastMem1, bv)
+    end1 = getEnd(lastMem1, bv, exPos)
 
     return start2 - end1
 
@@ -438,6 +437,8 @@ def main(memsPath1, memsPath2, refPath, gtfPath, errRate, outPath):
     count_unmapped_reads1 = 0
     count_unmapped_reads2 = 0
 
+    pos_tlen = []
+
     # 'merge' the 2 files containing mems together
     # NOTE-1: reads in .mem files are sorted!!!
     # NOTE-2: the .mem files have the same length
@@ -472,10 +473,14 @@ def main(memsPath1, memsPath2, refPath, gtfPath, errRate, outPath):
             have RNAME and ***POS*** identical to its mate.
         '''
 
-        if flag1 == 69:
+        if flag1 == 69:             # not mapped1 and mapped2
             start1 = start2
-        if flag2 == 133:
+            #pnext2 = start2
+            pnext2 = "*"
+        if flag2 == 133:            # mapped1 and not mapped2
             start2 = start1
+            #pnext1 = start1
+            pnext1 = "*"
 
         # calculate rnext, pnext and tlen
         if mapped1:
@@ -509,10 +514,10 @@ def main(memsPath1, memsPath2, refPath, gtfPath, errRate, outPath):
                 idmp += abs(start2 - start1 + len(read1))
             else:
                 idmp += getIdmp(start2, mems1, bv, exPos)
-
             count_mapped_pairs += 1
             if readID1 != lastID1 and readID2 != lastID2:
                 count_primary_allignments += 1
+                pos_tlen.append(tlen1)
             else:
                 count_secondary_allignments += 1
         elif mapped1: # not mapped2
@@ -560,6 +565,7 @@ def main(memsPath1, memsPath2, refPath, gtfPath, errRate, outPath):
     print("Count primary allignments", count_primary_allignments)
     print("Count secondary allignments", count_secondary_allignments)
     print("idmp", idmp)
+    print("average tlen", sum(pos_tlen)/count_primary_allignments)
     out.close()
 
 if __name__ == '__main__':
