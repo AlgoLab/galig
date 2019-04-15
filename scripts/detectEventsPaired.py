@@ -86,6 +86,7 @@ def readLine(line):
     line = line.strip("\n").strip(" ").split(" ")
     # 0: MAPPED/UNMAPPED
     mapped = True if line[0] == "MAPPED" else False
+    placeholder = True if line[0] == "PLACEHOLDER" else False
 
     if mapped:
         # 1: strand
@@ -98,12 +99,15 @@ def readLine(line):
         err = int(line[3])
         mems = line[4:-1]
         read = line[-1]
-    else:
+    elif not mapped and not placeholder:
         # 1: ID
         # 2: read
         readID = line[1]
         read = line[-1]
-    return mapped,strand, readID, err, mems, read
+    else: # not mapped and placeholder
+        # 1: ID
+        readID = line[1]
+    return placeholder, mapped, strand, readID, err, mems, read
 
 # Removes annotated introns
 def filterAnnotated(newIntrons, annIntrons):
@@ -373,72 +377,86 @@ def extractIntrons(memsPath, Ref, exons, BitV, errRate, onlyPrimary):
     introns = {}
     lastID = ""
     for line in open(memsPath, 'r').readlines():
-        mapped, alStrand, readID, err, mems, read = readLine(line)
+        placeholder, mapped, alStrand, readID, err, mems, read = readLine(line)
         if onlyPrimary:
             if readID == lastID:
                 continue
             lastID = readID
 
-        if len(mems) > 1:
-            for mem1,mem2 in pairwise(mems):
-                # Remove ( and ) from mem and cast to int
-                mem1 = [int(x) for x in mem1[1:-1].split(",")]
-                id1 = BitV.rank(mem1[0] - 1)
+        if mapped:
+            if len(mems) > 1:
+                for mem1,mem2 in pairwise(mems):
+                    # Remove ( and ) from mem and cast to int
+                    mem1 = [int(x) for x in mem1[1:-1].split(",")]
+                    id1 = BitV.rank(mem1[0] - 1)
 
-                mem2 = [int(x) for x in mem2[1:-1].split(",")]
-                id2 = BitV.rank(mem2[0] - 1)
+                    mem2 = [int(x) for x in mem2[1:-1].split(",")]
+                    id2 = BitV.rank(mem2[0] - 1)
 
-                Poverlap = mem2[1]-mem1[1]-mem1[2]
-                if id1 == id2: #MEMs inside the same exon
-                    Toverlap = mem2[0]-mem1[0]-mem1[2]
-                    # Intron Retention
-                    if Poverlap <= 0 and Toverlap > 0:
-                        gap = Toverlap+abs(Poverlap)-1
-                        if gap > 0:
-                            pos1 = exons[id1-1][0] + mem1[0] + mem1[2] - BitV.select(id1) + Poverlap
-                            pos2 = pos1 + gap
-                            key = (pos1, pos2)
-                            introns[key] = introns[key]+1 if key in introns else 1
-                else: #MEMs on different exons
-                    offset1 = BitV.select(id1 + 1) - (mem1[0] + mem1[2])
-                    offset2 = mem2[0] - BitV.select(id2)-1
-                    if Poverlap <= 0:
-                        Poverlap = abs(Poverlap)
-                        # No gap on P: possible Int.Alt.S.S.
-                        if offset1 == 0:
-                            offset2 += Poverlap
-                        else: #anyway, not only if offset2 == 0 !!! maybe this is wrong
-                            offset1 += Poverlap
-                        pos1 = exons[id1-1][1] - offset1 + 1
-                        pos2 = exons[id2-1][0] + offset2 - 1
-                        key = (pos1, pos2)
-                        introns[key] = introns[key]+1 if key in introns else 1
-                    else:
-                        #Gap on P
-                        if offset1 == 0 and offset2 == 0:
-                            #No gap on T -> possible Ext.Alt.S.S.
-                            intronStart, intronEnd  = exons[id1-1][1] + 1, exons[id2-1][0] - 1
-                            intronString = Ref[intronStart-1:intronEnd-1] #-1 since strings are indexed starting from 0, gtf from 1
-                            readGapString = read[mem1[1]+mem1[2]-1:mem2[1]-1]
-                            maxErr = round(len(read)*errRate/100)
-                            err1 = editDistance(readGapString, intronString[:len(readGapString)])
-                            err2 = editDistance(readGapString, intronString[len(intronString)-len(readGapString):])
-
-                            pos1, pos2 = -1, -1
-                            if err1 <= err2:
-                                # We check the start of the intron
-                                if err1 + err <= maxErr:
-                                    pos1 = intronStart + Poverlap
-                                    pos2 = intronEnd
-                            else:
-                                #We check the end of the intron
-                                if err2 + err <= maxErr:
-                                    pos1 = intronStart
-                                    pos2 = intronEnd - Poverlap
-
-                            if pos1 != -1 and pos2 != -1:
+                    Poverlap = mem2[1]-mem1[1]-mem1[2]
+                    if id1 == id2: #MEMs inside the same exon
+                        Toverlap = mem2[0]-mem1[0]-mem1[2]
+                        # Intron Retention
+                        if Poverlap <= 0 and Toverlap > 0:
+                            gap = Toverlap+abs(Poverlap)-1
+                            if gap > 0:
+                                pos1 = exons[id1-1][0] + mem1[0] + mem1[2] - BitV.select(id1) + Poverlap
+                                pos2 = pos1 + gap
                                 key = (pos1, pos2)
                                 introns[key] = introns[key]+1 if key in introns else 1
+                    else: #MEMs on different exons
+                        offset1 = BitV.select(id1 + 1) - (mem1[0] + mem1[2])
+                        offset2 = mem2[0] - BitV.select(id2)-1
+                        if Poverlap <= 0:
+                            Poverlap = abs(Poverlap)
+                            # No gap on P: possible Int.Alt.S.S.
+                            if offset1 == 0:
+                                offset2 += Poverlap
+                            else: #anyway, not only if offset2 == 0 !!! maybe this is wrong
+                                offset1 += Poverlap
+                            pos1 = exons[id1-1][1] - offset1 + 1
+                            pos2 = exons[id2-1][0] + offset2 - 1
+                            key = (pos1, pos2)
+                            introns[key] = introns[key]+1 if key in introns else 1
+                        else:
+                            #Gap on P
+                            if offset1 == 0 and offset2 == 0:
+                                #No gap on T -> possible Ext.Alt.S.S.
+                                intronStart, intronEnd  = exons[id1-1][1] + 1, exons[id2-1][0] - 1
+                                intronString = Ref[intronStart-1:intronEnd-1] #-1 since strings are indexed starting from 0, gtf from 1
+                                readGapString = read[mem1[1]+mem1[2]-1:mem2[1]-1]
+                                maxErr = round(len(read)*errRate/100)
+                                err1 = editDistance(readGapString, intronString[:len(readGapString)])
+                                err2 = editDistance(readGapString, intronString[len(intronString)-len(readGapString):])
+
+                                pos1, pos2 = -1, -1
+                                if err1 <= err2:
+                                    # We check the start of the intron
+                                    if err1 + err <= maxErr:
+                                        pos1 = intronStart + Poverlap
+                                        pos2 = intronEnd
+                                else:
+                                    #We check the end of the intron
+                                    if err2 + err <= maxErr:
+                                        pos1 = intronStart
+                                        pos2 = intronEnd - Poverlap
+
+                                if pos1 != -1 and pos2 != -1:
+                                    key = (pos1, pos2)
+                                    introns[key] = introns[key]+1 if key in introns else 1
+    return introns
+
+# Merge two introns-dict into one
+# NOTE: an introns-dict has the following structure: {(intronStart, intronEnd): number_of_reads}
+def mergeIntrons(introns1, introns2):
+    introns = {}
+    for (p1,p2),w in introns1.items():
+            introns[(p1,p2)] = w
+    for (p1,p2),w in introns2.items():
+            if (p1,p2) not in introns.keys():
+                introns[(p1,p2)] = w
+            else:
+                introns[(p1,p2)] += w
     return introns
 
 def main(memsPath1, memsPath2, refPath, gtfPath, errRate, tresh, outPath, allevents, idmp):
@@ -457,8 +475,9 @@ def main(memsPath1, memsPath2, refPath, gtfPath, errRate, tresh, outPath, alleve
     BitV = BitVector(text)
 
     # Extracting introns from spliced graph-alignments
-    introns = extractIntrons(memsPath1, Ref, exons, BitV, errRate, onlyPrimary)
-    introns += extractIntrons(memsPath2, Ref, exons, BitV, errRate, onlyPrimary)
+    introns1 = extractIntrons(memsPath1, Ref, exons, BitV, errRate, onlyPrimary)
+    introns2 = extractIntrons(memsPath2, Ref, exons, BitV, errRate, onlyPrimary)
+    introns = mergeIntrons(introns1, introns2)
 
     # Cleaning introns
     if not(allevents):
