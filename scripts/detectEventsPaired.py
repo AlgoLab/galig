@@ -489,24 +489,39 @@ def getTranscriptIdmp(transcripts, memsPath1, memsPath2, bv, exPos):
         placeholder1, mapped1, alStrand1, readID1, err1, mems1, read1 = readLine(line1)
         placeholder2, mapped2, alStrand2, readID2, err2, mems2, read2 = readLine(line2)
 
-        # find ends on reference
-        end1 = getEnd(mems1[-1], bv, exPos)
-        end2 = getEnd(mems2[-1], bv, exPos)
+        # get last mem from read1 and first mem from read2
+        m1 = mems1[-1]
+        m2 = mems2[0]
 
-        sameTranscript = False
-        if mapped1 and mapped2:
+        # find exon for m1 and m2
+        id1 = bv.rank(m1[0])
+        id2 = bv.rank(m2[0])
+
+        if id1 == id2: # m1 and m2 are on same exon
+            start2 = m2[0]
+            start1 = m1[0]
+            len1 = m1[2]
+            distance = start2 - (start1 + len1) - 1
+            tIdmp += distance
+        else:
+            # for now only consecutive exons
+            # TODO: add non-consecutive exons
+            consecutiveExons = False
             for trID,exons in transcripts.items():
-                tranSt,tranEnd = exons[0][0], exons[-1][1]
-                # Both reads are on same transcript
-                if tranSt < start1 < end2 < tranEnd:
-                    tIdmp += start2-end1
-                    sameTranscript = True
-                    break
+                for exon1, exon2 in pairwise(exons):
+                    if id1 == exon1 and id2 == exon2:
+                        consecutiveExons = True
+                        nextExon1startingPos = bv.select(id1+1)
+                        start1 = m1[0]
+                        len1 = m1[2]
+                        start2 = m2[0]
+                        exon2startingPos = bv.select(id2)
+                        distance = nextExon1startingPos - (start1 + len1) - 1 + (start2 - exon2startingPos) - 1
+                        tIdmp += distance
+                        break
 
-            if not sameTranscript:
-                end1_bv = mems1[-1][0]
-                start2_bv = bv.select(bv.rank(mems2[0][0]))
-                tIdmp += start2_bv - end1_bv
+            if not consecutiveExons:
+                pass
 
     return tIdmp
 
