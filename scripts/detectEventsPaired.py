@@ -299,6 +299,10 @@ def getPrecIntrons(Introns, I):
 def checkNewIntrons(newIntrons, allIntrons, strand, transcripts, idmp):
     # TODO: use idmp to make more accurate guesses
 
+    print("new introns: ",newIntrons)
+    print("all introns: ",allIntrons)
+    print("transcripts: ",transcripts)
+
     allIntrons = list(allIntrons)
     allIntrons.sort()
     events = {'ES': {}, 'A3': {}, 'A5': {}, 'IR': {}}
@@ -458,6 +462,53 @@ def mergeIntrons(introns1, introns2):
             else:
                 introns[(p1,p2)] += w
     return introns
+
+def getEnd(mem, bv, exPos):
+    exonN = bv.rank(mem[0])
+
+    # get starting position (on reference)
+    exonStartingPos = exPos[exonN-1][0]
+
+    # get offset from bitvector
+    exonStartingPos_onT = bv.select(exonN)
+    offset = mem[0] - exonStartingPos_onT + 1;
+
+    # find the end
+    # NOTE: offset is the same on reference and bitvector
+    end = exonStartingPos + offset + mem[2]
+
+    return end
+
+# Get transcript-based idmp
+def getTranscriptIdmp(transcripts, memsPath1, memsPath2, bv, exPos):
+    tIdmp = 0
+    mem1lines = open(memsPath1, 'r').readlines()
+    mem2lines = open(memsPath2, 'r').readlines()
+
+    for line1, line2 in zip(mem1lines,mem2lines):
+        placeholder1, mapped1, alStrand1, readID1, err1, mems1, read1 = readLine(line1)
+        placeholder2, mapped2, alStrand2, readID2, err2, mems2, read2 = readLine(line2)
+
+        # find ends on reference
+        end1 = getEnd(mems1[-1], bv, exPos)
+        end2 = getEnd(mems2[-1], bv, exPos)
+
+        sameTranscript = False
+        if mapped1 and mapped2:
+            for trID,exons in transcripts.items():
+                tranSt,tranEnd = exons[0][0], exons[-1][1]
+                # Both reads are on same transcript
+                if tranSt < start1 < end2 < tranEnd:
+                    tIdmp += start2-end1
+                    sameTranscript = True
+                    break
+
+            if not sameTranscript:
+                end1_bv = mems1[-1][0]
+                start2_bv = bv.select(bv.rank(mems2[0][0]))
+                tIdmp += start2_bv - end1_bv
+
+    return tIdmp
 
 def main(memsPath1, memsPath2, refPath, gtfPath, errRate, tresh, outPath, allevents, idmp):
     #TODO: add this as cmd line parameter
