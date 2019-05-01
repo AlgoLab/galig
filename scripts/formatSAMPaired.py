@@ -1,8 +1,9 @@
 #!/usr/bin/python3
 
-import sys, os
+import sys, os, itertools, operator
 import argparse
 from Bio import SeqIO
+import gffutils
 
 from BitVector import BitVector
 
@@ -397,6 +398,93 @@ def getIdmp(start2, mems1, bv, exPos):
 
     return start2 - end1
 
+# Get transcript-based idmp
+def getTranscriptIdmp(transcripts, mems1, mems2, bv, exPos):
+    tIdmp = 0
+
+    # get last mem from read1 and first mem from read2
+    m1 = mems1[-1]
+    m2 = mems2[0]
+
+    # find exon for m1 and m2
+    id1 = bv.rank(m1[0]) - 1
+    id2 = bv.rank(m2[0]) - 1
+
+    # find positions on bitvector
+    start1 = m1[0]
+    start2 = m2[0]
+    len1 = m1[2]
+    len2 = m2[2]
+
+    if id1 == id2: # m1 and m2 are on same exon
+        distance = start2 - (start1 + len1)
+        tIdmp += distance
+    else:
+        # for now only consecutive exons
+        # TODO: add non-consecutive exons
+        consecutiveExons = False
+
+        # check in all transcripts if the exons are consecutive
+        # NOTE: two exons are consecutive if they appear next to each other
+        #  in a transcript (an exon is represented as (startPosReference, endPosReference) )
+        for _,exons in transcripts.items():
+            start1Reference = getStart(m1,bv,exPos)
+            start2Reference = getStart(m2,bv,exPos)
+            end1Reference = getEnd(m1,bv,exPos)
+            end2Reference = getEnd(m2,bv,exPos)
+            for (s1, e1), (s2, e2) in pairwise(exons):
+                if s1 == start1Reference and e1 == end1Reference and s2 == start2Reference and e2 == end2Reference:
+                    consecutiveExons = True
+                    exon1EndingPosBv = bv.select(id1+1)
+                    exon2startingPosBv = bv.select(id2)
+                    distance = exon1EndingPosBv - (start1 + len1) + (start2 - exon2startingPosBv) - 1
+                    tIdmp += distance
+                    break
+
+        if not consecutiveExons:
+            pass
+
+    return tIdmp
+
+# Extracts transcripts from gtf
+def extractFromGTF(gtf):
+    strand = "+"
+    introns = set()
+    transcripts = {}
+    for g in gtf.features_of_type('gene'):
+        strand = g.strand
+        for tr in gtf.children(g, featuretype='transcript', order_by='start'):
+            exons = list(gtf.children(tr, featuretype='exon', order_by='start'))
+
+            transcript = [(ex.start, ex.end) for ex in exons]
+            transcripts.update({tr.id:transcript})
+
+            introns_ = set(zip([ex.end+1 for ex in exons[:-1]], [ex.start-1 for ex in exons[1:]]))
+            introns = introns | introns_
+    return transcripts
+
+# Opens gtf (gffutils wrapper)
+def openGTF(gtfPath):
+    try:
+        gtf = gffutils.FeatureDB("{}.db".format(gtfPath),
+                                 keep_order=True)
+    except ValueError:
+        gtf = gffutils.create_db(gtfPath,
+                                 dbfn="{}.db".format(gtfPath),
+                                 force=True, keep_order=True,
+                                 disable_infer_genes=True,
+                                 disable_infer_transcripts=True,
+                                 merge_strategy='merge',
+                                 sort_attribute_values=True)
+        gtf = gffutils.FeatureDB("{}.db".format(gtfPath), keep_order=True)
+    return gtf
+
+# L -> (l0,l1), (l1,l2), (l2, l3), ...
+def pairwise(L):
+    L0, L1 = itertools.tee(L)
+    next(L1, None)
+    return zip(L0,L1)
+
 
 def main(memsPath1, memsPath2, refPath, gtfPath, errRate, outPath):
     RefSeq = list(SeqIO.parse(refPath, "fasta"))[0]
@@ -404,9 +492,17 @@ def main(memsPath1, memsPath2, refPath, gtfPath, errRate, outPath):
     ref, refLen, text, exPos = extractFromInfoFile(gtfPath + ".sg")
     bv = BitVector(text)
 
+    # Reading annotation
+    gtf = openGTF(gtfPath)
+    transcripts = extractFromGTF(gtf)
+
+    # Open output sam file
     out = open(outPath, "w")
     out.write("@HD\tVN:1.4\n")
     out.write("@SQ\tSN:{}\tLN:{}\n".format(ref, refLen))
+
+    # Open output stats file
+    out_stats = open(outPath+".alignsinfo.txt", "w")
 
     lastMapped1 = False
     lastID1 = ""
@@ -429,6 +525,7 @@ def main(memsPath1, memsPath2, refPath, gtfPath, errRate, outPath):
     count_reads2 = 0
 
     idmp = 0
+    tIdmp = 0
     count_mapped_pairs = 0
     count_mapped1 = 0
     count_mapped2 = 0
@@ -520,6 +617,7 @@ def main(memsPath1, memsPath2, refPath, gtfPath, errRate, outPath):
                 pos_tlen.append(tlen1)
             else:
                 count_secondary_allignments += 1
+            tIdmp += getTranscriptIdmp(transcripts, mems1, mems2, bv, exPos)
         elif mapped1: # not mapped2
             count_mapped1 += 1
             if not placeholder2:
@@ -555,17 +653,23 @@ def main(memsPath1, memsPath2, refPath, gtfPath, errRate, outPath):
         line2 = file2.readline()
 
     # all mems have been read
-    idmp /= count_mapped_pairs # find the average
 
-    print("Count mapped1", count_mapped1, "/", count_reads1)
-    print("Count mapped2", count_mapped2, "/", count_reads2)
-    print("Count unmapped reads1", count_unmapped_reads1)
-    print("Count unmapped reads2", count_unmapped_reads2)
-    print("Count mapped pairs", count_mapped_pairs)
-    print("Count primary allignments", count_primary_allignments)
-    print("Count secondary allignments", count_secondary_allignments)
-    print("idmp", idmp)
-    print("average tlen", sum(pos_tlen)/count_primary_allignments)
+    # find the average
+    idmp /= count_mapped_pairs
+    tIdmp /= count_mapped_pairs
+
+    out_stats.write("Count mapped1: " + str(count_mapped1) + "/" + str(count_reads1) + "\n")
+    out_stats.write("Count mapped2: " + str(count_mapped2) + "/" + str(count_reads2) + "\n")
+    out_stats.write("Count unmapped reads1: " + str(count_unmapped_reads1) + "\n")
+    out_stats.write("Count unmapped reads2: " + str(count_unmapped_reads2) + "\n")
+    out_stats.write("Count mapped pairs: " + str(count_mapped_pairs) + "\n")
+    out_stats.write("Count primary allignments: " + str(count_primary_allignments) + "\n")
+    out_stats.write("Count secondary allignments: " + str(count_secondary_allignments) + "\n")
+    out_stats.write("idmp: " + str(idmp) + "\n")
+    out_stats.write("tidmp: " + str(tIdmp) + "\n")
+    out_stats.write("average tlen: " + str(sum(pos_tlen)/count_primary_allignments) + "\n")
+
+    out_stats.close()
     out.close()
 
 if __name__ == '__main__':
