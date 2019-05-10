@@ -25,6 +25,7 @@ void printHelp() {
     std::cout << "  -1, --sample 1 <path>" << std::endl;
     std::cout << "  -2, --sample 2 <path>" << std::endl;
     std::cout << "  -o, --output <path>: output file" << std::endl;
+    std::cout << "  -f, --ftl : fragment library type (default: ???)" << std::endl;
     std::cout << "  -l, --L <int>: minimum lenght of MEMs used to build the alignments (default: 15)" << std::endl;
     std::cout << "  -e, --eps <int>: error rate, a value from 0 to 100 (default: 3)" << std::endl;
     std::cout << "  -h, --help: show this help message and exit" << std::endl;
@@ -93,6 +94,7 @@ int main(int argc, char* argv[]) {
     std::string genomic;
     std::string annotation;
     std::string rna_seq_1, rna_seq_2;
+    std::string ftl;      //fragment type library
     int L = 0;
     int eps = -1;
     std::string out, out_1, out_2;
@@ -111,13 +113,14 @@ int main(int argc, char* argv[]) {
                 {"L",  required_argument, 0, 'l'},
                 {"erate",    required_argument, 0, 'e'},
                 {"output", required_argument, 0, 'o'},
+                {"ftl", required_argument, 0, 'f'},
                 {"help", no_argument, 0, 'h'},
                 //{"verbose", no_argument, 0, 'v'},
                 {0, 0, 0, 0}
             };
 
         int option_index = 0;
-        c = getopt_long(argc, argv, "g:a:1:2:l:e:o:h", long_options, &option_index);
+        c = getopt_long(argc, argv, "g:a:1:2:l:e:o:f:h", long_options, &option_index);
 
         if (c == -1) {
             break;
@@ -142,6 +145,9 @@ int main(int argc, char* argv[]) {
         case 'e':
             eps = std::stoi(optarg);
             break;
+        case 'f':
+            ftl = optarg;
+            break;
         case 'o':
             out = std::string(optarg);
             break;
@@ -161,6 +167,36 @@ int main(int argc, char* argv[]) {
     }
     if(eps < 0 || eps > 100) {
         eps = 3;
+    }
+
+    // - Extract fragment library type from options
+    bool inward=false, outward=false, matching=false;
+    bool stranded=false, unstranded=false;
+    bool forward=false, reverse=false;
+    for(char &c : ftl) {
+        switch(c) {
+            case 'I':
+                inward = true;
+                break;
+            case 'O':
+                outward = true;
+                break;
+            case 'M':
+                matching = true;
+                break;
+            case 'S':
+                stranded = true;
+                break;
+            case 'U':
+                unstranded = true;
+                break;
+            case 'F':
+                forward = true;
+                break;
+            case 'R':
+                reverse = true;
+                break;
+        }
     }
 
     // - Building splicing graph
@@ -214,10 +250,37 @@ int main(int argc, char* argv[]) {
         count1 = 0;
         count2 = 0;
 
-        // - Align first read
-        // --------------------------------------------------------
         head_1 = seqs_1->name.s;
         read_1 = seqs_1->seq.s;
+        head_2 = seqs_2->name.s;
+        read_2 = seqs_2->seq.s;
+
+        // SEE: https://salmon.readthedocs.io/en/latest/library_type.html
+        if(stranded) {
+            if (inward && forward) {
+                read_2 = reverseAndComplement(read_2);
+            } else if (inward && reverse) {
+                read_1 = reverseAndComplement(read_1);
+            //} else if (matching && foward) {
+                // do nothing
+            } else if (matching && reverse) {
+                read_1 = reverseAndComplement(read_1);
+                read_2 = reverseAndComplement(read_2);
+            } else if (outward && forward) {
+                read_1 = reverseAndComplement(read_1);
+            } else if (outward && reverse) {
+                read_2 = reverseAndComplement(read_2);
+            }
+        } else {
+            // unstranded
+        }
+
+
+
+
+
+        // - Align first read
+        // --------------------------------------------------------
         paths = analyzeRead(bm, sg, read_1, L, eps, exsN, verbose);
         if(paths.first != '/') {
             for(std::pair<int, std::list<Mem> > path : paths.second) {
@@ -245,8 +308,6 @@ int main(int argc, char* argv[]) {
 
         // - Align second read
         // --------------------------------------------------------
-        head_2 = seqs_2->name.s;
-        read_2 = seqs_2->seq.s;
         paths = analyzeRead(bm, sg, read_2, L, eps, exsN, verbose);
         if(paths.first != '/') {
             for(std::pair<int, std::list<Mem> > path : paths.second) {
@@ -281,12 +342,12 @@ int main(int argc, char* argv[]) {
 
         if (count1 < count2) {
             while (count1 < count2) {
-                outFile_1 << "PLACEHOLDER" << " " << head_1 << " " << read_1 << "\n";
+                outFile_1 << "PLACEHOLDER" << " " << head_1 << "\n";
                 count1++;
             }
         } else if (count2 < count1) {
             while (count2 < count1) {
-                    outFile_2 << "PLACEHOLDER" << " " << head_2 << " " << read_2 << "\n";
+                    outFile_2 << "PLACEHOLDER" << " " << head_2 << "\n";
                     count2++;
             }
         }
