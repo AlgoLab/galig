@@ -25,7 +25,7 @@ void printHelp() {
     std::cout << "  -1, --sample 1 <path>" << std::endl;
     std::cout << "  -2, --sample 2 <path>" << std::endl;
     std::cout << "  -o, --output <path>: output file" << std::endl;
-    std::cout << "  -f, --ftl : fragment library type (default: ???)" << std::endl;
+    std::cout << "  -f, --ftl : fragment library type (default: ISF)" << std::endl;
     std::cout << "  -l, --L <int>: minimum lenght of MEMs used to build the alignments (default: 15)" << std::endl;
     std::cout << "  -e, --eps <int>: error rate, a value from 0 to 100 (default: 3)" << std::endl;
     std::cout << "  -h, --help: show this help message and exit" << std::endl;
@@ -89,12 +89,43 @@ std::pair<char, std::list<std::pair<int, std::list<Mem> > > > analyzeRead(Backwa
     return std::make_pair(strand, paths);
 }
 
+// Only aligns the provided read, NOT the reverse-complemented version
+std::pair<char, std::list<std::pair<int, std::list<Mem> > > > analyzeReadSimple(BackwardMEM& bm,
+                                                                                const SplicingGraph& sg,
+                                                                                const std::string& read,
+                                                                                const int& L,
+                                                                                const int& eps,
+                                                                                const int& exsN,
+                                                                                const bool& verbose,
+                                                                                const char& strandIn) {
+    // Original read
+    std::list<Mem> mems = bm.getMEMs(read,L);
+    if(verbose) {
+        for(const Mem& m : mems) {
+            std::cout << m.toStr() << " ";
+        }
+        std::cout << std::endl;
+    }
+    std::list<std::pair<int, std::list<Mem> > > paths; // Path: [(weight, [mems])]
+    if(!mems.empty()) {
+        MemsGraph mg (read, L, eps, exsN, verbose);
+        mg.build(sg, mems);
+        paths = mg.visit(sg);
+    }
+
+    bool empty = paths.empty();
+    char strand = '/';
+    if(!empty)
+        strand = strandIn;
+    return std::make_pair(strand, paths);
+}
+
 int main(int argc, char* argv[]) {
 
     std::string genomic;
     std::string annotation;
     std::string rna_seq_1, rna_seq_2;
-    std::string ftl;      //fragment type library
+    std::string ftl="ISF";      //fragment type library
     int L = 0;
     int eps = -1;
     std::string out, out_1, out_2;
@@ -241,6 +272,7 @@ int main(int argc, char* argv[]) {
     seqs_2 = kseq_init(fastain_2);
 
     int count1, count2;
+    char strand1, strand2;
 
     // - Main loop: one iteration, one read
     // ---------------------------------------
@@ -255,33 +287,43 @@ int main(int argc, char* argv[]) {
         head_2 = seqs_2->name.s;
         read_2 = seqs_2->seq.s;
 
+        strand1 = '+';
+        strand2 = '+';
+
         // SEE: https://salmon.readthedocs.io/en/latest/library_type.html
-        if(stranded) {
+        if (stranded) {
             if (inward && forward) {
                 read_2 = reverseAndComplement(read_2);
+                strand2 = '-';
             } else if (inward && reverse) {
                 read_1 = reverseAndComplement(read_1);
+                strand1 = '-';
             //} else if (matching && foward) {
                 // do nothing
             } else if (matching && reverse) {
                 read_1 = reverseAndComplement(read_1);
+                strand1 = '-';
                 read_2 = reverseAndComplement(read_2);
+                strand2 = '-';
             } else if (outward && forward) {
                 read_1 = reverseAndComplement(read_1);
+                strand1 = '-';
             } else if (outward && reverse) {
                 read_2 = reverseAndComplement(read_2);
+                strand2 = '-';
             }
-        } else {
-            // unstranded
+
+            // Only the read has to be aligned (as-is, see the previous if/else statements)
+            paths = analyzeReadSimple(bm, sg, read_1, L, eps, exsN, verbose, strand1);
+
+        } else if (unstranded) {
+            // Both the read and its reverse-complement have to be aligned
+            // in order to determine the best one
+            paths = analyzeRead(bm, sg, read_1, L, eps, exsN, verbose);
         }
-
-
-
-
 
         // - Align first read
         // --------------------------------------------------------
-        paths = analyzeRead(bm, sg, read_1, L, eps, exsN, verbose);
         if(paths.first != '/') {
             for(std::pair<int, std::list<Mem> > path : paths.second) {
                 count1++;
@@ -291,10 +333,18 @@ int main(int argc, char* argv[]) {
                     for(std::list<Mem>::iterator m=path.second.begin(); m!=path.second.end(); ++m) {
                         outFile_1 << m->toStr() << " ";
                     }
-                    if(paths.first == '+')
+
+                    if (unstranded) {
+                        if(paths.first == '+')
+                            outFile_1 << read_1;
+                        else
+                            outFile_1 << reverseAndComplement(read_1);
+                    } else {
+                        // In case of a stranded library, the eventual reverse-and-complement
+                        // has already been done, doesn't have to be done again
                         outFile_1 << read_1;
-                    else
-                        outFile_1 << reverseAndComplement(read_1);
+                    }
+
                     outFile_1 << "\n";
                 }
             }
@@ -306,9 +356,38 @@ int main(int argc, char* argv[]) {
             std::cout << "Processed " << i << " genes." << std::endl;
         ++i;
 
+        if (unstranded) {
+            if (inward) {
+                if (paths.first == '+') {
+                    read_2 = reverseAndComplement(read_2);
+                    strand2 = '-';
+                } //else if (paths.first == '-') {
+                //} do nothing
+            } else if (matching) {
+                //if(paths.first == '+') {
+                // do nothing
+                //} else
+                if (paths.first == '-') {
+                    read_2 = reverseAndComplement(read_2);
+                    strand2 = '-';
+                }
+            } else if (outward) {
+                if (paths.first == '+') {
+                    read_2 = reverseAndComplement(read_2);
+                    strand2 = '-';
+                } //else if (paths.first == '-') {
+                  //do nothing
+                  //}
+            }
+        }
+
         // - Align second read
         // --------------------------------------------------------
-        paths = analyzeRead(bm, sg, read_2, L, eps, exsN, verbose);
+
+        // NOTE: in both stranded and unstranded cases the strand orientation of the second
+        // read is already known
+        paths = analyzeReadSimple(bm, sg, read_2, L, eps, exsN, verbose, strand2);
+
         if(paths.first != '/') {
             for(std::pair<int, std::list<Mem> > path : paths.second) {
                 count2++;
@@ -318,11 +397,11 @@ int main(int argc, char* argv[]) {
                     for(std::list<Mem>::iterator m=path.second.begin(); m!=path.second.end(); ++m) {
                         outFile_2 << m->toStr() << " ";
                     }
-                    if(paths.first == '+')
-                        outFile_2 << read_2;
-                    else
-                        outFile_2 << reverseAndComplement(read_2);
-                    outFile_2 << "\n";
+
+                    // Since the eventual reverse-and-complement has already been done in
+                    // both stranded and unstranded cases, there is no need to do it again
+                    outFile_2 << read_2 << "\n";
+
                 } else {
                     int err = path.first;
                     outFile_2 << paths.first << " " << head_2 << " " << err << " ";
