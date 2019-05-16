@@ -5,7 +5,6 @@ import argparse
 import time
 import subprocess
 import glob
-import re
 
 import gzip
 from Bio import SeqIO
@@ -337,6 +336,7 @@ def splitSalmon(args, genes, tr_gene_dict):
 Function to run ASGAL on the considered genes.
 '''
 def runASGAL(args, genes, chr_genes_dict):
+    samples_paired = []
     if args.multiMode:
         refs = os.path.join(args.outputPath, refsFold)
         annos = os.path.join(args.outputPath, annosFold)
@@ -353,22 +353,20 @@ def runASGAL(args, genes, chr_genes_dict):
         anno = args.annoPath
         samples = [args.sample1Path]
 
-        # paired-end read
-        if args.sample2Path != '-' and not args.multiMode:
-            samples += [args.sample2Path] # samples has length 2 [read1.fa, read2.fa]
+        if args.sample2Path != '-':
+            samples_paired = [args.sample2Path]
 
         outFold = os.path.join(args.outputPath)
         out = os.path.join(outFold, "{}-{}".format(os.path.basename(samples[0]).split('.')[0], gene))
         logFold = os.path.join(args.outputPath)
         log = os.path.join(logFold, "{}-{}.log".format(os.path.basename(samples[0]).split('.')[0], gene))
 
-    eprint("Running ASGAL on {} {}...".format(1 if not args.multiMode else len(samples), 'gene' if not args.multiMode else 'genes'))
+    eprint("Running ASGAL on {} {}...".format(len(samples), 'gene' if len(samples) == 1 else 'genes'))
     BAR = [' ' for i in range(0,bar_length)]
     print_bar(BAR, 0, len(samples))
     i = 0
 
-    if args.multiMode or len(samples) == 1:
-        # how asgal previously worked ...
+    if samples_paired == []:    # Single-end sample
         for sample in samples:
             if args.multiMode:
                 gene = os.path.basename(sample)[:-3]
@@ -381,38 +379,98 @@ def runASGAL(args, genes, chr_genes_dict):
 
             allevents_flag = "--allevents" if args.allevents else ""
 
-            asgal_CMDs = {'align': ["{}/bin/SpliceAwareAligner".format(WP),
+
+        asgal_CMDs = {'align': ["{}/bin/SpliceAwareAligner".format(WP),
+                                "-g", ref,
+                                "-a", anno,
+                                "-s", sample,
+                                "-l", args.l,
+                                "-e", args.e,
+                                "-o", "{}.mem".format(out)],
+                      'sam' : ["python3",
+                               "{}/scripts/formatSAM.py".format(WP),
+                               "-m", "{}.mem".format(out),
+                               "-g", ref,
+                               "-a", anno,
+                               "-e", args.e,
+                               "-o", "{}.sam".format(out)],
+                      'events' : ["python3",
+                                  "{}/scripts/detectEvents.py".format(WP),
+                                  "-g", ref,
+                                  "-a", anno,
+                                  "-m", "{}.mem".format(out),
+                                  "-o", "{}.events.csv".format(out),
+                                  "-e", args.e,
+                                  "-w", args.w]}
+        if args.allevents:
+            asgal_CMDs['events'].append("--allevents")
+
+        subprocess.run(asgal_CMDs['align'],
+                       stdout=open(log, 'w'),
+                       stderr=open(log, 'w'))
+        subprocess.run(asgal_CMDs['sam'],
+                       stdout=open(log, 'w'),
+                       stderr=open(log, 'w'))
+        subprocess.run(asgal_CMDs['events'],
+                       stdout=open(log, 'w'),
+                       stderr=open(log, 'w'))
+        i+=1
+        index = int(i*bar_length/len(samples))
+        if i == len(genes)-1:
+            BAR = ['#' for i in range(0,bar_length)]
+        else:
+            BAR = ['#' for i in range(0, index+1)] + [' ' for i in range(index+1,bar_length)]
+        print_bar(BAR, i+1, len(samples))
+
+    else:   # Paired-end sample
+        for sample1,sample2 in zip(samples,samples_paired):
+            if args.multiMode:
+                gene = os.path.basename(sample)[:-3]
+                anno = os.path.join(annos, "{}.gtf".format(gene))
+                gtf = openGTF(anno, verbose=False)
+                chrom = list(gtf.features_of_type('gene'))[0].seqid
+                ref = os.path.join(refs, "{}.fa".format(chrom))
+                out = os.path.join(outFold, "{}".format(gene))
+                log = os.path.join(logFold, "{}".format(gene))
+
+            allevents_flag = "--allevents" if args.allevents else ""
+
+            asgal_CMDs_paired = {'align': ["{}/bin/SpliceAwareAlignerPaired".format(WP),
                                     "-g", ref,
                                     "-a", anno,
-                                    "-s", sample,
+                                    "-1", sample1,
+                                    "-2", sample2,
+                                    "-f", "ISF",
                                     "-l", args.l,
                                     "-e", args.e,
-                                    "-o", "{}.mem".format(out)],
-                          'sam' : ["python3",
-                                   "{}/scripts/formatSAM.py".format(WP),
-                                   "-m", "{}.mem".format(out),
+                                    "-o", "{}".format(out)],
+                                'sam' : ["python3",
+                                   "{}/scripts/formatSAMPaired.py".format(WP),
+                                   "-1", "{}-1.mem".format(out),
+                                   "-2", "{}-2.mem".format(out),
                                    "-g", ref,
                                    "-a", anno,
                                    "-e", args.e,
                                    "-o", "{}.sam".format(out)],
-                          'events' : ["python3",
-                                      "{}/scripts/detectEvents.py".format(WP),
-                                      "-g", ref,
-                                      "-a", anno,
-                                      "-m", "{}.mem".format(out),
-                                      "-o", "{}.events.csv".format(out),
-                                      "-e", args.e,
-                                      "-w", args.w]}
+                                'events' : ["python3",
+                                   "{}/scripts/detectEventsPaired.py".format(WP),
+                                   "-g", ref,
+                                   "-a", anno,
+                                   "-1", "{}-1.mem".format(out),
+                                   "-2", "{}-2.mem".format(out),
+                                   "-o", "{}.events.csv".format(out),
+                                   "-e", args.e,
+                                   "-w", args.w]}
             if args.allevents:
-                asgal_CMDs['events'].append("--allevents")
+                asgal_CMDs_paired['events'].append("--allevents")
 
-            subprocess.run(asgal_CMDs['align'],
+            subprocess.run(asgal_CMDs_paired['align'],
                            stdout=open(log, 'w'),
                            stderr=open(log, 'w'))
-            subprocess.run(asgal_CMDs['sam'],
+            subprocess.run(asgal_CMDs_paired['sam'],
                            stdout=open(log, 'w'),
                            stderr=open(log, 'w'))
-            subprocess.run(asgal_CMDs['events'],
+            subprocess.run(asgal_CMDs_paired['events'],
                            stdout=open(log, 'w'),
                            stderr=open(log, 'w'))
             i+=1
@@ -422,102 +480,10 @@ def runASGAL(args, genes, chr_genes_dict):
             else:
                 BAR = ['#' for i in range(0, index+1)] + [' ' for i in range(index+1,bar_length)]
             print_bar(BAR, i+1, len(samples))
-    else:
-        # paired-end read -- no multimode and len(samples) == 2
-
-        # idmp = inner distance (between) mate pairs
-        idmp = 100
-
-        prep_CMDs = {'generate': ["STAR",
-                                  "--runMode", "genomeGenerate",
-                                  "--genomeDir", "./",
-                                  "--genomeFastaFiles", ref,
-                                  "--sjdbGTFfile", anno
-                                 ],
-                     'align': ["STAR",
-                               "--genomeDir", "./",
-                               "--readFilesIn", samples[0], samples[1],
-                               "--runThreadN", "8",
-                               "--outSAMtype BAM Unsorted"
-                               ],
-                     'stats': ["samtools stats Aligned.out.bam"],
-                     'grep': ["grep", "insert size average", "output.txt"]
-                    }
-
-        subprocess.run(prep_CMDs['generate'],
-                       stdout=open(log, 'w'),
-                       stderr=open(log, 'w'))
-        subprocess.run(prep_CMDs['align'],
-                       stdout=open(log, 'w'),
-                       stderr=open(log, 'w'))
-        print(subprocess.list2cmdline(prep_CMDs['grep']))
-        subprocess.run(prep_CMDs['stats'],
-                       stdout=open("output.txt", "w"),
-                       stderr=open(log, 'w'))
-        subprocess.run(prep_CMDs['grep'],
-                       stdout=open("idmp.txt", "w"),
-                       stderr=open(log, 'w'))
-
-        f = open("idmp.txt", "r")
-        line = f.readline()
-        f.close()
-
-        result = re.search("([0-9]+).+([0-9]+)",line)
-        idmp = int(float(result.group(0)))
-        print("idmp:",idmp)
-
-        # same as if branch, the only difference is that a new SpliceAwareAlignerPaired, which takes
-        # in 2 files containing reads, has to be created. Also DetectEvents had to support idmp.
-        asgal_CMDs_paired = {'align': ["{}/bin/SpliceAwareAlignerPaired".format(WP),
-                                    "-g", ref,
-                                    "-a", anno,
-                                    "-1", samples[0],
-                                    "-2", samples[1],
-                                    "-l", args.l,
-                                    "-e", args.e,
-                                    "-o", "{}-paired.mem".format(out)],
-                       'sam' : ["python3",
-                                   "{}/scripts/formatSAM.py".format(WP),
-                                   "-m", "{}.mem".format(out),
-                                   "-g", ref,
-                                   "-a", anno,
-                                   "-e", args.e,
-                                   "-o", "{}.sam".format(out)],
-                       'events' : ["python3",
-                                      "{}/scripts/detectEventsPaired.py".format(WP),
-                                      "-g", ref,
-                                      "-a", anno,
-                                      "-m", "{}.mem".format(out),
-                                      "-o", "{}.events.csv".format(out),
-                                      "-i", idmp, # idmp has to be used to make event dection more accurate
-                                      "-e", args.e,
-                                      "-w", args.w]}
-        if args.allevents:
-            asgal_CMDs_paired['events'].append("--allevents")
-
-        subprocess.run(asgal_CMDs_paired['align'],
-                       stdout=open(log, 'w'),
-                       stderr=open(log, 'w'))
-        subprocess.run(asgal_CMDs['sam'],
-                       stdout=open(log, 'w'),
-                       stderr=open(log, 'w'))
-        subprocess.run(asgal_CMDs['events'],
-                       stdout=open(log, 'w'),
-                       stderr=open(log, 'w'))
-
-        i+=1
-        index = int(i*bar_length/len(samples))
-        if i == len(genes)-1:
-            BAR = ['#' for i in range(0,bar_length)]
-        else:
-            BAR = ['#' for i in range(0, index+1)] + [' ' for i in range(index+1,bar_length)]
-        print_bar(BAR, i+1, len(samples))
-
-        # could probably be refactored ... the for loop in the if branch does not
-        # work properly for paired-end reads
 
     print("", file=sys.stderr)
     eprint("Done.")
+
 # INPUTS CHECK ######################################################################################################
 '''
 Function to check all inputs (if files exist, file extensions...).
@@ -588,8 +554,8 @@ def checkInputs(args):
         eprint_error("\n w value must be an integer. Halting...\n")
 
     # Other checks
-    if args.sample2Path != '-' and args.transPath == '-' and args.multiMode:
-      eprint_error("\nIf you pass two samples, you have to pass also the transcripts of the genes. Halting...\n")
+    if args.sample2Path != '-' and args.transPath == '-':
+        eprint_error("\nIf you pass two samples, you have to pass also the transcripts of the genes. Halting...\n")
     if args.multiMode and args.transPath == '-':
         eprint_error("\nIn multi mode, you have to pass the transcripts of the genes. Halting...\n")
 
@@ -605,9 +571,9 @@ def main():
     parser.add_argument('-g', '--genome', dest='refPath', help='Path to genome', required=True)
     parser.add_argument('-a', '--annotation', dest='annoPath', help='Path to annotation', required=True)
     parser.add_argument('-s', '--sample', dest='sample1Path', help='Path to sample (1)', required=True)
-    parser.add_argument('-s2', '--sample2', dest='sample2Path', help='Path to sample (2)', required=False, default='-')
     parser.add_argument('-o', '--output', dest='outputPath', help='Path to output folder', required=True)
 
+    parser.add_argument('-s2', '--sample2', dest='sample2Path', help='Path to sample (2)', required=False, default='-')
     parser.add_argument('-t', '--transcripts', dest='transPath', help='Path to transcripts', required=False, default='-')
 
     parser.add_argument('-l', '--L', dest='l', help='MEMs length', required=False, default="15")
@@ -617,9 +583,6 @@ def main():
     parser.add_argument('--multi', dest='multiMode', help='Use this to run ASGAL in genome-wide mode', required=False, action='store_true')
 
     args = parser.parse_args()
-
-    #if len(args.sample1Path) == 1:
-    #    args.sample1Path = args.sample1Path[0]
 
     checkInputs(args)
 
