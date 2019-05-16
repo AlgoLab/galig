@@ -632,6 +632,10 @@ def main(memsPath1, memsPath2, refPath, gtfPath, errRate, outPath):
             if not placeholder2:
                 count_unmapped_reads2 += 1
 
+        # fix ref in case of unmapped read
+        ref1 = "*" if not mapped1 else ref
+        ref2 = "*" if not mapped2 else ref
+
         #Same alignment is not output twice
         if (readID1 != lastID1 or start1 != lastStart1 or cigar1 != lastCigar1) and not placeholder1:
             lastMapped1 = mapped1
@@ -639,7 +643,7 @@ def main(memsPath1, memsPath2, refPath, gtfPath, errRate, outPath):
             lastStart1 = start1
             lastCigar1 = cigar1
             lastStrand1 = strand1
-            out.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\tNM:i:{}\n".format(readID1, flag1, ref, start1, 255, cigar1, rnext1, pnext1, tlen1, read1, "*", err1))
+            out.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\tNM:i:{}\n".format(readID1, flag1, ref1, start1, 255, cigar1, rnext1, pnext1, tlen1, read1, "*", err1))
         #Same alignment is not output twice
         if (readID2 != lastID2 or start2 != lastStart2 or cigar2 != lastCigar2) and not placeholder2:
             lastMapped2 = mapped2
@@ -647,7 +651,7 @@ def main(memsPath1, memsPath2, refPath, gtfPath, errRate, outPath):
             lastStart2 = start2
             lastCigar2 = cigar2
             lastStrand2 = strand2
-            out.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\tNM:i:{}\n".format(readID2, flag2, ref, start2, 255, cigar2, rnext2, pnext2, tlen2, read2, "*", err2))
+            out.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\tNM:i:{}\n".format(readID2, flag2, ref2, start2, 255, cigar2, rnext2, pnext2, tlen2, read2, "*", err2))
 
         line1 = file1.readline()
         line2 = file2.readline()
@@ -663,8 +667,8 @@ def main(memsPath1, memsPath2, refPath, gtfPath, errRate, outPath):
     out_stats.write("Count unmapped reads1: " + str(count_unmapped_reads1) + "\n")
     out_stats.write("Count unmapped reads2: " + str(count_unmapped_reads2) + "\n")
     out_stats.write("Count mapped pairs: " + str(count_mapped_pairs) + "\n")
-    out_stats.write("Count primary allignments: " + str(count_primary_allignments) + "\n")
-    out_stats.write("Count secondary allignments: " + str(count_secondary_allignments) + "\n")
+    out_stats.write("Count primary alignments: " + str(count_primary_allignments) + "\n")
+    out_stats.write("Count secondary alignments: " + str(count_secondary_allignments) + "\n")
     out_stats.write("idmp: " + str(idmp) + "\n")
     out_stats.write("tidmp: " + str(tIdmp) + "\n")
     out_stats.write("average tlen: " + str(sum(pos_tlen)/count_primary_allignments) + "\n")
