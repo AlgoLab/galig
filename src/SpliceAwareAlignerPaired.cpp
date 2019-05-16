@@ -25,7 +25,7 @@ void printHelp() {
     std::cout << "  -1, --sample 1 <path>" << std::endl;
     std::cout << "  -2, --sample 2 <path>" << std::endl;
     std::cout << "  -o, --output <path>: output file" << std::endl;
-    std::cout << "  -f, --ftl : fragment library type (default: ISF)" << std::endl;
+    std::cout << "  -f, --flt : fragment library type (default: ISF)" << std::endl;
     std::cout << "  -l, --L <int>: minimum lenght of MEMs used to build the alignments (default: 15)" << std::endl;
     std::cout << "  -e, --eps <int>: error rate, a value from 0 to 100 (default: 3)" << std::endl;
     std::cout << "  -h, --help: show this help message and exit" << std::endl;
@@ -125,7 +125,7 @@ int main(int argc, char* argv[]) {
     std::string genomic;
     std::string annotation;
     std::string rna_seq_1, rna_seq_2;
-    std::string ftl="ISF";      //fragment type library
+    std::string flt="ISF";      //fragment library type
     int L = 0;
     int eps = -1;
     std::string out, out_1, out_2;
@@ -144,7 +144,7 @@ int main(int argc, char* argv[]) {
                 {"L",  required_argument, 0, 'l'},
                 {"erate",    required_argument, 0, 'e'},
                 {"output", required_argument, 0, 'o'},
-                {"ftl", required_argument, 0, 'f'},
+                {"flt", required_argument, 0, 'f'},
                 {"help", no_argument, 0, 'h'},
                 //{"verbose", no_argument, 0, 'v'},
                 {0, 0, 0, 0}
@@ -177,7 +177,7 @@ int main(int argc, char* argv[]) {
             eps = std::stoi(optarg);
             break;
         case 'f':
-            ftl = optarg;
+            flt = optarg;
             break;
         case 'o':
             out = std::string(optarg);
@@ -204,7 +204,7 @@ int main(int argc, char* argv[]) {
     bool inward=false, outward=false, matching=false;
     bool stranded=false, unstranded=false;
     bool forward=false, reverse=false;
-    for(char &c : ftl) {
+    for(char &c : flt) {
         switch(c) {
             case 'I':
                 inward = true;
