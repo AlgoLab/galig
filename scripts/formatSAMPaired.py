@@ -497,12 +497,13 @@ def main(memsPath1, memsPath2, refPath, gtfPath, errRate, outPath):
     transcripts = extractFromGTF(gtf)
 
     # Open output sam file
-    out = open(outPath, "w")
+    out = open(outPath+".sam", "w")
     out.write("@HD\tVN:1.4\n")
     out.write("@SQ\tSN:{}\tLN:{}\n".format(ref, refLen))
 
     # Open output stats file
     out_stats = open(outPath+".alignsinfo.txt", "w")
+    print(out_stats);
 
     lastMapped1 = False
     lastID1 = ""
@@ -659,8 +660,10 @@ def main(memsPath1, memsPath2, refPath, gtfPath, errRate, outPath):
     # all mems have been read
 
     # find the average
-    idmp /= count_mapped_pairs
-    tIdmp /= count_mapped_pairs
+    # also check division by 0
+    idmp = idmp/count_mapped_pairs if count_mapped_pairs else 0
+    tIdmp = tIdmp/count_mapped_pairs if count_mapped_pairs else 0
+    avg_tlen = sum(pos_tlen)/count_primary_allignments if count_primary_allignments else 0
 
     out_stats.write("Count mapped1: " + str(count_mapped1) + "/" + str(count_reads1) + "\n")
     out_stats.write("Count mapped2: " + str(count_mapped2) + "/" + str(count_reads2) + "\n")
@@ -671,7 +674,7 @@ def main(memsPath1, memsPath2, refPath, gtfPath, errRate, outPath):
     out_stats.write("Count secondary alignments: " + str(count_secondary_allignments) + "\n")
     out_stats.write("idmp: " + str(idmp) + "\n")
     out_stats.write("tidmp: " + str(tIdmp) + "\n")
-    out_stats.write("average tlen: " + str(sum(pos_tlen)/count_primary_allignments) + "\n")
+    out_stats.write("average tlen: " + str(avg_tlen) + "\n")
 
     out_stats.close()
     out.close()

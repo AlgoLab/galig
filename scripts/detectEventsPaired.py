@@ -2,7 +2,6 @@
 
 import sys, os, itertools, operator
 import argparse
-
 from Bio import SeqIO
 import gffutils
 
@@ -296,12 +295,8 @@ def getPrecIntrons(Introns, I):
     return list(Prec)
 
 # Extracts events from introns
-def checkNewIntrons(newIntrons, allIntrons, strand, transcripts, idmp):
+def checkNewIntrons(newIntrons, allIntrons, strand, transcripts):
     # TODO: use idmp to make more accurate guesses
-
-    print("new introns: ",newIntrons)
-    print("all introns: ",allIntrons)
-    print("transcripts: ",transcripts)
 
     allIntrons = list(allIntrons)
     allIntrons.sort()
@@ -463,69 +458,7 @@ def mergeIntrons(introns1, introns2):
                 introns[(p1,p2)] += w
     return introns
 
-def getEnd(mem, bv, exPos):
-    exonN = bv.rank(mem[0])
-
-    # get starting position (on reference)
-    exonStartingPos = exPos[exonN-1][0]
-
-    # get offset from bitvector
-    exonStartingPos_onT = bv.select(exonN)
-    offset = mem[0] - exonStartingPos_onT + 1;
-
-    # find the end
-    # NOTE: offset is the same on reference and bitvector
-    end = exonStartingPos + offset + mem[2]
-
-    return end
-
-# Get transcript-based idmp
-def getTranscriptIdmp(transcripts, memsPath1, memsPath2, bv, exPos):
-    tIdmp = 0
-    mem1lines = open(memsPath1, 'r').readlines()
-    mem2lines = open(memsPath2, 'r').readlines()
-
-    for line1, line2 in zip(mem1lines,mem2lines):
-        placeholder1, mapped1, alStrand1, readID1, err1, mems1, read1 = readLine(line1)
-        placeholder2, mapped2, alStrand2, readID2, err2, mems2, read2 = readLine(line2)
-
-        # get last mem from read1 and first mem from read2
-        m1 = mems1[-1]
-        m2 = mems2[0]
-
-        # find exon for m1 and m2
-        id1 = bv.rank(m1[0])
-        id2 = bv.rank(m2[0])
-
-        if id1 == id2: # m1 and m2 are on same exon
-            start2 = m2[0]
-            start1 = m1[0]
-            len1 = m1[2]
-            distance = start2 - (start1 + len1) - 1
-            tIdmp += distance
-        else:
-            # for now only consecutive exons
-            # TODO: add non-consecutive exons
-            consecutiveExons = False
-            for trID,exons in transcripts.items():
-                for exon1, exon2 in pairwise(exons):
-                    if id1 == exon1 and id2 == exon2:
-                        consecutiveExons = True
-                        nextExon1startingPos = bv.select(id1+1)
-                        start1 = m1[0]
-                        len1 = m1[2]
-                        start2 = m2[0]
-                        exon2startingPos = bv.select(id2)
-                        distance = nextExon1startingPos - (start1 + len1) - 1 + (start2 - exon2startingPos) - 1
-                        tIdmp += distance
-                        break
-
-            if not consecutiveExons:
-                pass
-
-    return tIdmp
-
-def main(memsPath1, memsPath2, refPath, gtfPath, errRate, tresh, outPath, allevents, idmp):
+def main(memsPath1, memsPath2, refPath, gtfPath, errRate, tresh, outPath, allevents):
     #TODO: add this as cmd line parameter
     onlyPrimary = False
 
@@ -560,7 +493,7 @@ def main(memsPath1, memsPath2, refPath, gtfPath, errRate, tresh, outPath, alleve
         allIntronsKey = newIntrons.keys()
 
     # Extracting events from introns
-    events = checkNewIntrons(newIntrons, allIntronsKey, strand, transcripts, idmp)
+    events = checkNewIntrons(newIntrons, allIntronsKey, strand, transcripts)
     printEvents(events, outPath)
 
 if __name__ == '__main__':
@@ -570,7 +503,7 @@ if __name__ == '__main__':
     parser.add_argument('-1', '--mems1', required=True, help='input file containing the alignments to the splicing graph')
     parser.add_argument('-2', '--mems2', required=True, help='input file containing the alignments to the splicing graph')
     parser.add_argument('-o', '--output', required=True, help='SAM output file')
-    parser.add_argument('-i', '--idmp', required=True, help='inner distance between mate-pairs')
+    #parser.add_argument('-i', '--idmp', required=True, help='inner distance between mate-pairs')
     parser.add_argument('-e', '--erate', required=False, default=3, type=int, help='error rate of alignments (from 0 to 100, default: 3)')
     parser.add_argument('-w', '--support', required=False, default=3, type=int, help='minimum number of reads needed to confirm an event (default: 3)')
     parser.add_argument('--allevents', required=False, action='store_true', help='output all events, not only the novel ones')
@@ -585,6 +518,6 @@ if __name__ == '__main__':
     tresh = args.support
     outPath = args.output
     allevents = args.allevents
-    idmp = args.idmp
+    #idmp = args.idmp
 
-    main(memsPath1, memsPath2, refPath, gtfPath, errRate, tresh, outPath, allevents, idmp)
+    main(memsPath1, memsPath2, refPath, gtfPath, errRate, tresh, outPath, allevents)
