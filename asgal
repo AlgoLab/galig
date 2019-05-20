@@ -352,21 +352,30 @@ def runASGAL(args, genes, chr_genes_dict):
         ref = args.refPath
         anno = args.annoPath
         samples = [args.sample1Path]
-
-        if args.sample2Path != '-':
-            samples_paired = [args.sample2Path]
-
         outFold = os.path.join(args.outputPath)
-        out = os.path.join(outFold, "{}-{}".format(os.path.basename(samples[0]).split('.')[0], gene))
+        if args.pairedEnd:
+            # NOTE: [:-2] removes -1 and -2 from read names, these will be added later where necessary
+            out = os.path.join(outFold, "{}-{}".format((os.path.basename(samples[0]).split('.')[0])[:-2], gene))
+        else:
+            out = os.path.join(outFold, "{}-{}".format(os.path.basename(samples[0]).split('.')[0], gene))
         logFold = os.path.join(args.outputPath)
-        log = os.path.join(logFold, "{}-{}.log".format(os.path.basename(samples[0]).split('.')[0], gene))
+        if args.pairedEnd:
+            # NOTE: [:-2] removes -1 and -2 from read names, these will be added later where necessary
+            log = os.path.join(outFold, "{}-{}.log".format((os.path.basename(samples[0]).split('.')[0])[:-2], gene))
+        else:
+            log = os.path.join(outFold, "{}-{}.log".format(os.path.basename(samples[0]).split('.')[0], gene))
 
-    eprint("Running ASGAL on {} {}...".format(len(samples), 'gene' if len(samples) == 1 else 'genes'))
-    BAR = [' ' for i in range(0,bar_length)]
-    print_bar(BAR, 0, len(samples))
-    i = 0
 
-    if samples_paired == []:    # Single-end sample
+    if args.pairedEnd:
+        samples_paired = [args.sample2Path]
+
+    if not args.pairedEnd:    # Single-end sample
+
+        eprint("Running ASGAL on {} {}...".format(len(samples), 'gene' if len(samples) == 1 else 'genes'))
+        BAR = [' ' for i in range(0,bar_length)]
+        print_bar(BAR, 0, len(samples))
+        i = 0
+
         for sample in samples:
             if args.multiMode:
                 gene = os.path.basename(sample)[:-3]
@@ -380,49 +389,58 @@ def runASGAL(args, genes, chr_genes_dict):
             allevents_flag = "--allevents" if args.allevents else ""
 
 
-        asgal_CMDs = {'align': ["{}/bin/SpliceAwareAligner".format(WP),
-                                "-g", ref,
-                                "-a", anno,
-                                "-s", sample,
-                                "-l", args.l,
-                                "-e", args.e,
-                                "-o", "{}.mem".format(out)],
-                      'sam' : ["python3",
-                               "{}/scripts/formatSAM.py".format(WP),
-                               "-m", "{}.mem".format(out),
-                               "-g", ref,
-                               "-a", anno,
-                               "-e", args.e,
-                               "-o", "{}.sam".format(out)],
-                      'events' : ["python3",
-                                  "{}/scripts/detectEvents.py".format(WP),
-                                  "-g", ref,
-                                  "-a", anno,
-                                  "-m", "{}.mem".format(out),
-                                  "-o", "{}.events.csv".format(out),
-                                  "-e", args.e,
-                                  "-w", args.w]}
-        if args.allevents:
-            asgal_CMDs['events'].append("--allevents")
+            asgal_CMDs = {'align': ["{}/bin/SpliceAwareAligner".format(WP),
+                                    "-g", ref,
+                                    "-a", anno,
+                                    "-s", sample,
+                                    "-l", args.l,
+                                    "-e", args.e,
+                                    "-o", "{}.mem".format(out)],
+                          'sam' : ["python3",
+                                   "{}/scripts/formatSAM.py".format(WP),
+                                   "-m", "{}.mem".format(out),
+                                   "-g", ref,
+                                   "-a", anno,
+                                   "-e", args.e,
+                                   "-o", "{}.sam".format(out)],
+                          'events' : ["python3",
+                                      "{}/scripts/detectEvents.py".format(WP),
+                                      "-g", ref,
+                                      "-a", anno,
+                                      "-m", "{}.mem".format(out),
+                                      "-o", "{}.events.csv".format(out),
+                                      "-e", args.e,
+                                      "-w", args.w]}
+            if args.allevents:
+                asgal_CMDs['events'].append("--allevents")
 
-        subprocess.run(asgal_CMDs['align'],
-                       stdout=open(log, 'w'),
-                       stderr=open(log, 'w'))
-        subprocess.run(asgal_CMDs['sam'],
-                       stdout=open(log, 'w'),
-                       stderr=open(log, 'w'))
-        subprocess.run(asgal_CMDs['events'],
-                       stdout=open(log, 'w'),
-                       stderr=open(log, 'w'))
-        i+=1
-        index = int(i*bar_length/len(samples))
-        if i == len(genes)-1:
-            BAR = ['#' for i in range(0,bar_length)]
-        else:
-            BAR = ['#' for i in range(0, index+1)] + [' ' for i in range(index+1,bar_length)]
-        print_bar(BAR, i+1, len(samples))
+            subprocess.run(asgal_CMDs['align'],
+                           stdout=open(log, 'w'),
+                           stderr=open(log, 'w'))
+            subprocess.run(asgal_CMDs['sam'],
+                           stdout=open(log, 'w'),
+                           stderr=open(log, 'w'))
+            subprocess.run(asgal_CMDs['events'],
+                           stdout=open(log, 'w'),
+                           stderr=open(log, 'w'))
+            i+=1
+            index = int(i*bar_length/len(samples))
+            if i == len(genes)-1:
+                BAR = ['#' for i in range(0,bar_length)]
+            else:
+                BAR = ['#' for i in range(0, index+1)] + [' ' for i in range(index+1,bar_length)]
+                print_bar(BAR, i+1, len(samples))
 
     else:   # Paired-end sample
+
+        flt = args.flt
+
+        log = os.path.join(logFold, "{}-{}.log".format((os.path.basename(samples[0]).split('.')[0])[:-2], gene))
+        eprint("Running ASGAL on {} {}...".format(len(samples), 'read-pair' if len(samples) == 1 else 'read-pairs'))
+        BAR = [' ' for i in range(0,bar_length)]
+        print_bar(BAR, 0, len(samples))
+        i = 0
+
         for sample1,sample2 in zip(samples,samples_paired):
             if args.multiMode:
                 gene = os.path.basename(sample)[:-3]
@@ -440,7 +458,7 @@ def runASGAL(args, genes, chr_genes_dict):
                                     "-a", anno,
                                     "-1", sample1,
                                     "-2", sample2,
-                                    "-f", "ISF",
+                                    "-f", flt,
                                     "-l", args.l,
                                     "-e", args.e,
                                     "-o", "{}".format(out)],
@@ -451,7 +469,7 @@ def runASGAL(args, genes, chr_genes_dict):
                                    "-g", ref,
                                    "-a", anno,
                                    "-e", args.e,
-                                   "-o", "{}.sam".format(out)],
+                                   "-o", "{}".format(out)],
                                 'events' : ["python3",
                                    "{}/scripts/detectEventsPaired.py".format(WP),
                                    "-g", ref,
@@ -554,7 +572,7 @@ def checkInputs(args):
         eprint_error("\n w value must be an integer. Halting...\n")
 
     # Other checks
-    if args.sample2Path != '-' and args.transPath == '-':
+    if args.sample2Path != '-' and args.transPath == '-' and not args.pairedEnd:
         eprint_error("\nIf you pass two samples, you have to pass also the transcripts of the genes. Halting...\n")
     if args.multiMode and args.transPath == '-':
         eprint_error("\nIn multi mode, you have to pass the transcripts of the genes. Halting...\n")
@@ -581,6 +599,9 @@ def main():
     parser.add_argument('-w', '--support', dest='w', help='Minimum intron coverage', required=False, default="3")
     parser.add_argument('--allevents', dest='allevents', help='Use this if you want to detect all events, also annotated ones', required=False, action='store_true')
     parser.add_argument('--multi', dest='multiMode', help='Use this to run ASGAL in genome-wide mode', required=False, action='store_true')
+
+    parser.add_argument('--paired', dest='pairedEnd', help='Use this to run ASGAL with paired-end reads', required=False, action='store_true')
+    parser.add_argument('-f', '--flt', dest='flt', help='Fragment Library Type', required=False, default="ISF")
 
     args = parser.parse_args()
 
