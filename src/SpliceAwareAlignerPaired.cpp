@@ -305,10 +305,10 @@ int main(int argc, char* argv[]) {
                 strand1 = '-';
                 read_2 = reverseAndComplement(read_2);
                 strand2 = '-';
-            } else if (outward && forward) {
+            } else if (outward && reverse) {
                 read_1 = reverseAndComplement(read_1);
                 strand1 = '-';
-            } else if (outward && reverse) {
+            } else if (outward && forward) {
                 read_2 = reverseAndComplement(read_2);
                 strand2 = '-';
             }
