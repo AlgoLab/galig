@@ -52,7 +52,7 @@ python3 ./scripts/detectEvents.py -g [reference] -a [annotation] -m output.mem -
 ```bash
 cd example
 tar xfz input.tar.gz
-../asgal -g ./input/genome.fa -a ./input/annotation.gtf -s ./input/reads.fasta -o outputFolder
+../asgal -g ./input/genome.fa -a ./input/annotation.gtf -s ./input/sample_1.fa -o outputFolder
 ```
 
 This command will produce four files in the output folder:

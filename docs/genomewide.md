@@ -111,3 +111,21 @@ cd GW_ASGAL_example
 ```bash
 /path/to/asgal --multi -g genome.fa -a annotations.gtf -s sample1.fa.gz -t transcripts.fa.gz -o outFold
 ```
+
+## Docker
+If you need to run asgal in genome-wide mode with docker, you must setup the input data as follows:
+```bash
+./asgalgw_data/
+├── annotation.gtf
+├── genome.fa
+├── sample_1.fa
+├── sample_2.fa # optional
+└── transcripts.fa
+```
+
+Then, you can run asgal in genome-wide mode with:
+```bash
+docker run -v "$PWD"/asgalgw_data:/data algolab/asgal
+```
+
+You will find the output in the folder `input/output/`.

@@ -180,7 +180,7 @@ grep "CG13375" Drosophila_melanogaster.BDGP6.91.chr.gtf > input/annotation.gtf
 rm Drosophila_melanogaster.BDGP6.91.chr.gtf
 
 # Run ASGAL
-../asgal -g input/genome.fa -a input/annotation.gtf -s input/reads.fasta -o CG13375
+../asgal -g input/genome.fa -a input/annotation.gtf -s input/sample_1.fasta -o CG13375
 ```
 
 We should obtain a novel _exon skipping_ events:
