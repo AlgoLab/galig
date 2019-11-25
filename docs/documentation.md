@@ -29,7 +29,7 @@ genome-wide analyses), install:
 On an ubuntu system (18.04), the following commands suffice:
 ```bash
 sudo apt-get update
-sudo apt-get install build-essential git python3 python3-pip python3-setuptools python3-biopython python3-biopython-sql python3-pysam cmake libboost1.65-all-dev samtools unzip wget curl zlib1g-dev liblzma-dev libjemalloc-dev libjemalloc1 libghc-bzlib-dev
+sudo apt-get install build-essential git python3 python3-pip python3-setuptools python3-biopython python3-biopython-sql python3-pysam cmake libboost1.65-all-dev samtools unzip wget curl zlib1g-dev liblzma-dev libjemalloc-dev libjemalloc1 libghc-bzlib-dev libgff-dev libtbb-dev
 pip3 install --user gffutils
 ```
 
@@ -180,7 +180,7 @@ grep "CG13375" Drosophila_melanogaster.BDGP6.91.chr.gtf > input/annotation.gtf
 rm Drosophila_melanogaster.BDGP6.91.chr.gtf
 
 # Run ASGAL
-../asgal -g input/genome.fa -a input/annotation.gtf -s input/sample_1.fasta -o CG13375
+../asgal -g input/genome.fa -a input/annotation.gtf -s input/sample_1.fa -o CG13375
 ```
 
 We should obtain a novel _exon skipping_ events:

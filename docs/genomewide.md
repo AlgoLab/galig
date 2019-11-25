@@ -128,4 +128,4 @@ Then, you can run asgal in genome-wide mode with:
 docker run -v "$PWD"/asgalgw_data:/data algolab/asgal
 ```
 
-You will find the output in the folder `input/output/`.
+You will find the output in the folder `./asgalgw_data/output/`.
