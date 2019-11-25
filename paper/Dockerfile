@@ -17,7 +17,9 @@ RUN apt-get update && apt-get install -y \
     libjemalloc-dev \
     libjemalloc1 \
     libghc-bzlib-dev \
-    samtools ; \
+    samtools \
+    libgff-dev \
+    libtbb-dev ; \
     pip3 install gffutils
 
 VOLUME ["/data"]
@@ -27,6 +29,4 @@ RUN git clone --recursive https://github.com/AlgoLab/galig.git ; \
     make prerequisites ; \
     make
 
-ENTRYPOINT ["/galig/asgal"]
-
-CMD ["-g /data/genome.fa", "-a /data/annotation.gtf", "-s /data/reads.fasta", "-o /data/events"]
+ENTRYPOINT ["/galig/asgal-docker.sh"]

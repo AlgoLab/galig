@@ -13,14 +13,14 @@ then
 		     -o /data/output
     else
 	/galig/asgal --multi \
-		     -g /data/genome.fasta \
+		     -g /data/genome.fa \
 		     -a /data/annotation.gtf \
 		     -s /data/sample_1.fa \
 		     -t /data/transcripts.fa \
 		     -o /data/output
     fi
 else
-    /galig/asgal -g /data/genome.fasta \
+    /galig/asgal -g /data/genome.fa \
 		 -a /data/annotation.gtf \
 		 -s /data/sample_1.fa \
 		 -o /data/output
