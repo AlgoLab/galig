@@ -18,18 +18,15 @@ To compile ASGAL and the 3rd party libraries it uses
   * [biopython](http://biopython.org)
   * [pysam](https://pysam.readthedocs.io/en/latest/index.html)
   * [gffutils](http://daler.github.io/gffutils/)
+  * [pandas](https://pandas.pydata.org/)
   * [cmake](https://cmake.org)
   * [samtools](http://samtools.sourceforge.net/)
-  * [zlib1g-dev](http://zlib.net/)
-
-To compile [Salmon](https://combine-lab.github.io/salmon/) (used for
-genome-wide analyses), install:
-  * [boost](https://www.boost.org/)
+  * [zlib](http://zlib.net/)
 
 On an ubuntu system (18.04), the following commands suffice:
 ```bash
-sudo apt-get update
-sudo apt-get install build-essential git python3 python3-pip python3-setuptools python3-biopython python3-biopython-sql python3-pysam cmake libboost1.65-all-dev samtools unzip wget curl zlib1g-dev liblzma-dev libjemalloc-dev libjemalloc1 libghc-bzlib-dev libgff-dev libtbb-dev
+sudo apt update
+sudo apt install -y build-essential cmake make wget git python3-pip samtools zlib1g-dev python3 python3-pip python3-setuptools python3-biopython python3-biopython-sql python3-pysam python3-pandas python3-setuptools
 pip3 install --user gffutils
 ```
 

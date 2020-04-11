@@ -126,7 +126,7 @@ $(BASE_DIR)/salmon/bin/salmon:
 	@echo "* Salmon" ; \
 	cd $(BASE_DIR) ; \
 	wget https://github.com/COMBINE-lab/salmon/releases/download/v0.12.0/salmon-0.12.0_linux_x86_64.tar.gz ; \
-	tar xvfz salmon-0.12.0_linux_x86_64.tar.gz ; \
+	tar xfz salmon-0.12.0_linux_x86_64.tar.gz ; \
 	mv salmon-0.12.0_linux_x86_64 salmon ; \
 	rm salmon-0.12.0_linux_x86_64.tar.gz
 
