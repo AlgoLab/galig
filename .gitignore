@@ -2,6 +2,7 @@ bin/
 obj/
 *~
 lemon/
+salmon/
 
 docs/Gemfile
 docs/Gemfile.lock

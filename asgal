@@ -5,8 +5,10 @@ import argparse
 import time
 import subprocess
 import glob
-
+import pandas as pd
 import gzip
+import multiprocessing
+
 from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
@@ -35,7 +37,7 @@ def getTime():
     return time.strftime('[ %b %d, %Y - %l:%M:%S%p ]')
 
 def eprint(*args, **kwargs):
-    print(getTime(), *args, file=sys.stderr, **kwargs)
+    print(getTime(), *args, file=sys.stderr, flush=True, **kwargs)
 
 def eprint_error(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
@@ -44,6 +46,20 @@ def eprint_error(*args, **kwargs):
 def print_bar(BAR, i, n):
     sys.stderr.write("[{}] {}/{}\r".format(''.join(BAR), min(i,n), n))
     sys.stderr.flush()
+
+def command_check_return(command, stdout, stderr, shell=False, ignore_error=False, verbose=False):
+    if verbose:
+        if type(command) is not list:	
+            command = [command]
+        eprint(f"command: '{' '.join(command)}'")
+        eprint(f"stdout redirected to {stdout}")
+        eprint(f"stderr redirected to {stderr}")
+    completed_process = subprocess.run(command,
+                                       stdout=open(stdout, 'w'),
+                                       stderr=open(stderr, 'w'),
+                                       shell=shell)
+    if not ignore_error:
+        completed_process.check_returncode()
 
 # REFERENCE #########################################################################################################
 '''
@@ -103,6 +119,11 @@ def splitAnnotation(args):
     tr_gene_dict = {}
 
     nGenes = len(list(gtf.features_of_type('gene')))
+    eprint(f"number of genes {nGenes}")
+    if nGenes == 0:
+        eprint("No features of type gene can be found in the input annotation")
+        eprint(f"I see gtf features {list(gtf.featuretypes())}")
+        sys.exit(1)
     i = 0
     BAR = [' ' for i in range(0,bar_length)]
     print_bar(BAR, 0, nGenes)
@@ -147,14 +168,7 @@ def runSalmon(args):
     salmonTmpBam = os.path.join(args.outputPath, "salmon", "salmon.sort.bam")
     salmonBam = os.path.join(args.outputPath, "salmon", "salmon.bam")
 
-    salmon = "salmon"
-    try:
-        subprocess.call(salmon,
-                        stdout=open("/dev/null", 'w'),
-                        stderr=open("/dev/null", 'w'))
-    except OSError as e:
-        if e.errno == os.errno.ENOENT:
-            salmon = os.path.join(WP, "salmon", "bin", "salmon")
+    salmon = os.path.join(WP, "salmon", "bin", "salmon")
 
     salmonIndex = os.path.join(args.outputPath, salmonIndexFold)
     if not os.path.isdir(salmonIndex):
@@ -163,52 +177,47 @@ def runSalmon(args):
     if not os.path.isdir(salmonOut):
         os.makedirs(salmonOut)
     eprint("Running Salmon indexing...")
-    subprocess.run([salmon, "index",
-                    "-t", args.transPath,
-                    "-i", salmonIndex],
-                   stdout=open(salmonIndexLog, 'w'), stderr=open(salmonIndexLog, 'w'))
+    salmon_index_cmd = [salmon, "index",
+                        "-p", args.threads,
+                        "-t", args.transPath,
+                        "-i", salmonIndex]
+
+    command_check_return(salmon_index_cmd, salmonIndexLog, salmonIndexLog, verbose=args.verbose)
     eprint("Done.")
     if args.sample2Path == '-':
         eprint("Running Salmon quasi-mapping on single-end sample...")
-        subprocess.run([salmon, "quant",
-                        "-i", salmonIndex,
-                        "-l", "A",
-                        "-r", args.sample1Path,
-                        "-o", salmonOut,
-                        ("--writeMappings="+salmonSam)],
-                       stdout=open(salmonQuantLog, 'w'),
-                       stderr=open(salmonQuantLog, 'w'))
-        eprint("Done.")
+        salmon_quant_cmd = [salmon, "quant",
+                            "-p", args.threads,
+                            "-i", salmonIndex,
+                            "-l", "A",
+                            "-r", args.sample1Path,
+                            "-o", salmonOut,
+                            "--no-version-check",
+                            ("--writeMappings="+salmonSam)]
     else:
         eprint("Running Salmon quasi-mapping on paired-end sample...")
-        subprocess.run([salmon, "quant",
-                        "-i", salmonIndex,
-                        "-l", "A",
-                        "-1", args.sample1Path,
-                        "-2", args.sample2Path,
-                        "-o", salmonOut,
-			"--validateMappings",
-                        ("--writeMappings="+salmonSam),
-                        "--writeUnmappedNames"],
-                       stdout=open(salmonQuantLog, 'w'),
-                       stderr=open(salmonQuantLog, 'w'))
-        eprint("Done.")
-    # SAMtools post-processing
-    eprint("Running SAMtools postprocessing...")
-    subprocess.run(["samtools", "view",
-                    "-Sb", salmonSam],
-                   stdout=open(salmonTmpBam, 'w'),
-                   stderr=open(samtoolsLog, 'w'))
-    subprocess.run(["samtools", "sort",
-                    salmonTmpBam],
-                   stdout=open(salmonBam, 'w'),
-                   stderr=open(samtoolsLog, 'a'))
-    subprocess.run(["samtools", "index",
-                    salmonBam],
-                   stdout=open(samtoolsLog, 'a'),
-                   stderr=open(samtoolsLog, 'a'))
+        salmon_quant_cmd = [salmon, "quant",
+                            "-p", args.threads,
+                            "-i", salmonIndex,
+                            "-l", "A",
+                            "-1", args.sample1Path,
+                            "-2", args.sample2Path,
+                            "-o", salmonOut,
+                            "--no-version-check",
+			    "--validateMappings",
+                            ("--writeMappings="+salmonSam),
+                            "--writeUnmappedNames"]
+
+    salmon_quant_view_cmd = f"{' '.join(salmon_quant_cmd)}"
+    command_check_return(salmon_quant_view_cmd, salmonSam, salmonQuantLog, shell=True, verbose=args.verbose)
+
+    samtools_sam2bam_cmd = f"samtools view -bS {salmonSam} | samtools sort -"
+    command_check_return(samtools_sam2bam_cmd, salmonBam, samtoolsLog, shell=True, verbose=args.verbose)
+
+    samtools_index_cmd = ["samtools", "index", salmonBam]
+    command_check_return(samtools_index_cmd, samtoolsLog, samtoolsLog, verbose=args.verbose)
+
     os.remove(salmonSam)
-    os.remove(salmonTmpBam)
     eprint("Done.")
 
 # Salmon Post-Processing ############################################################################################
@@ -272,19 +281,33 @@ def save_to_fasta(gene_reads_dict, reads, out_dir):
 Function to split Salmon BAM into smaller fastas,
 one for each gene covered by at least one read
 '''
-def split_bam(aln_filename, genes, tr_gene_dict, out_dir, unmapped_reads):
+def split_bam(aln_filename, genes, tr_gene_dict, out_dir, unmapped_reads, debug=False):
     chunk_size = 250000
     gene_reads_dict = {}
     reads = {}
     all_reads = {}
+    saved_fasta = False
+    genes_set = set(genes)
+    if debug:
+        eprint(f"working on aln_filename: {aln_filename}")
+        eprint(f"working on genes: {genes}")
+        eprint(f"working on tr_gene_dict: {tr_gene_dict}")
+        eprint(f"working on out_dir: {out_dir}")
+        eprint(f"working on unmapped_reads: {unmapped_reads}")
     with pysam.AlignmentFile(aln_filename, 'rb') as aln_file:
         for aln in aln_file:
             if aln.is_secondary or aln.is_unmapped:
+                if debug:
+                    eprint(f"skipping secondary {aln.is_secondary} unmapped {aln.is_unmapped}")
                 continue
             tr_name = aln_file.get_reference_name(aln.reference_id).split('.')[0]
             if tr_name not in tr_gene_dict:
+                if debug:
+                    eprint(f"tr_name {tr_name} not in tr_gene_dict")
                 continue
-            if tr_gene_dict[tr_name] in genes:
+            if tr_gene_dict[tr_name] in genes_set:
+                if debug:
+                    eprint(f"tr_gene_dict[tr_name] {tr_gene_dict[tr_name]} in genes_set")
                 gene_idx = tr_gene_dict[tr_name]
                 possibly_not_uniq_read_idx = aln.query_name
                 if possibly_not_uniq_read_idx not in all_reads:
@@ -306,10 +329,15 @@ def split_bam(aln_filename, genes, tr_gene_dict, out_dir, unmapped_reads):
                     gene_reads_dict[gene_idx] = gene_reads_dict[gene_idx] | set([read_idx])
             if len(reads) == chunk_size:
                 save_to_fasta(gene_reads_dict, reads, out_dir)
+                saved_fasta = True
                 reads = {}
                 gene_reads_dict = {}
     if len(reads) != 0:
+        saved_fasta = True
         save_to_fasta(gene_reads_dict, reads, out_dir)
+    if not saved_fasta:
+        eprint("Not even one fasta file was saved. Can't work like that.")
+        sys.exit(1)
 
 def splitSalmon(args, genes, tr_gene_dict):
     salmonBam = os.path.join(args.outputPath, "salmon", "salmon.bam")
@@ -328,8 +356,47 @@ def splitSalmon(args, genes, tr_gene_dict):
         eprint("Unmapped reads that will be remapped: {}".format(len(unmapped_reads)))
         eprint("Done.")
     eprint("Splitting Salmon BAM...")
-    split_bam(salmonBam, genes, tr_gene_dict, outFold, unmapped_reads)
+    split_bam(salmonBam, genes, tr_gene_dict, outFold, unmapped_reads, args.debug)
     eprint("Done.")
+
+def asgal_command_one_gene(multi_args):
+    ref = multi_args['ref']
+    anno = multi_args['anno']
+    sample = multi_args['sample']
+    out = multi_args['out']
+    log = multi_args['log']
+    args = multi_args['args']
+    allevents_flag = "--allevents" if args.allevents else ""
+
+    asgal_CMDs = {'align': ["{}/bin/SpliceAwareAligner".format(WP),
+                                "-g", ref,
+                                "-a", anno,
+                                "-s", sample,
+                                "-l", args.l,
+                                "-e", args.e,
+                                "-o", "{}.mem".format(out)],
+                      'sam' : ["python3",
+                               "{}/scripts/formatSAM.py".format(WP),
+                               "-m", "{}.mem".format(out),
+                               "-g", ref,
+                               "-a", anno,
+                               "-e", args.e,
+                               "-o", "{}.sam".format(out)],
+                      'events' : ["python3",
+                                  "{}/scripts/detectEvents.py".format(WP),
+                                  "-g", ref,
+                                  "-a", anno,
+                                  "-m", "{}.mem".format(out),
+                                  "-o", "{}.events.csv".format(out),
+                                  "-e", args.e,
+                                  "-w", args.w]}
+    if args.allevents:
+        asgal_CMDs['events'].append("--allevents")
+
+    command_check_return(asgal_CMDs['align'], log, log, verbose=args.verbose)
+    command_check_return(asgal_CMDs['sam'], log, log, verbose=args.verbose)
+    command_check_return(asgal_CMDs['events'], log, log, verbose=args.verbose)
+
 
 # ASGAL #############################################################################################################
 '''
@@ -357,10 +424,11 @@ def runASGAL(args, genes, chr_genes_dict):
         log = os.path.join(logFold, "{}-{}.log".format(os.path.basename(samples[0]).split('.')[0], gene))
 
     eprint("Running ASGAL on {} {}...".format(len(samples), 'gene' if len(samples) == 1 else 'genes'))
-    BAR = [' ' for i in range(0,bar_length)]
-    print_bar(BAR, 0, len(samples))
-    i = 0
+    # BAR = [' ' for i in range(0,bar_length)]
+    # print_bar(BAR, 0, len(samples))
+    # i = 0
 
+    params_list = []
     for sample in samples:
         if args.multiMode:
             gene = os.path.basename(sample)[:-3]
@@ -371,50 +439,15 @@ def runASGAL(args, genes, chr_genes_dict):
             out = os.path.join(outFold, "{}".format(gene))
             log = os.path.join(logFold, "{}".format(gene))
 
-        allevents_flag = "--allevents" if args.allevents else ""
+        # asgal_command_one_gene(args, ref, anno, sample, out, log)
+        params_list.append({'ref': ref, 'anno': anno, 'sample': sample, 'out': out, 'log': log, 'args': args})
 
-        asgal_CMDs = {'align': ["{}/bin/SpliceAwareAligner".format(WP),
-                                "-g", ref,
-                                "-a", anno,
-                                "-s", sample,
-                                "-l", args.l,
-                                "-e", args.e,
-                                "-o", "{}.mem".format(out)],
-                      'sam' : ["python3",
-                               "{}/scripts/formatSAM.py".format(WP),
-                               "-m", "{}.mem".format(out),
-                               "-g", ref,
-                               "-a", anno,
-                               "-e", args.e,
-                               "-o", "{}.sam".format(out)],
-                      'events' : ["python3",
-                                  "{}/scripts/detectEvents.py".format(WP),
-                                  "-g", ref,
-                                  "-a", anno,
-                                  "-m", "{}.mem".format(out),
-                                  "-o", "{}.events.csv".format(out),
-                                  "-e", args.e,
-                                  "-w", args.w]}
-        if args.allevents:
-            asgal_CMDs['events'].append("--allevents")
+    if args.debug:
+        print(params_list, file=sys.stderr)
+    pool = multiprocessing.Pool(int(args.threads))
+    pool.map(asgal_command_one_gene, params_list)
+    pool.close()
 
-        subprocess.run(asgal_CMDs['align'],
-                       stdout=open(log, 'w'),
-                       stderr=open(log, 'w'))
-        subprocess.run(asgal_CMDs['sam'],
-                       stdout=open(log, 'w'),
-                       stderr=open(log, 'w'))
-        subprocess.run(asgal_CMDs['events'],
-                       stdout=open(log, 'w'),
-                       stderr=open(log, 'w'))
-        i+=1
-        index = int(i*bar_length/len(samples))
-        if i == len(genes)-1:
-            BAR = ['#' for i in range(0,bar_length)]
-        else:
-            BAR = ['#' for i in range(0, index+1)] + [' ' for i in range(index+1,bar_length)]
-        print_bar(BAR, i+1, len(samples))
-    print("", file=sys.stderr)
     eprint("Done.")
 
 # INPUTS CHECK ######################################################################################################
@@ -492,6 +525,20 @@ def checkInputs(args):
     if args.multiMode and args.transPath == '-':
         eprint_error("\nIn multi mode, you have to pass the transcripts of the genes. Halting...\n")
 
+
+def join_files(file_list: list, output_file: str, verbose: bool) -> None:
+    all_results = pd.DataFrame(columns=["Type", "Start", "End", "Support", "Transcripts", "file"])
+    for i, file in enumerate(file_list):
+        if verbose:
+            print(f"working on {file} - {i}/{len(file_list)}", flush=True)
+        if os.path.getsize(file) == 35:
+            continue
+        df = pd.read_csv(file)
+        df['file'] = file
+        all_results = pd.concat([all_results,df])
+        print(all_results)
+    all_results.to_csv(output_file, index=False)
+
 # main ##############################################################################################################
 def main():
     global WP
@@ -514,8 +561,13 @@ def main():
     parser.add_argument('-w', '--support', dest='w', help='Minimum intron coverage', required=False, default="3")
     parser.add_argument('--allevents', dest='allevents', help='Use this if you want to detect all events, also annotated ones', required=False, action='store_true')
     parser.add_argument('--multi', dest='multiMode', help='Use this to run ASGAL in genome-wide mode', required=False, action='store_true')
+    parser.add_argument('--verbose', dest='verbose', help='Add some prints to stderr', required=False, action='store_true')
+    parser.add_argument('--debug', dest='debug', help='Add debug prints to stderr', required=False, action='store_true')
+    parser.add_argument('--split-only', dest='split_only', help='Only split files per gene, do not run ASGAL', required=False, action='store_true')
+    parser.add_argument('-@', '--threads', dest='threads', help='Number of threads to use for salmon mapping and parallel gene computation', required=False, default="2")
 
     args = parser.parse_args()
+    eprint(f"args {args}")
 
     checkInputs(args)
 
@@ -530,7 +582,10 @@ def main():
         runSalmon(args)
         splitSalmon(args, genes, tr_gene_dict)
 
-    runASGAL(args, genes, chr_genes_dict)
+    if not args.split_only:
+        runASGAL(args, genes, chr_genes_dict)
+        file_list = glob.glob(f"{args.outputPath}/ASGAL/*.csv")
+        join_files(file_list, f"{args.outputPath}/ASGAL.csv", args.verbose)
 
 if __name__ == '__main__':
     main()

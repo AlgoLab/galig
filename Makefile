@@ -124,21 +124,16 @@ salmon: $(BASE_DIR)/salmon/bin/salmon
 SALMON_NAME:=salmon
 $(BASE_DIR)/salmon/bin/salmon:
 	@echo "* Salmon" ; \
-	cd $(BASE_DIR)/salmon ; \
-	mkdir -p build ; \
-	cd build ; \
-	cmake .. ; \
-	make ; \
-	make install
+	cd $(BASE_DIR) ; \
+	wget https://github.com/COMBINE-lab/salmon/releases/download/v0.12.0/salmon-0.12.0_linux_x86_64.tar.gz ; \
+	tar xfz salmon-0.12.0_linux_x86_64.tar.gz ; \
+	mv salmon-0.12.0_linux_x86_64 salmon ; \
+	rm salmon-0.12.0_linux_x86_64.tar.gz
 
 .PHONY: clean-salmon
 clean-salmon:
 	@echo "* Cleaning salmon binary..." ; \
-	rm -f $(BASE_DIR)/salmon/bin/salmon ; \
-    rm -rf $(BASE_DIR)/salmon/build ; \
-    rm -rf $(BASE_DIR)/salmon/external ; \
-    rm -rf $(BASE_DIR)/salmon/lib ; \
-    rm -rf $(BASE_DIR)/salmon/tests/unitTests
+	rm -rf $(BASE_DIR)/salmon
 
 ########################################################################
 

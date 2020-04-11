@@ -16,10 +16,10 @@ The instructions to install and use _ASGAL_ are at
   * [biopython](http://biopython.org)
   * [pysam](https://pysam.readthedocs.io/en/latest/index.html)
   * [gffutils](http://daler.github.io/gffutils/)
+  * [pandas](https://pandas.pydata.org/)
   * [cmake](https://cmake.org)
   * [samtools](http://samtools.sourceforge.net/)
-  * [zlib1g-dev](http://zlib.net/)
-  * [boost](https://www.boost.org/)
+  * [zlib](http://zlib.net/)
 
 See <a href="http://asgal.algolab.eu/documentation#installation" target="_blank">here</a> for more details.
 

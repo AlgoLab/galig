@@ -95,6 +95,12 @@ Parameters:
                             (default: 3)
 --allevents                 output all events, not only the novel ones
                             (default: only novels)
+--split-only                split files per gene, do not run ASGAL
+			    (default: False)
+--verbose                   verbose print (default: False)
+--debug                     debug print (default: False)
+-@,--threads		    number of threads to use for salmon mapping and parallel gene computation
+			    (default: 2)
 ```
 
 ## Example
