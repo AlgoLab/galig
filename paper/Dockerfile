@@ -1,25 +1,22 @@
 FROM ubuntu:18.04
-RUN apt-get update && apt-get install -y \
-    build-essential \
+
+RUN apt update && \
+    apt install -y build-essential \
     cmake \
+    make \
     wget \
-    unzip \
     git \
+    python3-pip \
+    samtools \
+    zlib1g-dev \
     python3 \
     python3-pip \
+    python3-setuptools \
     python3-biopython \
     python3-biopython-sql \
     python3-pysam \
-    zlib1g-dev \
-    libboost1.65-all-dev \
-    curl \
-    liblzma-dev \
-    libjemalloc-dev \
-    libjemalloc1 \
-    libghc-bzlib-dev \
-    samtools \
-    libgff-dev \
-    libtbb-dev ; \
+    python3-pandas \
+    python3-setuptools ; \
     pip3 install gffutils
 
 VOLUME ["/data"]
