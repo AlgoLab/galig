@@ -164,8 +164,6 @@ def runSalmon(args):
     salmonIndexLog = os.path.join(args.outputPath, logsFold, "salmon_index.log")
     salmonQuantLog = os.path.join(args.outputPath, logsFold, "salmon_quant.log")
     samtoolsLog = os.path.join(args.outputPath, logsFold, "samtools.log")
-    salmonSam = os.path.join(args.outputPath, "salmon", "salmon.sam")
-    salmonTmpBam = os.path.join(args.outputPath, "salmon", "salmon.sort.bam")
     salmonBam = os.path.join(args.outputPath, "salmon", "salmon.bam")
 
     salmon = os.path.join(WP, "salmon", "bin", "salmon")
@@ -193,7 +191,7 @@ def runSalmon(args):
                             "-r", args.sample1Path,
                             "-o", salmonOut,
                             "--no-version-check",
-                            ("--writeMappings="+salmonSam)]
+                            "--writeMappings"]
     else:
         eprint("Running Salmon quasi-mapping on paired-end sample...")
         salmon_quant_cmd = [salmon, "quant",
@@ -205,19 +203,15 @@ def runSalmon(args):
                             "-o", salmonOut,
                             "--no-version-check",
 			    "--validateMappings",
-                            ("--writeMappings="+salmonSam),
+                            "--writeMappings",
                             "--writeUnmappedNames"]
 
-    salmon_quant_view_cmd = f"{' '.join(salmon_quant_cmd)}"
-    command_check_return(salmon_quant_view_cmd, salmonSam, salmonQuantLog, shell=True, verbose=args.verbose)
-
-    samtools_sam2bam_cmd = f"samtools view -bS {salmonSam} | samtools sort -"
-    command_check_return(samtools_sam2bam_cmd, salmonBam, samtoolsLog, shell=True, verbose=args.verbose)
+    salmon_quant_cmd = f"{' '.join(salmon_quant_cmd)} | samtools view -Sb - | samtools sort -"
+    command_check_return(salmon_quant_cmd, salmonBam, salmonQuantLog, shell=True, verbose=args.verbose)
 
     samtools_index_cmd = ["samtools", "index", salmonBam]
     command_check_return(samtools_index_cmd, samtoolsLog, samtoolsLog, verbose=args.verbose)
 
-    os.remove(salmonSam)
     eprint("Done.")
 
 # Salmon Post-Processing ############################################################################################
