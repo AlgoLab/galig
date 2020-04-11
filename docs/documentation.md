@@ -228,7 +228,9 @@ Optional parameters:
 -w,--support <int>          minimum number of reads needed to confirm an event
                             (default: 3)
 --allevents                 output all events, not only the novel ones
-                            (default: only novels)
+                            (default: false, ie only novels)
+--verbose                   verbose print (default: False)
+--debug                     debug print (default: False)
 ```
 
 ### Splice-Aware Aligner
