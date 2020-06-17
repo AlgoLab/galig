@@ -36,17 +36,8 @@ RUN pip3 install gffutils
 # Install gosu
 ENV GOSU_VERSION 1.12
 RUN set -eux; \
-# save list of currently installed packages for later so we can clean up
 	dpkgArch="$(dpkg --print-architecture | awk -F- '{ print $NF }')"; \
 	wget -O /usr/local/bin/gosu "https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-$dpkgArch"; \
-	wget -O /usr/local/bin/gosu.asc "https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-$dpkgArch.asc"; \
-	export GNUPGHOME="$(mktemp -d)"; \
-	gpg --batch --keyserver hkps://keys.openpgp.org --recv-keys B42F6819007F00F88E364FD4036A9C25BF357DD4; \
-	gpg --batch --verify /usr/local/bin/gosu.asc /usr/local/bin/gosu; \
-	command -v gpgconf && gpgconf --kill all || :; \
-	rm -rf "$GNUPGHOME" /usr/local/bin/gosu.asc; \
-	\
-# clean up fetch dependencies
 	chmod +x /usr/local/bin/gosu; \
 # verify that the binary works
 	gosu --version; \
@@ -58,4 +49,5 @@ RUN cd galig ; make
 
 VOLUME ["/data"]
 COPY asgal-docker.sh /galig/asgal-docker.sh
+ENV PATH=$PATH:/galig/asgal
 ENTRYPOINT ["/galig/asgal-docker.sh"]
