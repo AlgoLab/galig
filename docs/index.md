@@ -41,7 +41,7 @@ can run ASGAL on that sample with the commands
 ```
 wget https://github.com/AlgoLab/galig/raw/master/example/input.tar.gz
 tar xfz input.tar.gz
-docker run -v "$PWD"/input:/data algolab/asgal:v1.1.0
+docker run -v "$PWD"/input:/data algolab/asgal:v1.1.1
 ```
 
 The running times will be a few seconds. Then you will find the file
