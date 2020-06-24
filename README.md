@@ -12,7 +12,7 @@ The instructions to install and use _ASGAL_ are at
 
 
 ### Prerequisites
-  * [python3](https://www.python.org)
+  * [python3](https://www.python.org) (>=3.6)
   * [biopython](http://biopython.org)
   * [pysam](https://pysam.readthedocs.io/en/latest/index.html)
   * [gffutils](http://daler.github.io/gffutils/)
