@@ -14,7 +14,7 @@ work on any *nix-based system.
 To compile ASGAL and the 3rd party libraries it uses
 ([sdsl-lite](https://github.com/simongog/sdsl-lite) and
 [lemon](http://lemon.cs.elte.hu/trac/lemon)), install:
-  * [python3](https://www.python.org)
+  * [python3](https://www.python.org) (>=3.6)
   * [biopython](http://biopython.org)
   * [pysam](https://pysam.readthedocs.io/en/latest/index.html)
   * [gffutils](http://daler.github.io/gffutils/)
