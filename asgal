@@ -473,7 +473,7 @@ def checkInputs(args):
                 if args.transPath.split('.')[-1] not in ['fa', 'fasta']:
                     eprint_error("\nUnknown extension for transcripts file, is it a .fa or .fasta file? Halting...\n")
         else:
-            eprint_error("\nTranscripts file {} not found. Halting...\n".format(args.annoPath))
+            eprint_error("\nTranscripts file {} not found. Halting...\n".format(args.transPath))
 
     # Samples
     sample = args.sample1Path
