@@ -23,29 +23,61 @@ echo "Starting with UID:GID $USER_ID:$GROUP_ID"
 
 if [ -s /data/transcripts.fa ]
 then
-    if [ -s /data/sample_2.fa ]
+    if [ -s /data/sample_1.fq ]
     then
-    $GOSU_CMD       \
-	/galig/asgal --multi \
-		     -g /data/genome.fa \
-		     -a /data/annotation.gtf \
-		     -s /data/sample_1.fa \
-		     -s2 /data/sample_2.fa \
-		     -t /data/transcripts.fa \
-		     -o /data/output
+	if [ -s /data/sample_2.fq ]
+	then
+	    $GOSU_CMD       \
+		/galig/asgal --multi \
+		             -g /data/genome.fa \
+			     -a /data/annotation.gtf \
+			     -s /data/sample_1.fq \
+			     -s2 /data/sample_2.fq \
+			     -t /data/transcripts.fa \
+			     -o /data/output
+	else
+	    $GOSU_CMD       \
+		/galig/asgal --multi \
+		             -g /data/genome.fa \
+			     -a /data/annotation.gtf \
+			     -s /data/sample_1.fq \
+			     -t /data/transcripts.fa \
+			     -o /data/output
+	fi
     else
-    $GOSU_CMD       \
-	/galig/asgal --multi \
-		     -g /data/genome.fa \
-		     -a /data/annotation.gtf \
-		     -s /data/sample_1.fa \
-		     -t /data/transcripts.fa \
-		     -o /data/output
+	if [ -s /data/sample_2.fa ]
+	then
+	    $GOSU_CMD       \
+		/galig/asgal --multi \
+		             -g /data/genome.fa \
+			     -a /data/annotation.gtf \
+			     -s /data/sample_1.fa \
+			     -s2 /data/sample_2.fa \
+			     -t /data/transcripts.fa \
+			     -o /data/output
+	else
+	    $GOSU_CMD       \
+		/galig/asgal --multi \
+		             -g /data/genome.fa \
+			     -a /data/annotation.gtf \
+			     -s /data/sample_1.fa \
+			     -t /data/transcripts.fa \
+			     -o /data/output
+	fi
     fi
 else
-    $GOSU_CMD       \
-    /galig/asgal -g /data/genome.fa \
-		 -a /data/annotation.gtf \
-		 -s /data/sample_1.fa \
-		 -o /data/output
+    if [ -s /data/sample_1.fq ]
+    then
+	$GOSU_CMD       \
+	    /galig/asgal -g /data/genome.fa \
+	                 -a /data/annotation.gtf \
+			 -s /data/sample_1.fq \
+			 -o /data/output
+    else
+	$GOSU_CMD       \
+	    /galig/asgal -g /data/genome.fa \
+	                 -a /data/annotation.gtf \
+			 -s /data/sample_1.fa \
+			 -o /data/output
+    fi
 fi

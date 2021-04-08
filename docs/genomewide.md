@@ -124,14 +124,14 @@ If you need to run asgal in genome-wide mode with docker, you must setup the inp
 ./asgalgw_data/
 ├── annotation.gtf
 ├── genome.fa
-├── sample_1.fa
-├── sample_2.fa # optional
+├── sample_1.f{a,q}
+├── sample_2.f{a,q} # optional
 └── transcripts.fa
 ```
 
 Then, you can run asgal in genome-wide mode with:
 ```bash
-docker run -v "$PWD"/asgalgw_data:/data algolab/asgal:v1.1.0
+docker run -v "$PWD"/asgalgw_data:/data algolab/asgal:v1.1.3
 ```
 
 You will find the output in the folder `./asgalgw_data/output/`.
