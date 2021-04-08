@@ -6,7 +6,7 @@ USER_ID=$(/usr/bin/stat -c %u /data)
 GROUP_ID=$(/usr/bin/stat -c %g /data)
 
 # When running as root, use a dummy command to change user
-GOSU_CMD="gosu root:root"
+SU_CMD="setpriv --reuid=root --regid=root"
 
 # If the owner is not root, we create user:group with the correct uid:gid
 if [ "$USER_ID" != "0" ]
@@ -15,7 +15,7 @@ then
     groupadd -g "$GROUP_ID" group
     useradd --shell /bin/bash -u "$USER_ID" -g group -o -c "" -m user
     chown --recursive "$USER_ID":"$GROUP_ID" /data
-    GOSU_CMD="gosu user:group"
+    SU_CMD="setpriv --reuid=user --regid=group --init-groups"
 fi
 export HOME=/
 
@@ -27,7 +27,7 @@ then
     then
 	if [ -s /data/sample_2.fq ]
 	then
-	    $GOSU_CMD       \
+	    $SU_CMD       \
 		/galig/asgal --multi \
 		             -g /data/genome.fa \
 			     -a /data/annotation.gtf \
@@ -36,7 +36,7 @@ then
 			     -t /data/transcripts.fa \
 			     -o /data/output
 	else
-	    $GOSU_CMD       \
+	    $SU_CMD       \
 		/galig/asgal --multi \
 		             -g /data/genome.fa \
 			     -a /data/annotation.gtf \
@@ -47,7 +47,7 @@ then
     else
 	if [ -s /data/sample_2.fa ]
 	then
-	    $GOSU_CMD       \
+	    $SU_CMD       \
 		/galig/asgal --multi \
 		             -g /data/genome.fa \
 			     -a /data/annotation.gtf \
@@ -56,7 +56,7 @@ then
 			     -t /data/transcripts.fa \
 			     -o /data/output
 	else
-	    $GOSU_CMD       \
+	    $SU_CMD       \
 		/galig/asgal --multi \
 		             -g /data/genome.fa \
 			     -a /data/annotation.gtf \
@@ -68,13 +68,13 @@ then
 else
     if [ -s /data/sample_1.fq ]
     then
-	$GOSU_CMD       \
+	$SU_CMD       \
 	    /galig/asgal -g /data/genome.fa \
 	                 -a /data/annotation.gtf \
 			 -s /data/sample_1.fq \
 			 -o /data/output
     else
-	$GOSU_CMD       \
+	$SU_CMD       \
 	    /galig/asgal -g /data/genome.fa \
 	                 -a /data/annotation.gtf \
 			 -s /data/sample_1.fa \

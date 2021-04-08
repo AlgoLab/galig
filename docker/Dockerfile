@@ -1,4 +1,4 @@
-FROM ubuntu:18.04
+FROM ubuntu:20.04
 
 ## for apt to be noninteractive
 ENV DEBIAN_FRONTEND noninteractive
@@ -27,21 +27,11 @@ RUN apt-get install -qqy \
     python3-pysam \
     python3-setuptools \
     samtools \
+    util-linux \
     wget \
     zlib1g-dev
 RUN apt-get clean
 RUN pip3 install gffutils
-
-
-# Install gosu
-ENV GOSU_VERSION 1.12
-RUN set -eux; \
-	dpkgArch="$(dpkg --print-architecture | awk -F- '{ print $NF }')"; \
-	wget -O /usr/local/bin/gosu "https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-$dpkgArch"; \
-	chmod +x /usr/local/bin/gosu; \
-# verify that the binary works
-	gosu --version; \
-	gosu nobody true
 
 RUN git clone --depth=1 --recursive https://github.com/AlgoLab/galig.git
 RUN cd galig ; make prerequisites
