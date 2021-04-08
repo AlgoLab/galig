@@ -43,7 +43,7 @@ RUN set -eux; \
 	gosu --version; \
 	gosu nobody true
 
-RUN git clone --recursive https://github.com/AlgoLab/galig.git
+RUN git clone --depth=1 --recursive https://github.com/AlgoLab/galig.git
 RUN cd galig ; make prerequisites
 RUN cd galig ; make
 
