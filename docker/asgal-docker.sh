@@ -13,13 +13,14 @@ if [ "$USER_ID" != "0" ]
 then
     echo "Changing user"
     groupadd -g "$GROUP_ID" group
-    useradd --shell /bin/bash -u "$USER_ID" -g group -o -c "" -m user
+    useradd --shell /bin/bash -u "$USER_ID" -g "$GROUP_ID" -o -c "" -m user
     chown --recursive "$USER_ID":"$GROUP_ID" /data
-    SU_CMD="setpriv --reuid=user --regid=group --init-groups"
+    SU_CMD="setpriv --reuid="$USER_ID" --regid="$GROUP_ID" --init-groups"
 fi
 export HOME=/
 
 echo "Starting with UID:GID $USER_ID:$GROUP_ID"
+cd /data
 
 if [ -s /data/transcripts.fa ]
 then
