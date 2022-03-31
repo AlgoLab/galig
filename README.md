@@ -1,5 +1,5 @@
+[![Support this project by running your production jobs at BatchX](https://images.batchx.io/gh-badge-logo.svg)](https://platform.batchx.io/algolab/tools/asgal%2Falternative-splicing "Support this project by running your production jobs at BatchX")
 # ASGAL
-
 **ASGAL** (**A**lternative **S**plicing **G**raph **AL**igner) is a
 tool for detecting the alternative splicing events expressed in a
 RNA-Seq sample with respect to a gene annotation. The **main idea**
