@@ -1,0 +1,8 @@
+fa: /home/denti/GW_ASGAL_example/genome.fa # reference genome
+gtf: /home/denti/GW_ASGAL_example/annotations.gtf # annotation
+tr: /home/denti/GW_ASGAL_example/transcripts.fa # set of transcripts
+fq1: /home/denti/GW_ASGAL_example/sample1.fa # first pair
+fq2: /home/denti/GW_ASGAL_example/sample2.fa # second pair
+odir: /home/denti/GW_ASGAL_example/OUT # output directory
+threads: 8
+galig: /home/denti/code/galig # path to galig repository

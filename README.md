@@ -1,4 +1,7 @@
 [![Support this project by running your production jobs at BatchX](https://images.batchx.io/gh-badge-logo.svg)](https://platform.batchx.io/algolab/tools/asgal%2Falternative-splicing "Support this project by running your production jobs at BatchX")
+
+**DEVELOPMENT BRANCH - USE IT AT YOUR OWN RISK (not fully tested - results may be wrong)**
+
 # ASGAL
 **ASGAL** (**A**lternative **S**plicing **G**raph **AL**igner) is a
 tool for detecting the alternative splicing events expressed in a
@@ -65,5 +68,19 @@ An extended explanation of this example can be found <a href="http://asgal.algol
 
 
 The tool has been tested only on 64bit Linux system. You can find more information at [http://asgal.algolab.eu](http://asgal.algolab.eu).
+
+### NEW FEATURE
+* ASGAL pipeline have been rewritten from scratch and it is provided as a Snakemake workflow. It should be more efficient. To run it, update `config.yaml` and then run:
+```
+# Install all dependencies
+conda[/mamba] create -n asgal salmon pysam biopython gffutils samtools snakemake
+conda activate asgal
+snakemake [-n] -j 8
+```
+The output is stored at `[OUTDIR]/[genename]/ASGAL/`.
+* PSI computation - see the `[OUTDIR]/[genename]/ASGAL/events.wpsi.csv` file. PSI is computed as
+> #inclusionreads / (#inclusionreads + #exclusionreads)
+
+However, the PSI value is an **approximation** of the real value (*still a work-in-progress*)
 
 [![Join the chat at https://gitter.im/AlgoLab/galig](https://badges.gitter.im/AlgoLab/galig.svg)](https://gitter.im/AlgoLab/galig?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
