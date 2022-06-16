@@ -73,7 +73,7 @@ The tool has been tested only on 64bit Linux system. You can find more informati
 * ASGAL pipeline have been rewritten from scratch and it is provided as a Snakemake workflow. It should be more efficient. To run it, update `config.yaml` and then run:
 ```
 # Install all dependencies
-conda[/mamba] create -n asgal salmon pysam biopython gffutils samtools snakemake
+conda[/mamba] create -n asgal salmon pysam biopython gffutils samtools snakemake seqtk
 conda activate asgal
 snakemake [-n] -j 8
 ```

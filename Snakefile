@@ -90,8 +90,8 @@ rule get_unmapped:
     shell:
         """
         cut -f1 -d' ' {input.txt} > {params.txt}
-        grep -A 1 -f {params.txt} {input.fq1} > {output.fq}
-        grep -A 1 -f {params.txt} {input.fq2} >> {output.fq}
+        grep -A 1 -f {params.txt} {input.fq1} | seqtk seq -F '#' > {output.fq}
+        grep -A 1 -f {params.txt} {input.fq2} | seqtk seq -F '#' >> {output.fq}
         """
 
 rule complete_fq:
