@@ -10,6 +10,8 @@ TR = config["tr"]
 FQ1 = config["fq1"]
 FQ2 = config["fq2"]
 
+L = config["l"]
+
 mode = "paired"
 if FQ2 == ".":
     mode = "single"
@@ -32,6 +34,7 @@ for line in open(GTF):
 
 print(f"{len(genes)} genes")
 print(f"Mode: {mode}")
+print("Minimum MEMs length:", L)
 
 rule run:
     input:
@@ -149,7 +152,7 @@ rule asgal:
     threads: 1
     shell:
         """
-        {ASGAL_DIR}/bin/SpliceAwareAligner -g {input.fa} -a {input.gtf} -s {input.fq} -o {params.mem}
+        {ASGAL_DIR}/bin/SpliceAwareAligner -g {input.fa} -a {input.gtf} -s {input.fq} -o {params.mem} -l {L}
         python3 {ASGAL_DIR}/scripts/formatSAM.py -m {params.mem} -g {input.fa} -a {input.gtf} -o {output.sam}
         python3 {ASGAL_DIR}/scripts/detectEvents.py --allevents -g {input.fa} -a {input.gtf} -m {params.mem} -o {output.csv}
         """
