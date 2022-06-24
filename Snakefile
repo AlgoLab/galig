@@ -10,6 +10,10 @@ TR = config["tr"]
 FQ1 = config["fq1"]
 FQ2 = config["fq2"]
 
+mode = "paired"
+if FQ2 == ".":
+    mode = "single"
+
 ODIR = config["odir"]
 
 THREADS = config["threads"]
@@ -25,7 +29,9 @@ for line in open(GTF):
     if line[2] == "gene":
         gene = re.match("gene_id \"([A-Za-z0-9\.]+)\";", line[-1]).group(1)
         genes[gene] = chrom
-print(genes)
+
+print(f"{len(genes)} genes")
+print(f"Mode: {mode}")
 
 rule run:
     input:
@@ -46,21 +52,23 @@ rule salmon_index:
 rule salmon_quant:
     input:
         fq1 = FQ1,
-        fq2 = FQ2,
+        fq2 = FQ2 if mode == "paired" else FQ1,
         index = pjoin(ODIR, "salmon-index")
     output:
         bam = pjoin(ODIR, "salmon-out", "aligns.bam"),
         txt = pjoin(ODIR, "salmon-out", "aux_info", "unmapped_names.txt")
     params:
         odir = pjoin(ODIR, "salmon-out"),
-        sam = pjoin(ODIR, "salmon-out", "aligns.sam")
+        sam = pjoin(ODIR, "salmon-out", "aligns.sam"),
+        mode = mode
     threads: THREADS
-    shell:
-        """
-        salmon quant -p {threads} -i {input.index} -l A -1 {input.fq1} -2 {input.fq2} -o {params.odir} --validateMappings --writeMappings={params.sam} --writeUnmappedNames
-        samtools view -bS {params.sam} | samtools sort > {output.bam}
-        samtools index {output.bam}
-        """
+    run:
+        if params.mode == "paired":
+            shell("salmon quant -p {threads} -i {input.index} -l A -1 {input.fq1} -2 {input.fq2} -o {params.odir} --validateMappings --writeMappings={params.sam} --writeUnmappedNames")
+        else:
+            shell("salmon quant -p {threads} -i {input.index} -l A -r {input.fq1} -o {params.odir} --validateMappings --writeMappings={params.sam} --writeUnmappedNames")
+        shell("samtools view -bS {params.sam} | samtools sort > {output.bam}")
+        shell("samtools index {output.bam}")
 
 rule split_reads:
     input:
@@ -74,25 +82,25 @@ rule split_reads:
     shell:
         """
         grep {wildcards.gene} {input.gtf} | grep -P "\\ttranscript\\t" | egrep -o 'transcript_id "[0-9A-Za-z\.]+";' | cut -f 2 -d'"' | cut -f1 -d'.' | sort -u | awk '{{ print $0"\\t"1"\\t"4294967295 }}'> {params.bed}
-        samtools view -b {input.bam} -L {params.bed} | samtools fastq > {output.fq}
+        samtools view -b {input.bam} -L {params.bed} | samtools fastq - > {output.fq}
         """
 
 rule get_unmapped:
     input:
         fq1 = FQ1,
-        fq2 = FQ2,
+        fq2 = FQ2 if mode == "paired" else FQ1,
         txt = pjoin(ODIR, "salmon-out", "aux_info", "unmapped_names.txt")
     output:
         fq = pjoin(ODIR, "salmon-out", "unmapped_names.fq")
     params:
-        txt = pjoin(ODIR, "salmon-out", "aux_info", "unmapped_names.one-col.txt")
+        txt = pjoin(ODIR, "salmon-out", "aux_info", "unmapped_names.one-col.txt"),
+        mode = mode
     threads: 1
-    shell:
-        """
-        cut -f1 -d' ' {input.txt} > {params.txt}
-        grep -A 1 -f {params.txt} {input.fq1} | seqtk seq -F '#' > {output.fq}
-        grep -A 1 -f {params.txt} {input.fq2} | seqtk seq -F '#' >> {output.fq}
-        """
+    run:
+        shell("cut -f1 -d' ' {input.txt} > {params.txt}")
+        shell("grep -A 1 -f {params.txt} {input.fq1} | seqtk seq -F '#' > {output.fq}")
+        if params.mode == "paired":
+            shell("grep -A 1 -f {params.txt} {input.fq2} | seqtk seq -F '#' >> {output.fq}")
 
 rule complete_fq:
     input:
