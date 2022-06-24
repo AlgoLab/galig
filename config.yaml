@@ -7,3 +7,5 @@ odir: # path to output directory
 threads: # n. threads
 galig: # path to galig repository
 l: 10 # minimum length for MEMs (default: 15)
+unmapped: False # use unmapped reads
+onlynovel: False # find only novel events

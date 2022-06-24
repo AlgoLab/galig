@@ -11,6 +11,8 @@ FQ1 = config["fq1"]
 FQ2 = config["fq2"]
 
 L = config["l"]
+UNMAPPED = config["unmapped"]
+ONLYNOVEL = config["onlynovel"]
 
 mode = "paired"
 if FQ2 == ".":
@@ -35,6 +37,8 @@ for line in open(GTF):
 print(f"{len(genes)} genes")
 print(f"Mode: {mode}")
 print("Minimum MEMs length:", L)
+print("Use unmapped reads:", UNMAPPED)
+print("Find only novel events:", ONLYNOVEL)
 
 rule run:
     input:
@@ -112,10 +116,11 @@ rule complete_fq:
     output:
         fq = pjoin(ODIR, "{gene}", "reads.wunmapped.fq")
     threads: 1
-    shell:
-        """
-        cat {input.fq} {input.unmapped_fq} > {output.fq}
-        """
+    run:
+        if UNMAPPED:
+            shell("cat {input.fq} {input.unmapped_fq} > {output.fq}")
+        else:
+            shell("cp {input.fq} {output.fq}")
 
 rule split_reference:
     input:
@@ -148,13 +153,14 @@ rule asgal:
         sam = pjoin(ODIR, "{gene}", "ASGAL", "aligns.sam"),
         csv = pjoin(ODIR, "{gene}", "ASGAL", "events.csv")
     params:
-        mem = pjoin(ODIR, "{gene}", "ASGAL", "aligns.mem")
+        mem = pjoin(ODIR, "{gene}", "ASGAL", "aligns.mem"),
+        allevents = "" if ONLYNOVEL else "--allevents"
     threads: 1
     shell:
         """
         {ASGAL_DIR}/bin/SpliceAwareAligner -g {input.fa} -a {input.gtf} -s {input.fq} -o {params.mem} -l {L}
         python3 {ASGAL_DIR}/scripts/formatSAM.py -m {params.mem} -g {input.fa} -a {input.gtf} -o {output.sam}
-        python3 {ASGAL_DIR}/scripts/detectEvents.py --allevents -g {input.fa} -a {input.gtf} -m {params.mem} -o {output.csv}
+        python3 {ASGAL_DIR}/scripts/detectEvents.py -g {input.fa} -a {input.gtf} -m {params.mem} -o {output.csv} {params.allevents}
         """
 
 rule sam2bam:
