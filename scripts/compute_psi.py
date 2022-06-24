@@ -19,11 +19,14 @@ def main():
         exclusion_w = int(exclusion_w)
         all_w = 0
         for al in bam.fetch(chrom, s, e):
-            if al.get_cigar_stats()[1][3] > 0:
+            if etype == "IR":
+                all_w += 1
+            elif al.get_cigar_stats()[1][3] > 0:
                 # we have Ns
                 all_w += 1
         inclusion_w = all_w - exclusion_w
-        psi = round(inclusion_w/(inclusion_w+exclusion_w), 2)
+
+        psi = round(inclusion_w/(inclusion_w+exclusion_w), 2) if inclusion_w+exclusion_w != 0 else 0
         print(etype, s, e, exclusion_w, inclusion_w, psi, Ts, sep=",")
 
 

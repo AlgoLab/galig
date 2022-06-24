@@ -150,7 +150,7 @@ def getCIGAR(mems, RefSeq, bv, exPos, read, errRate, err):
                             if N>0:
                                 cigarList.append([N, 'N'])
                             else:
-                                if cigarList[-1][1] is 'M':
+                                if cigarList[-1][1] == 'M':
                                     M = cigarList[-1][0]
                                     cigarList.pop(-1)
                             cigarList.append([M + mems[i][2], 'M'])
@@ -159,7 +159,7 @@ def getCIGAR(mems, RefSeq, bv, exPos, read, errRate, err):
                             if N>0:
                                 cigarList.append([N, 'N'])
                             else:
-                                if cigarList[-1][1] is 'M':
+                                if cigarList[-1][1] == 'M':
                                     M = cigarList[-1][0]
                                     cigarList.pop(-1)
                             cigarList.append([M + mems[i][2]-abs(errors_P), 'M'])
@@ -198,7 +198,7 @@ def getCIGAR(mems, RefSeq, bv, exPos, read, errRate, err):
                     if N>0:
                         cigarList.append([N, 'N'])
                     else:
-                        if cigarList[-1][1] is 'M':
+                        if cigarList[-1][1] == 'M':
                             M = cigarList[-1][0]
                             cigarList.pop(-1)
                     cigarList.append([M + mems[i][2], 'M'])
@@ -209,7 +209,7 @@ def getCIGAR(mems, RefSeq, bv, exPos, read, errRate, err):
                         if N>0:
                             cigarList.append([N, 'N'])
                         else:
-                            if cigarList[-1][1] is 'M':
+                            if cigarList[-1][1] == 'M':
                                 M = cigarList[-1][0]
                                 cigarList.pop(-1)
                         cigarList.append([M + mems[i][2]-abs(errors_P), 'M'])
@@ -219,7 +219,7 @@ def getCIGAR(mems, RefSeq, bv, exPos, read, errRate, err):
                         if cigarList[-1][0]<=0:
                             M = cigarList[-1][0]
                             cigarList.pop(-1)
-                            if cigarList[-1][1] is 'N':
+                            if cigarList[-1][1] == 'N':
                                 cigarList[-2][0] = cigarList[-2][0] + M
                                 M = 0
                                 N = cigarList[-1][0]
@@ -228,7 +228,7 @@ def getCIGAR(mems, RefSeq, bv, exPos, read, errRate, err):
                         if N>0:
                             cigarList.append([N, 'N'])
                         else:
-                            if cigarList[-1][1] is 'M':
+                            if cigarList[-1][1] == 'M':
                                 M = cigarList[-1][0]
                                 cigarList.pop(-1)
                         cigarList.append([M + mems[i][2], 'M'])
@@ -241,7 +241,7 @@ def getCIGAR(mems, RefSeq, bv, exPos, read, errRate, err):
                             if N>0:
                                 cigarList.append([N, 'N'])
                             else:
-                                if cigarList[-1][1] is 'M':
+                                if cigarList[-1][1] == 'M':
                                     M = cigarList[-1][0]
                                     cigarList.pop(-1)
                             cigarList.append([M + mems[i][2], 'M'])
@@ -250,7 +250,7 @@ def getCIGAR(mems, RefSeq, bv, exPos, read, errRate, err):
                             if N>0:
                                 cigarList.append([N, 'N'])
                             else:
-                                if cigarList[-1][1] is 'M':
+                                if cigarList[-1][1] == 'M':
                                     M = cigarList[-1][0]
                                     cigarList.pop(-1)
                             cigarList.append([M + mems[i][2]-abs(errors_P), 'M'])
@@ -271,7 +271,7 @@ def getCIGAR(mems, RefSeq, bv, exPos, read, errRate, err):
                             if N>0:
                                 cigarList.append([N, 'N'])
                             else:
-                                if cigarList[-1][1] is 'M':
+                                if cigarList[-1][1] == 'M':
                                     M = cigarList[-1][0]
                                     cigarList.pop(-1)
                             cigarList.append([M + mems[i][2], 'M'])
@@ -283,7 +283,7 @@ def getCIGAR(mems, RefSeq, bv, exPos, read, errRate, err):
                             if N>0:
                                 cigarList.append([N, 'N'])
                             else:
-                                if cigarList[-1][1] is 'M':
+                                if cigarList[-1][1] == 'M':
                                     M = cigarList[-1][0]
                                     cigarList.pop(-1)
                             cigarList.append([M + len(readGapString)+mems[i][2], 'M'])
@@ -293,7 +293,7 @@ def getCIGAR(mems, RefSeq, bv, exPos, read, errRate, err):
                         if N>0:
                             cigarList.append([N, 'N'])
                         else:
-                            if cigarList[-1][1] is 'M':
+                            if cigarList[-1][1] == 'M':
                                 M = cigarList[-1][0]
                                 cigarList.pop(-1)
                         cigarList.append([M + mems[i][2], 'M'])
@@ -320,14 +320,22 @@ def main(memsPath, refPath, gtfPath, errRate, outPath):
     lastID = ""
     lastStart = -1
     lastCigar = ""
-    for line in open(memsPath).readlines():
+    for line in open(memsPath):
         strand, readID, err, mems, read = readLine(line)
         mems = extractMEMs(mems)
+
+        gPs = [] # genomic positions
+        for mem in mems:
+            gPs.append(getStart(mem, bv, exPos))
+        if not all(gPs[i] < gPs[i+1] for i in range(len(gPs) - 1)):
+            continue
 
         start = getStart(mems[0], bv, exPos)
         flag = getFlag(strand, readID, lastID)
 
         cigar = getCIGAR(mems, RefSeq, bv, exPos, read, errRate, err)
+        if "-" in cigar:
+            continue
         #Same alignment is not output twice
         if readID != lastID or start != lastStart or cigar != lastCigar:
             lastID = readID

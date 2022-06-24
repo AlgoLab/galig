@@ -211,7 +211,7 @@ int main(int argc, char* argv[]) {
             }
         }
         if(i%10000 == 0)
-            std::cout << "Processed " << i << " genes." << std::endl;
+            std::cout << "Processed " << i << " reads." << std::endl;
         ++i;
     }
     kseq_destroy(seqs);
