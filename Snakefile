@@ -31,7 +31,7 @@ for line in open(GTF):
     line = line.strip("\n").split("\t")
     chrom = line[0]
     if line[2] == "gene":
-        gene = re.match("gene_id \"([A-Za-z0-9\.]+)\";", line[-1]).group(1)
+        gene = re.match("gene_id \"([A-Za-z0-9\.\_]+)\";", line[-1]).group(1)
         genes[gene] = chrom
 
 print(f"{len(genes)} genes")
@@ -88,7 +88,7 @@ rule split_reads:
     threads: 1
     shell:
         """
-        grep {wildcards.gene} {input.gtf} | grep -P "\\ttranscript\\t" | egrep -o 'transcript_id "[0-9A-Za-z\.]+";' | cut -f 2 -d'"' | cut -f1 -d'.' | sort -u | awk '{{ print $0"\\t"1"\\t"4294967295 }}'> {params.bed}
+        grep {wildcards.gene} {input.gtf} | grep -P "\\ttranscript\\t" | egrep -o 'transcript_id "[0-9A-Za-z\.\_]+";' | cut -f 2 -d'"' | cut -f1 -d'.' | sort -u | awk '{{ print $0"\\t"1"\\t"4294967295 }}'> {params.bed}
         samtools view -b {input.bam} -L {params.bed} | samtools fastq - > {output.fq}
         """
 
