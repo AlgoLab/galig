@@ -346,7 +346,8 @@ def printEvents(events, outPath):
     out.write("Type,Start,End,Support,Transcripts\n")
     for t,evs in events.items():
         for (p1,p2,w),trs in evs.items():
-            out.write("{},{},{},{},{}\n".format(t,p1,p2,w,"/".join(trs)))
+            if p1 < p2:
+                out.write("{},{},{},{},{}\n".format(t,p1,p2,w,"/".join(trs)))
 
 def extractIntrons(memsPath, Ref, exons, BitV, errRate, onlyPrimary):
     introns = {}
@@ -357,7 +358,6 @@ def extractIntrons(memsPath, Ref, exons, BitV, errRate, onlyPrimary):
             if readID == lastID:
                 continue
             lastID = readID
-
         if len(mems) > 1:
             for mem1,mem2 in pairwise(mems):
                 # Remove ( and ) from mem and cast to int
@@ -394,6 +394,10 @@ def extractIntrons(memsPath, Ref, exons, BitV, errRate, onlyPrimary):
                         introns[key] = introns[key]+1 if key in introns else 1
                     else:
                         #Gap on P
+                        if offset1 + offset2 == Poverlap:
+                            offset1 = 0
+                            offset2 = 0
+                            Poverlap = 0
                         if offset1 == 0 and offset2 == 0:
                             #No gap on T -> possible Ext.Alt.S.S.
                             intronStart, intronEnd  = exons[id1-1][1] + 1, exons[id2-1][0] - 1
