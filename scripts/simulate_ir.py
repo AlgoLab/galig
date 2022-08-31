@@ -21,8 +21,13 @@ def open_gtf(gtf_path):
 
 def main():
     gtf_path = sys.argv[1]
+    maxl = int(sys.argv[2]) if len(sys.argv) > 2 else 100
+    print(f"Simulating IR of length <= {maxl}", file=sys.stderr)
+
+    print("Opening annotation..", file=sys.stderr)
     gtf = open_gtf(gtf_path)
 
+    print("Extending annotation..", file=sys.stderr)
     for gene in gtf.features_of_type("gene"):
         print(gene)
         fake_exons = set()
@@ -40,7 +45,7 @@ def main():
                 print(exon)
             for i in range(len(exons) - 1):
                 l = exons[i + 1].start - 1 - (exons[i].end + 1) + 1
-                if l < 100 and l % 3 == 0:
+                if l <= maxl and l % 3 == 0:
                     fake_exons.add((exons[i].start, exons[i + 1].end))
         i = 1
         for (s, e) in fake_exons:
