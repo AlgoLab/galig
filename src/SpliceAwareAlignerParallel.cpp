@@ -437,7 +437,7 @@ int main(int argc, char *argv[])
 
  
   /* cptl */
-  ctpl::thread_pool p(num_threads/2 - 1);
+  ctpl::thread_pool p(num_threads);
   for (auto &sample : rna_seqs)
     {
       p.push(std::bind(compute_mem, std::ref(sample)));
