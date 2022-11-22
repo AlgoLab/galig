@@ -23,7 +23,7 @@ INCLUDE_FLAGS:= -I$(BASE_DIR)/lemon/compiled/include/ \
 # Pre-processor flags
 CPPFLAGS= $(INCLUDE_FLAGS)
 # Common C and C++ flags
-CCXXFLAGS:=-std=c++11 -Wall -O3 -DNDEBUG -march=native -Wno-deprecated -ffunction-sections -fdata-sections -fopenmp
+CCXXFLAGS:=-std=c++1z -Wall -O3 -DNDEBUG -march=native -Wno-deprecated -ffunction-sections -fdata-sections -fopenmp -ltbb
 # C-only flags
 CFLAGS+= $(CCXXFLAGS)
 # C++-only flags
@@ -41,14 +41,16 @@ LIBS:= -L$(BASE_DIR)/lemon/compiled/lib/ \
 # - OBJS_xxx = the object files that compose the program
 # - LIBS_xxx = the libraries which must be linked
 #
-PROGRAMS:=SpliceAwareAligner
-OBJS_SpliceAwareAligner = \
+PROGRAMS:=SpliceAwareAlignerParallel
+OBJS_SpliceAwareAlignerParallel = \
 	utils.o \
 	bMEM.o \
 	SplicingGraph.o \
 	MEMsGraph.o \
-	SpliceAwareAligner.o
-LIBS_SpliceAwareAligner= $(LIBS) -lrt -lsdsl -ldivsufsort -ldivsufsort64 -lemon -lz
+	function_pool.o \
+	SpliceAwareAlignerParallel.o
+
+LIBS_SpliceAwareAlignerParallel= $(LIBS) -lrt -lsdsl -ldivsufsort -ldivsufsort64 -lemon -lz
 
 #
 # END List of programs
