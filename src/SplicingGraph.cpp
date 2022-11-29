@@ -170,7 +170,7 @@ int SplicingGraph::select(const int& i) const {
 }
 
 bool SplicingGraph::contain(const int& x, const int& y) const {
-    if(edges[x][y] >= 1) {
+    if(edges[x][y] == 1 || edges[x][y] == 2) {
         return true;
     } else {
         return false;
@@ -178,7 +178,7 @@ bool SplicingGraph::contain(const int& x, const int& y) const {
 }
 
 bool SplicingGraph::isNew(const int& x, const int& y) const {
-    if(edges[x][y] > 1) {
+    if(edges[x][y] == 2) {
         return true;
     } else {
         return false;
