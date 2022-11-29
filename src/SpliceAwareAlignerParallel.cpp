@@ -166,7 +166,6 @@ int main(int argc, char *argv[])
 	  {"threads", required_argument, 0, 'j'},
 	  {"L", required_argument, 0, 'l'},
 	  {"erate", required_argument, 0, 'e'},
-	  //{"output", required_argument, 0, 'o'},
 	  {"help", no_argument, 0, 'h'},
 	  //{"verbose", no_argument, 0, 'v'},
 	  {0, 0, 0, 0}};
@@ -225,42 +224,7 @@ int main(int argc, char *argv[])
     {
       num_threads = (std::thread::hardware_concurrency() / 2) - 1;
     }
-  // std::string out_dir = annotation_dir+"/ASGAL/";
 
-  // std::cout << "Genomic directory: " << genomic_dir << std::endl;
-  // std::cout << "RNA-seq directory: " << rna_seqs_dir << std::endl;
-  // std::cout << "Annotation file: " << annotation << std::endl;
-  // std::cout << "Annotation directory: " << annotation_dir << std::endl;
-  // // std::cout << "Output directory: " << out_dir << std::endl;
-
-  // std::cout << "Minimum MEM length: " << L << std::endl;
-  // std::cout << "Error rate: " << eps << std::endl;
-  std::vector<SplicingGraph> sgs;
-  std::vector<BackwardMEM> bms;
-  std::map<std::string, std::string> chr_to_sg;
-  // TODO parallelize by creating a class for sgs and bms
-  // int count = 0;
-  for (const auto &entry : std::filesystem::directory_iterator(genomic_dir))
-    {
-      // std::cout << entry.path() << std::endl;
-
-      gzFile fastain = gzopen(entry.path().string().c_str(), "r");
-      kseq_t *reference = kseq_init(fastain);
-      kseq_read(reference);
-      chr_to_sg[entry.path().stem().string()] = entry.path().string();
-      kseq_destroy(reference);
-      gzclose(fastain);
-    }
-  // std::cout << "Splicing graphs built" << std::endl;
-  // std::cout << "Number of splicing graphs: " << sgs.size() << std::endl;
-  // std::vector<std::pair<std::string, std::string>> rna_seqs;
-  // for (const auto &entry : std::filesystem::directory_iterator(rna_seqs_dir))
-  // {
-  //     if (entry.path().extension().string() == ".fq")
-  //     {
-  //         rna_seqs.emplace_back(std::make_pair(entry.path().stem().string(), entry.path().string()));
-  //     }
-  // }
   std::vector<rna_seq_read> rna_seqs;
   for (const auto &entry : std::filesystem::directory_iterator(rna_seqs_dir))
     {
@@ -272,62 +236,51 @@ int main(int argc, char *argv[])
         }
     }
   std::sort(rna_seqs.begin(), rna_seqs.end(), size_compare);
-  if (verbose){
-    for (auto &r : rna_seqs)
-    {
-      std::cout << r.name << "\t" << r.size << std::endl;
-    }
-    std::cout << "OMP thread max: " << omp_get_max_threads() << std::endl;
-    std::cout << "thread max: " << std::thread::hardware_concurrency() << std::endl;
-  }
-  
-  auto compute_mem = [annotation_dir, genomic_dir, &chr_to_sg, L, eps, verbose](rna_seq_read &sample)
+  auto compute_mem = [annotation_dir, genomic_dir, L, eps, verbose](rna_seq_read &sample)
   {
-    if(verbose){
-      std::cout << "sample: " << sample.path << std::endl;
-    }
-    auto start = std::chrono::high_resolution_clock::now();
-    auto chr = chr_to_sg[split(sample.name, "_")[2]];
+   auto start = std::chrono::high_resolution_clock::now();
     std::string ann_tmp = annotation_dir + "/" + sample.name + "/annotation.gtf";
     std::string genome = split(sample.name, "_")[2];
-    std::string genomic = genomic_dir + "/" + genome + ".fa";
+    std::string genomic = "";
+    if(genomic_dir.back() != '/'){
+      genomic = genomic_dir + "/" + genome + ".fa";
+    }else{
+      genomic = genomic_dir + genome + ".fa";
+    }
    
-    gzFile fastain = gzopen(genomic.c_str(), "r");
+     gzFile fastain = gzopen(genomic.c_str(), "r");
     kseq_t *reference = kseq_init(fastain);
     kseq_read(reference);
-
     SplicingGraph sg (reference->seq.s, ann_tmp);
-    BackwardMEM bm(sg.getText(), genomic);
-    //sg.print();
     kseq_destroy(reference);
     gzclose(fastain);
-
-    int exsN = sg.getExonsNumber();
+    BackwardMEM bm(sg.getText(), genomic);
 
     gzFile fastain_q = gzopen(sample.path.c_str(), "r");
-    //fastain = gzopen(sample.path.c_str(), "r");
     std::pair<char, std::list<std::pair<int, std::list<Mem>>>> paths;
-
-    kseq_t *seqs = kseq_init(fastain_q);
     int l;
     std::string head;
     std::string read;
     int i = 1;
+    
     if (!std::filesystem::is_directory(annotation_dir + "/" + sample.name + "/ASGAL") ||
 	!std::filesystem::exists(annotation_dir + "/" + sample.name + "/ASGAL"))
       {
 	std::filesystem::create_directory(annotation_dir + "/" + sample.name + "/ASGAL");
       }
+    
     std::string out = annotation_dir + "/" + sample.name + "/ASGAL/aligns.mem";
+
     std::ofstream outFile;
     outFile.open(out);
-        
+    std::vector<std::pair<std::string, std::string>> reads;    
+    kseq_t *seqs = kseq_init(fastain_q); 
     while ((l = kseq_read(seqs)) >= 0)
       {
 
 	head = seqs->name.s;
 	read = seqs->seq.s;
-	paths = analyzeRead(bm, sg, read, L, eps, exsN, verbose);
+	paths = analyzeRead(bm, sg, read, L, eps, 0, verbose);
 	if (paths.first != '/')
 	  {
 	    for (std::pair<int, std::list<Mem>> path : paths.second)
@@ -352,22 +305,23 @@ int main(int argc, char *argv[])
 	  std::cout << "Processed " << i << " reads." << std::endl;
 	++i;
       }
-    outFile.close();
     kseq_destroy(seqs);
     gzclose(fastain_q);
     
+    outFile.close();
     std::string sam_command = "python3 scripts/formatSAM.py -m " + out + " -g "
-      + chr + " -a " + ann_tmp + " -o "
+      + genomic + " -a " + ann_tmp + " -o "
       + annotation_dir + "/"
       + sample.name + "/ASGAL/aligns.sam";
-    std::system(sam_command.c_str());
+    int sam_ret = std::system(sam_command.c_str());
     auto stop = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::seconds>(stop - start);
-    if (verbose){
-      std::cout << "sample: " << sample.path << " time: " << duration.count() << std::endl;
+     if (false){
+      std::cout << "sample: " << sample.path << "\n genome: " << genomic <<
+	"\n annotation:" << ann_tmp  << "\n time: " << duration.count() <<
+	std::endl << std::endl;
     }
   };
-
   /* openmp */
   // #pragma omp parallel for
   //   for (auto &sample : rna_seqs)
@@ -375,67 +329,6 @@ int main(int argc, char *argv[])
   //       compute_mem(std::ref(sample));
   //     }
 
-  /* for_each c++17*/
-  // // std::for_each(std::execution::par_unseq, rna_seqs.begin(), rna_seqs.end(), compute_mem);
-
-  /* blocks of threads */
-  // int n = (int) std::thread::hardware_concurrency()/2;
-  // //int n = 200;
-  // int size = (rna_seqs.size() - 1) / n + 1;
-  // std::vector<rna_seq_read> vec[size];
-  
-  // // and store it in a vector at k'th index in `vec`
-  // for (int k = 0; k < size; ++k)
-  //   {
-  //     // get range for the next set of `n` elements
-  //     auto start_itr = std::next(rna_seqs.cbegin(), k*n);
-  //     auto end_itr = std::next(rna_seqs.cbegin(), k*n + n);
-      
-  //     // allocate memory for the sub-vector
-  //     vec[k].resize(n);
- 
-  //     // code to handle the last sub-vector as it might
-  //     // contain fewer elements
-  //     if (k*n + n > (int)rna_seqs.size())
-  // 	{
-  // 	  end_itr = rna_seqs.cend();
-  // 	  vec[k].resize(rna_seqs.size() - k*n);
-  // 	}
- 
-  //     // copy elements from the input range to the sub-vector
-  //     std::copy(start_itr, end_itr, vec[k].begin());
-  //   }
-  // std::cout << rna_seqs.size() << " " << n << " " << size << "\n";
-  // int ch = 0;
-  // for (auto v: vec){
-  //   std::cout << "pool number " << ch << "\n";
-  //   std::vector<std::thread> th_vec;
-  //   for (auto &sample : v)
-  //     {
-  // 	th_vec.emplace_back(compute_mem, std::ref(sample));
-  //     }
-
-  //   for (auto &th : th_vec)
-  //     {
-  // 	if(th.joinable())
-  // 	  th.join();
-  //     }
-  //   ch++;
-  //   th_vec.clear();
-  // }
-
-  //   std::vector<std::thread> th_vec;
-  // for (auto &sample : rna_seqs)
-  // {
-  //     th_vec.emplace_back(compute_mem, std::ref(sample));
-  // }
-
-  // for (auto &th : th_vec)
-  // {
-  //     th.join();
-  // }
-
- 
   /* cptl */
   ctpl::thread_pool p(num_threads);
   for (auto &sample : rna_seqs)
