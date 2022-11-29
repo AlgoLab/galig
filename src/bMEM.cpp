@@ -57,7 +57,11 @@ std::list<Mem> BackwardMEM::getMEMs(const std::string& read,
             }
             i = lb; j = rb;
             --p2;
-            backward_search(cst.csa, read[p2-1], lb, rb);
+            if(p2>0){
+	      backward_search(cst.csa, read[p2-1], lb, rb);
+	    }else{
+	      continue;
+	    }
         }
         for(path_type::iterator it=path.begin(); it!=path.end(); ++it) {
             size_type c_ = it->c;
