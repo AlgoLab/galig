@@ -6,7 +6,7 @@
 #include <list>
 #include <chrono>
 #include <filesystem>
-
+#include <mutex>
 #include <zlib.h>
 #include <stdio.h>
 #include <functional>
@@ -21,6 +21,7 @@
 
 KSEQ_INIT(gzFile, gzread)
 
+//std::mutex mu;
 
 struct rna_seq_read
 {
@@ -143,7 +144,6 @@ std::pair<char, std::list<std::pair<int, std::list<Mem>>>> analyzeRead(BackwardM
 int main(int argc, char *argv[])
 {
   std::string genomic_dir;
-  std::string annotation;
   std::string annotation_dir;
   std::string rna_seqs_dir;
   int num_threads = 0;
@@ -159,10 +159,9 @@ int main(int argc, char *argv[])
     {
       static struct option long_options[] =
 	{
-	  {"genomic", required_argument, 0, 'g'},
-	  {"annotation", required_argument, 0, 'a'},
-	  {"annotation_dir", required_argument, 0, 'd'},
-	  {"sample", required_argument, 0, 's'},
+	  {"genomic_dir", required_argument, 0, 'g'},
+	  {"annotation_dir", required_argument, 0, 'a'},
+	  {"sample_dir", required_argument, 0, 's'},
 	  {"threads", required_argument, 0, 'j'},
 	  {"L", required_argument, 0, 'l'},
 	  {"erate", required_argument, 0, 'e'},
@@ -171,7 +170,7 @@ int main(int argc, char *argv[])
 	  {0, 0, 0, 0}};
 
       int option_index = 0;
-      c = getopt_long(argc, argv, "g:s:a:d:j:l:e:h", long_options, &option_index);
+      c = getopt_long(argc, argv, "g:s:a:j:l:e:h", long_options, &option_index);
 
       if (c == -1)
         {
@@ -187,9 +186,6 @@ int main(int argc, char *argv[])
 	  rna_seqs_dir = optarg;
 	  break;
         case 'a':
-	  annotation = optarg;
-	  break;
-        case 'd':
 	  annotation_dir = optarg;
 	  break;
 	case 'j':
@@ -236,7 +232,7 @@ int main(int argc, char *argv[])
         }
     }
   std::sort(rna_seqs.begin(), rna_seqs.end(), size_compare);
-  auto compute_mem = [annotation_dir, genomic_dir, L, eps, verbose](rna_seq_read &sample)
+  auto compute_mem = [annotation_dir, genomic_dir, L, eps, verbose](int id, rna_seq_read sample)
   {
    auto start = std::chrono::high_resolution_clock::now();
     std::string ann_tmp = annotation_dir + "/" + sample.name + "/annotation.gtf";
@@ -248,10 +244,12 @@ int main(int argc, char *argv[])
       genomic = genomic_dir + genome + ".fa";
     }
    
-     gzFile fastain = gzopen(genomic.c_str(), "r");
+    gzFile fastain = gzopen(genomic.c_str(), "r");
     kseq_t *reference = kseq_init(fastain);
     kseq_read(reference);
+    //mu.lock();
     SplicingGraph sg (reference->seq.s, ann_tmp);
+    //mu.unlock();
     kseq_destroy(reference);
     gzclose(fastain);
     BackwardMEM bm(sg.getText(), genomic);
@@ -313,7 +311,7 @@ int main(int argc, char *argv[])
       + genomic + " -a " + ann_tmp + " -o "
       + annotation_dir + "/"
       + sample.name + "/ASGAL/aligns.sam";
-    int sam_ret = std::system(sam_command.c_str());
+    //int sam_ret = std::system(sam_command.c_str());
     auto stop = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::seconds>(stop - start);
      if (false){
@@ -333,7 +331,7 @@ int main(int argc, char *argv[])
   ctpl::thread_pool p(num_threads);
   for (auto &sample : rna_seqs)
     {
-      p.push(std::bind(compute_mem, std::ref(sample)));
+      p.push(compute_mem, sample);
     }
   return 0;
 }
