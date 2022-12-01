@@ -9,7 +9,7 @@ from BitVector import BitVector
 # Computes edit distance between two strings
 def editDistance(s1, s2):
     if len(s1) < len(s2):
-        return levenshtein(s2, s1)
+        return editDistance(s2, s1)
 
     if len(s2) == 0:
         return len(s1)
