@@ -137,9 +137,17 @@ void SplicingGraph::setupBitVector() {
         }
         i++;
     }
-    bitVector = sdsl::rrr_vector<>(BV);
-    selectBV = sdsl::rrr_vector<>::select_1_type(&bitVector);
-    rankBV = sdsl::rrr_vector<>::rank_1_type(&bitVector);
+    // bitVector = sdsl::rrr_vector<>(BV);
+    // selectBV = sdsl::rrr_vector<>::select_1_type(&bitVector);
+    // rankBV = sdsl::rrr_vector<>::rank_1_type(&bitVector);
+
+    bitVector = sdsl::sd_vector<>(BV);
+    selectBV = sdsl::sd_vector<>::select_1_type(&bitVector);
+    rankBV = sdsl::sd_vector<>::rank_1_type(&bitVector);
+    
+    // bitVector = BV;
+    // selectBV = sdsl::bit_vector::select_1_type(&bitVector);
+    // rankBV = sdsl::bit_vector::rank_1_type(&bitVector);
 }
 
 std::string SplicingGraph::getText() const {
@@ -170,19 +178,21 @@ int SplicingGraph::select(const int& i) const {
 }
 
 bool SplicingGraph::contain(const int& x, const int& y) const {
-    if(edges[x][y] == 1 || edges[x][y] == 2) {
-        return true;
-    } else {
-        return false;
-    }
+  if(x >= edges.size() || y >= edges[x].size()){
+    return false;
+  }else{
+    return (edges[x][y] == 1 || edges[x][y] == 2);
+  }
+
 }
 
 bool SplicingGraph::isNew(const int& x, const int& y) const {
-    if(edges[x][y] == 2) {
-        return true;
-    } else {
-        return false;
-    }
+  if(x >= edges.size() || y >= edges[x].size()){
+    return false;
+  }else{
+    return (edges[x][y] == 2);
+  }
+
 }
 
 void SplicingGraph::print() const {

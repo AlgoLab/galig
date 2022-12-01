@@ -127,10 +127,19 @@ private:
     int exsN;
 
     std::vector<std::vector<int> > edges;
-    sdsl::rrr_vector<> bitVector;
-    sdsl::rrr_vector<>::select_1_type selectBV;
-    sdsl::rrr_vector<>::rank_1_type rankBV;
-
+  
+    // sdsl::rrr_vector<> bitVector;
+    // sdsl::rrr_vector<>::select_1_type selectBV;
+    // sdsl::rrr_vector<>::rank_1_type rankBV;
+  
+    sdsl::sd_vector<> bitVector;
+    sdsl::sd_vector<>::select_1_type selectBV;
+    sdsl::sd_vector<>::rank_1_type rankBV;
+  
+    // sdsl::bit_vector bitVector;
+    // sdsl::bit_vector::select_1_type selectBV;
+    // sdsl::bit_vector::rank_1_type rankBV;
+  
     void setupBitVector();
     void save(const std::string);
     //void load(const std::string);
