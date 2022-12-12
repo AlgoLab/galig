@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/python3.9
 
 import sys, os
 import argparse
@@ -166,8 +166,8 @@ def runSalmon(args):
     samtoolsLog = os.path.join(args.outputPath, logsFold, "samtools.log")
     salmonBam = os.path.join(args.outputPath, "salmon", "salmon.bam")
 
-    salmon = os.path.join(WP, "salmon", "bin", "salmon")
-
+    #salmon = os.path.join(WP, "salmon", "bin", "salmon")
+    salmon = "salmon"
     salmonIndex = os.path.join(args.outputPath, salmonIndexFold)
     if not os.path.isdir(salmonIndex):
         os.makedirs(salmonIndex)
