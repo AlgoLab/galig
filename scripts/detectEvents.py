@@ -346,7 +346,8 @@ def printEvents(events, outPath):
     out.write("Type,Start,End,Support,Transcripts\n")
     for t,evs in events.items():
         for (p1,p2,w),trs in evs.items():
-            out.write("{},{},{},{},{}\n".format(t,p1,p2,w,"/".join(trs)))
+            if p1 < p2:
+                out.write("{},{},{},{},{}\n".format(t,p1,p2,w,"/".join(trs)))
 
 def extractIntrons(memsPath, Ref, exons, BitV, errRate, onlyPrimary):
     introns = {}
