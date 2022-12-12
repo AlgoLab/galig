@@ -15,24 +15,14 @@ else
 
 VPATH = $(SRC_DIR)
 
-INCLUDE_FLAGS:= -I$(BASE_DIR)/lemon/compiled/include/ \
-                -I$(BASE_DIR)/sdsl-lite/compiled/include
-#-I$(LOC_DIR)/include/ \
-#-I$(LOC_DIR)/include/glib-core/	\
-
-# Pre-processor flags
-CPPFLAGS= $(INCLUDE_FLAGS)
 # Common C and C++ flags
-CCXXFLAGS:=-std=c++11 -Wall -O3 -DNDEBUG -march=native -Wno-deprecated -ffunction-sections -fdata-sections -fopenmp
+CCXXFLAGS:=-Wall -pthread -g
 # C-only flags
 CFLAGS+= $(CCXXFLAGS)
 # C++-only flags
-CXXFLAGS+= $(CCXXFLAGS)
+CXXFLAGS+= $(CCXXFLAGS) -std=c++1z
 # Linker flags
-LDFLAGS+=-Wl,--gc-sections -fopenmp
-# Define libraries
-LIBS:= -L$(BASE_DIR)/lemon/compiled/lib/ \
-       -L$(BASE_DIR)/sdsl-lite/compiled/lib
+LDFLAGS+=-pthread
 
 ######
 #
@@ -48,6 +38,7 @@ OBJS_SpliceAwareAligner = \
 	SplicingGraph.o \
 	MEMsGraph.o \
 	SpliceAwareAligner.o
+
 LIBS_SpliceAwareAligner= $(LIBS) -lrt -lsdsl -ldivsufsort -ldivsufsort64 -lemon -lz
 
 #
@@ -61,58 +52,10 @@ all: $(addprefix $(BIN_DIR)/, $(PROGRAMS))
 # 3RD PART PREREQUISITES #
 ##########################
 .PHONY: prerequisites
-prerequisites: lemon sdsl salmon
+prerequisites: salmon
 
 .PHONY: clean-prerequisites
-clean-prerequisites: clean-lemon clean-sdsl clean-salmon
-
-# LEMON ################################################################
-
-.PHONY: lemon
-lemon: $(BASE_DIR)/lemon/
-
-LEMON_NAME:=lemon-1.3.1
-$(BASE_DIR)/lemon/:
-	@echo "* Lemon Library" ; \
-	cd $(BASE_DIR) ; \
-	wget http://lemon.cs.elte.hu/pub/sources/$(LEMON_NAME).tar.gz ; \
-	tar -xvf $(LEMON_NAME).tar.gz ; \
-	rm $(LEMON_NAME).tar.gz ; \
-	mv $(LEMON_NAME) lemon ; \
-	if [ -d lemon/ ] ; then \
-	 	cd lemon/ && mkdir build && cd build ; \
-		sed '3d' ../CMakeLists.txt > tmp ; \
-		mv tmp ../CMakeLists.txt ; \
-		cmake -DCMAKE_INSTALL_PREFIX=../compiled/ .. ; \
-		make ; \
-		make install ; \
-	else \
-		echo "! lemon folder not found !" ; \
-		exit 1 ; \
-	fi
-
-.PHONY: clean-lemon
-clean-lemon:
-	@echo "* Cleaning lemon library..." ; \
-	rm -rf $(BASE_DIR)/lemon/
-
-########################################################################
-
-# SDSL-LITE ############################################################
-
-.PHONY: sdsl
-sdsl: $(BASE_DIR)/sdsl-lite/compiled
-
-$(BASE_DIR)/sdsl-lite/compiled:
-	@echo "* SDSL-lite Library" ; \
-	cd $(BASE_DIR)/sdsl-lite ; \
-	mkdir compiled ; \
-	./install.sh ./compiled
-
-.PHONY: clean-sdsl
-clean-sdsl:
-	@echo "* Cleaning SDSL library..." ; \
-	rm -rf $(BASE_DIR)/sdsl-lite/compiled
+clean-prerequisites: clean-salmon
 
 ########################################################################
 
@@ -147,13 +90,13 @@ clean-salmon:
 
 .PRECIOUS: %.o
 %.o: %.cpp
-	@echo '* CXX $<'; \
+	echo '* CXX $<'; \
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -o $@ -c $<
 
 .SECONDEXPANSION:
 
 $(BIN_DIR)/%: $$(OBJS_%)
-	@echo '* LD  $@'; \
+	echo '* LD  $@'; \
         [ -d $(BIN_DIR) ] || mkdir -p "$(BIN_DIR)" ; \
 	$(CXX) $(LDFLAGS) -o $@ $(OBJS_$(notdir $@)) $(LIBS_$(notdir $@))
 
