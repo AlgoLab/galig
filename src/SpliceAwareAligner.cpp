@@ -18,7 +18,7 @@
 KSEQ_INIT(gzFile, gzread)
 
 void printHelp() {
-    std::cout << "Usage: SGAL [options] (required: -g -a -s -o)\n" << std::endl;
+    std::cout << "Usage: SpliceAwareAligner [options] (required: -g -a -s -o)\n" << std::endl;
     std::cout << "Options:" << std::endl;
     std::cout << "  -g, --genome <path>" << std::endl;
     std::cout << "  -a, --annotation <path>" << std::endl;
@@ -211,7 +211,7 @@ int main(int argc, char* argv[]) {
             }
         }
         if(i%10000 == 0)
-            std::cout << "Processed " << i << " genes." << std::endl;
+            std::cout << "Processed " << i << " reads." << std::endl;
         ++i;
     }
     kseq_destroy(seqs);

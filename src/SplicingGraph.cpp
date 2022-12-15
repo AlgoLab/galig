@@ -170,20 +170,23 @@ int SplicingGraph::select(const int& i) const {
 }
 
 bool SplicingGraph::contain(const int& x, const int& y) const {
-    if(edges[x][y] >= 1) {
-        return true;
-    } else {
-        return false;
-    }
+  if(x >= edges.size() || y >= edges[x].size()) {
+    return false;
+  }else {
+    return (edges[x][y] == 1 || edges[x][y] == 2);
+  }
+
 }
 
 bool SplicingGraph::isNew(const int& x, const int& y) const {
-    if(edges[x][y] > 1) {
-        return true;
-    } else {
-        return false;
-    }
+  if(x >= edges.size() || y >= edges[x].size()) {
+    return false;
+  }else {
+    return (edges[x][y] == 2);
+  }
+
 }
+
 
 void SplicingGraph::print() const {
     std::cout << T << std::endl;
