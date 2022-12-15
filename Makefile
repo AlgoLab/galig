@@ -16,7 +16,7 @@ else
 VPATH = $(SRC_DIR)
 
 # Common C and C++ flags
-CCXXFLAGS:=-Wall -pthread -g
+CCXXFLAGS:=-O3 -DNDEBUG -march=native -Wall -pthread
 # C-only flags
 CFLAGS+= $(CCXXFLAGS)
 # C++-only flags
