@@ -18,7 +18,7 @@
 KSEQ_INIT(gzFile, gzread)
 
 void printHelp() {
-    std::cout << "Usage: ASGAL [options] (required: -g -a -s -o)\n" << std::endl;
+    std::cout << "Usage: SpliceAwareAligner [options] (required: -g -a -s -o)\n" << std::endl;
     std::cout << "Options:" << std::endl;
     std::cout << "  -g, --genome <path>" << std::endl;
     std::cout << "  -a, --annotation <path>" << std::endl;
