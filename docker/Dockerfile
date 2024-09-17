@@ -33,7 +33,7 @@ RUN apt-get install -qqy \
 RUN apt-get clean
 RUN pip3 install gffutils
 
-RUN git clone --depth=1 --recursive https://github.com/AlgoLab/galig.git
+RUN git clone --depth 1 --branch v1.1.7 --recursive https://github.com/AlgoLab/galig.git
 RUN cd galig ; make prerequisites
 RUN cd galig ; make
 
